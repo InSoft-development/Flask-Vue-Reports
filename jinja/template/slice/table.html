@@ -1,0 +1,49 @@
+<h2 align="center">Таблица срезов сигналов</h2>
+  <table style="width: 100%">
+    <thead>
+    <tr>
+      <th scope="col" style="width: 35%; text-align: center">Код сигнала (KKS)</th>
+      <th scope="col" style="width: 30%; text-align: center">Дата и время измерения</th>
+      <th scope="col" style="width: 10%; text-align: center">Значение</th>
+      <th scope="col" style="width: 20%; text-align: center">Качество</th>
+      <th scope="col" style="width: 5%; text-align: center">Код качества</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for item in rows %}
+      {% set bad_code = ['BadNoCommunication', 'BadSensorFailure', 'BadCommunicationFailure', 'BadDeviceFailure', 'UncertainLastUsableValue'] %}
+      {% set bad_num_code = [8, 16, 24, 28, 88] %}
+      <tr>
+        <td><div>{{ item["Код сигнала (KKS)"] }}</div></td>
+        <td><div>{{ item["Дата и время измерения"] }}</div></td>
+        <td><div>{{ item["Значение"] }}</div></td>
+        {% if item["Качество"] in bad_code %}
+          <td class="text-danger"><div>{{ item["Качество"] }}</div></td>
+        {% elif item["Качество"] == '' or item["Качество"] == 'NaN' %}
+          <td class="text-warning"><div>{{ item["Качество"] }}</div></td>
+        {% else %}
+          <td><div>{{ item["Качество"] }}</div></td>
+        {% endif %}
+        {% if item["Код качества"] in bad_num_code %}
+          <td class="text-danger"><div>{{ item["Код качества"] }}</div></td>
+        {% elif item["Код качества"] == '' or item["Код качества"] == 'NaN'  %}
+          <td class="text-warning"><div>{{ item["Код качества"] }}</div></td>
+        {% else %}
+          <td><div>{{ item["Код качества"] }}</div></td>
+        {% endif %}
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+<style>
+table, tr, td, th, tbody, thead {
+  border: 1px solid black;
+  border-collapse: collapse;
+  page-break-inside: avoid !important;
+}
+td div, th div{
+  page-break-inside: avoid;
+  text-align: center;
+}
+</style>

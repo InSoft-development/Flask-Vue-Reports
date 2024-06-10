@@ -1,0 +1,87 @@
+<h2 align="center">
+    Отчет по датчику
+</h2>
+<h2 align="center">
+    {{ sensor_title }}
+</h2>
+<div>
+    <table style="width: 100%">
+    <thead>
+    <tr>
+        <th scope="col" style="width: 20%; text-align: center" rowspan="4">№ записи</th>
+        <th style="width: 80%; text-align: center" colspan="2">Параметры запроса</th>
+    </tr>
+    <tr>
+        <td style="width: 40%;">
+            Дата начала: {{ parameters["date_begin"] }}
+        </td>
+        <td style="width: 40%;">
+            Дата конца: {{ parameters["date_end"] }}
+        </td>
+    </tr>
+    <tr>
+        <td style="width: 40%;">
+            Интервал: {{ parameters["interval"] }}
+        </td>
+        <td style="width: 40%;">
+            Размерность интервала: {{ parameters["dimension"] }}
+        </td>
+    </tr>
+    <tr>
+        <th scope="col" style="width: 40%; text-align: center">Метка времени</th>
+        <th scope="col" style="width: 40%; text-align: center">Значение сигнала</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for item in rows %}
+        {% set outer_loop = loop %}
+        {% set bad_code = ['BadNoCommunication', 'BadSensorFailure', 'BadCommunicationFailure', 'BadDeviceFailure', 'UncertainLastUsableValue'] %}
+        <tr>
+            <td><div>{{ outer_loop.index0 }}</div></td>
+            {% for key, value in item.items() %}
+                {% if status[outer_loop.index0][key] in bad_code %}
+                    <td class="text-danger"><div>{{ value }}</div></td>
+                {% elif status[outer_loop.index0][key] == "missed" or status[outer_loop.index0][key] == "NaN" %}
+                    <td class="text-warning"><div>{{ value }}</div></td>
+                {% else %}
+                    <td><div>{{ value }}</div></td>
+                {% endif %}
+            {% endfor %}
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+<div id="line"></div>
+<script>
+    var plotlyConfig = {
+      scrollZoom: true,
+      displayModeBar: false
+    }
+
+    var xArray = {{ data_x }};
+    var yArray = {{ data_y }};
+
+    var data = [{
+      x:xArray,
+      y:yArray,
+      mode: 'lines',
+      type:"scatter"
+    }];
+
+    var layout = {title:"{{ sensor_title }}"};
+
+    Plotly.newPlot("line", data, layout, plotlyConfig);
+</script>
+
+<style>
+tr, td, th, tbody, thead {
+  border: 1px solid black;
+  border-collapse: collapse;
+  page-break-inside: avoid
+}
+td div, th div {
+  page-break-inside: avoid;
+  text-align: center;
+}
+</style>

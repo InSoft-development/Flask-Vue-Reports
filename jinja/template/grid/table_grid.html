@@ -1,0 +1,48 @@
+<table style="width: 100%">
+    <thead>
+    <tr>
+        {% for key in rows[0].keys() %}
+          {% if key == "Метка времени" %}
+            <th scope="col" style="width: 40%; text-align: center">{{ key }}</th>
+          {% else %}
+            <th scope="col" style="text-align: center">{{ key }}</th>
+          {% endif %}
+        {% endfor %}
+    </tr>
+    </thead>
+    <tbody>
+    {% for item in rows %}
+        {% set outer_loop = loop %}
+        {% set bad_code = ['BadNoCommunication', 'BadSensorFailure', 'BadCommunicationFailure', 'BadDeviceFailure', 'UncertainLastUsableValue'] %}
+        <tr>
+            {% for key, value in item.items() %}
+                {% if status[outer_loop.index0][key] in bad_code %}
+                    <td class="text-danger"><div>{{ value }}</div></td>
+                {% elif status[outer_loop.index0][key] == "missed" or status[outer_loop.index0][key] == "NaN"
+            or status[outer_loop.index0][key] == "None" or value == "NaN" %}
+                    <td class="text-warning"><div>{{ value }}</div></td>
+                {% else %}
+                    <td><div>{{ value }}</div></td>
+                {% endif %}
+            {% endfor %}
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+<style>
+table {
+  border: 1px solid black;
+  border-collapse: collapse;
+  page-break-after: always !important;
+}
+tr, td, th, tbody, thead {
+  border: 1px solid black;
+  border-collapse: collapse;
+  page-break-inside: avoid !important;
+}
+td div, th div{
+  page-break-inside: avoid;
+  text-align: center;
+}
+</style>

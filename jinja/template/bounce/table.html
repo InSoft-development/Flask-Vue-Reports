@@ -1,0 +1,40 @@
+<h2 align="center">Дребезг сигналов</h2>
+<table style="width: 100%">
+    <thead>
+        <tr>
+            <th scope="col" style="width: 100%; text-align: center" colspan="2">Параметры запроса</th>
+        </tr>
+        <tr>
+            <td style="width: 50%;"><div>Дата: {{ parameters["date"] }}</div></td>
+            <td style="width: 50%;"><div>Количество показываемых датчиков: {{ parameters["top"] }}</div></td>
+        </tr>
+        <tr>
+            <td style="width: 50%;"><div>Интервал: {{ parameters["interval"] }}</div></td>
+            <td style="width: 50%;"><div>Размерность интервала: {{ parameters["dimension"] }}</div></td>
+        </tr>
+        <tr>
+            <th scope="col" style="width: 50%; text-align: center">Наименование датчика</th>
+            <th scope="col" style="width: 50%; text-align: center">Частота</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for item in rows %}
+        <tr>
+            <td><div>{{ item['Наименование датчика'] }}</div></td>
+            <td><div>{{ item['Частота'] }}</div></td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+<style>
+table, tr, td, th, tbody, thead {
+  border: 1px solid black;
+  border-collapse: collapse;
+  page-break-inside: avoid !important;
+}
+td div, th div {
+  page-break-inside: avoid !important;
+  text-align: center;
+}
+</style>
