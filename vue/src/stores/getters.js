@@ -67,6 +67,7 @@ export async function getDefaultFields(defaultFields) {
       selectionTag: 'sequential',
       sensorsAndTemplateValue: ['Sochi2\\.GT\\.AM\\.\\S*-AM\\.Q?$'],
       quality: ['8 - (BNC) - ОТКАЗ СВЯЗИ (TIMEOUT)', '192 - (GOD) – ХОРОШ'],
+      lastValueChecked: false,
       dateDeepOfSearch: new Date(),
       interval: 10,
       dimension: 'hour',
@@ -102,37 +103,37 @@ export async function getTypesOfSensors(typesOptions) {
  * @returns {Promise<void>}
  */
 export async function getKKSFilterByMasks(options, types, masks) {
-    let masksRequestArray = Array()
-    let lastKKS = ''
+  let masksRequestArray = Array()
+  let lastKKS = ''
 
-    for (let i = 0; i < masks.length; i++) {
-      if (
-        !(await new Promise((resolve) => {
-          socket.emit('get_kks_tag_exist', masks[i], () => {
-            resolve()
-          })
-        }))
-      ) {
-        masksRequestArray.push(masks[i])
-      } else {
-        if (i == masks.length - 1) lastKKS = masks[i]
-      }
+  for (let i = 0; i < masks.length; i++) {
+    if (
+      !(await new Promise((resolve) => {
+        socket.emit('get_kks_tag_exist', masks[i], () => {
+          resolve()
+        })
+      }))
+    ) {
+      masksRequestArray.push(masks[i])
+    } else {
+      if (i == masks.length - 1) lastKKS = masks[i]
     }
+  }
 
-    // for (let mask of masks){
-    //   if (!(await eel.get_kks_tag_exist(mask)()))
-    //     masksRequestArray.push(mask)
-    // }
+  // for (let mask of masks){
+  //   if (!(await eel.get_kks_tag_exist(mask)()))
+  //     masksRequestArray.push(mask)
+  // }
 
-    let result = null
-    await new Promise((resolve) => {
-      socket.emit('get_kks_by_masks', types, masksRequestArray, (kks) => {
-        result = kks
-        resolve(kks)
-      })
+  let result = null
+  await new Promise((resolve) => {
+    socket.emit('get_kks_by_masks', types, masksRequestArray, (kks) => {
+      result = kks
+      resolve(kks)
     })
-    if (lastKKS.length != 0) result.unshift(lastKKS)
-    options.value[1].options = result
+  })
+  if (lastKKS.length != 0) result.unshift(lastKKS)
+  options.value[1].options = result
 }
 
 /***
@@ -149,32 +150,32 @@ export async function getKKSByMasksForTable(
   sensorsAndTemplate,
   selectionTagRadio
 ) {
-    let kks = Array()
-    let masks = Array()
-    for (let element of sensorsAndTemplate) {
-      if (
-        await new Promise((resolve) => {
-          socket.emit('get_kks_tag_exist', element, () => {
-            resolve()
-          })
+  let kks = Array()
+  let masks = Array()
+  for (let element of sensorsAndTemplate) {
+    if (
+      await new Promise((resolve) => {
+        socket.emit('get_kks_tag_exist', element, () => {
+          resolve()
         })
-      )
-        kks.push(element)
-      else masks.push(element)
-    }
-
-    let result = null
-    await new Promise((resolve) => {
-      socket.emit('get_kks', types, masks, kks, selectionTagRadio.value, (kks) => {
-        result = kks
-        resolve(kks)
       })
+    )
+      kks.push(element)
+    else masks.push(element)
+  }
+
+  let result = null
+  await new Promise((resolve) => {
+    socket.emit('get_kks', types, masks, kks, selectionTagRadio.value, (kks) => {
+      result = kks
+      resolve(kks)
     })
-    if (result[0] === ['']) {
-      alert('Неверный синтаксис регулярного выражения. Ничего не нашлось')
-      return
-    }
-    chosenSensors.value = result
+  })
+  if (result[0] === ['']) {
+    alert('Неверный синтаксис регулярного выражения. Ничего не нашлось')
+    return
+  }
+  chosenSensors.value = result
 }
 
 export async function getKKSByTextMasksFromSearch(
@@ -183,33 +184,33 @@ export async function getKKSByTextMasksFromSearch(
   dialogSearchedTagsTextArea,
   countOfTags
 ) {
-    if (templateText.value.trim() === '') return
-    let kks = Array()
-    let masks = Array()
+  if (templateText.value.trim() === '') return
+  let kks = Array()
+  let masks = Array()
 
-    if (
-      await new Promise((resolve) => {
-        socket.emit('get_kks_tag_exist', templateText.value, () => {
-          resolve()
-        })
-      })
-    )
-      kks.push(templateText.value)
-    else masks.push(templateText.value)
-
-    let result = null
+  if (
     await new Promise((resolve) => {
-      socket.emit('get_kks', types, masks, kks, (kks) => {
-        result = kks
-        resolve(kks)
+      socket.emit('get_kks_tag_exist', templateText.value, () => {
+        resolve()
       })
     })
-    if (result[0] === ['']) {
-      alert('Неверный синтаксис регулярного выражения. Ничего не нашлось')
-      return
-    }
-    countOfTags.value = result.length
-    dialogSearchedTagsTextArea.value = result.join('\n')
+  )
+    kks.push(templateText.value)
+  else masks.push(templateText.value)
+
+  let result = null
+  await new Promise((resolve) => {
+    socket.emit('get_kks', types, masks, kks, (kks) => {
+      result = kks
+      resolve(kks)
+    })
+  })
+  if (result[0] === ['']) {
+    alert('Неверный синтаксис регулярного выражения. Ничего не нашлось')
+    return
+  }
+  countOfTags.value = result.length
+  dialogSearchedTagsTextArea.value = result.join('\n')
 }
 
 /***
@@ -220,6 +221,10 @@ export async function getKKSByTextMasksFromSearch(
  * @param qualities
  * @param date
  * @param dateDeepOfSearch
+ * @param lastValueChecked
+ * @param intervalOrDateChecked
+ * @param intervalDeepOfSearch
+ * @param intervalDeepOfSearchRadio
  * @param dataTable
  * @param dataTableRequested
  * @returns {Promise<void>}
@@ -230,53 +235,61 @@ export async function getSignals(
   sensorsAndTemplate,
   qualities,
   date,
+  lastValueChecked,
+  intervalOrDateChecked,
+  intervalDeepOfSearch,
+  intervalDeepOfSearchRadio,
   dateDeepOfSearch,
   dataTable,
   dataTableRequested
 ) {
-    let formatDate = new Date(date.toString().split('GMT')[0] + ' UTC').toISOString()
-    let formatDateDeepOfSearch = new Date(
-      dateDeepOfSearch.toString().split('GMT')[0] + ' UTC'
-    ).toISOString()
-    let kks = Array()
-    let masks = Array()
-    for (let element of sensorsAndTemplate) {
-      if (
-        await new Promise((resolve) => {
-          socket.emit('get_kks_tag_exist', element, () => {
-            resolve()
-          })
+  let formatDate = new Date(date.toString().split('GMT')[0] + ' UTC').toISOString()
+  let formatDateDeepOfSearch = new Date(
+    dateDeepOfSearch.toString().split('GMT')[0] + ' UTC'
+  ).toISOString()
+  let kks = Array()
+  let masks = Array()
+  for (let element of sensorsAndTemplate) {
+    if (
+      await new Promise((resolve) => {
+        socket.emit('get_kks_tag_exist', element, () => {
+          resolve()
         })
-      )
-        kks.push(element)
-      else masks.push(element)
-    }
+      })
+    )
+      kks.push(element)
+    else masks.push(element)
+  }
 
-    let result = null
-    await new Promise((resolve) => {
-      socket.emit(
-        'get_signals_data',
-        types,
-        selectionTag,
-        masks,
-        kks,
-        qualities,
-        formatDate,
-        formatDateDeepOfSearch,
-        (res) => {
-          result = res
-          resolve(res)
-        }
-      )
-    })
-    if (typeof result === 'string') {
-      dataTableRequested.value = false
-      alert(result)
-    }
-    if (Array.isArray(result)) {
-      dataTable.value = result
-      dataTableRequested.value = true
-    }
+  let result = null
+  await new Promise((resolve) => {
+    socket.emit(
+      'get_signals_data',
+      types,
+      selectionTag,
+      masks,
+      kks,
+      qualities,
+      formatDate,
+      lastValueChecked,
+      intervalOrDateChecked,
+      intervalDeepOfSearch,
+      intervalDeepOfSearchRadio,
+      formatDateDeepOfSearch,
+      (res) => {
+        result = res
+        resolve(res)
+      }
+    )
+  })
+  if (typeof result === 'string') {
+    dataTableRequested.value = false
+    alert(result)
+  }
+  if (Array.isArray(result)) {
+    dataTable.value = result
+    dataTableRequested.value = true
+  }
 }
 
 /***
@@ -301,34 +314,34 @@ export async function getGrid(
   dataTableRequested,
   dataTableStatus
 ) {
-    let formatDateBegin = new Date(dateBegin.toString().split('GMT')[0] + ' UTC').toISOString()
-    let formatDateEnd = new Date(dateEnd.toString().split('GMT')[0] + ' UTC').toISOString()
+  let formatDateBegin = new Date(dateBegin.toString().split('GMT')[0] + ' UTC').toISOString()
+  let formatDateEnd = new Date(dateEnd.toString().split('GMT')[0] + ' UTC').toISOString()
 
-    let result = Array()
-    await new Promise((resolve) => {
-      socket.emit(
-        'get_grid_data',
-        chosenSensors,
-        formatDateBegin,
-        formatDateEnd,
-        interval,
-        dimension,
-        (data, status) => {
-          result[0] = data
-          result[1] = status
-          resolve([data, status])
-        }
-      )
-    })
-    if (typeof result === 'string') {
-      dataTableRequested.value = false
-      alert(result)
-    }
-    if (Array.isArray(result)) {
-      dataTable.value = result[0]
-      dataTableStatus.value = result[1]
-      dataTableRequested.value = true
-    }
+  let result = Array()
+  await new Promise((resolve) => {
+    socket.emit(
+      'get_grid_data',
+      chosenSensors,
+      formatDateBegin,
+      formatDateEnd,
+      interval,
+      dimension,
+      (data, status) => {
+        result[0] = data
+        result[1] = status
+        resolve([data, status])
+      }
+    )
+  })
+  if (typeof result === 'string') {
+    dataTableRequested.value = false
+    alert(result)
+  }
+  if (Array.isArray(result)) {
+    dataTable.value = result[0]
+    dataTableStatus.value = result[1]
+    dataTableRequested.value = true
+  }
 }
 
 /***
@@ -351,29 +364,29 @@ export async function getBounceSignals(
   dataTable,
   dataTableRequested
 ) {
-    let formatDate = new Date(date.toString().split('GMT')[0] + ' UTC').toISOString()
+  let formatDate = new Date(date.toString().split('GMT')[0] + ' UTC').toISOString()
 
-    let result = null
-    await new Promise((resolve) => {
-      socket.emit(
-        'get_bounce_signals_data',
-        templateSignal,
-        formatDate,
-        interval,
-        dimension,
-        showSensors,
-        (res) => {
-          result = res
-          resolve(res)
-        }
-      )
-    })
-    if (typeof result === 'string') {
-      dataTableRequested.value = false
-      alert(result)
-    }
-    if (Array.isArray(result)) {
-      dataTable.value = result
-      dataTableRequested.value = true
-    }
+  let result = null
+  await new Promise((resolve) => {
+    socket.emit(
+      'get_bounce_signals_data',
+      templateSignal,
+      formatDate,
+      interval,
+      dimension,
+      showSensors,
+      (res) => {
+        result = res
+        resolve(res)
+      }
+    )
+  })
+  if (typeof result === 'string') {
+    dataTableRequested.value = false
+    alert(result)
+  }
+  if (Array.isArray(result)) {
+    dataTable.value = result
+    dataTableRequested.value = true
+  }
 }

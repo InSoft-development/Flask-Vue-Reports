@@ -8,11 +8,11 @@ const mutex = new Mutex()
  * @returns {Promise<void>}
  */
 export async function runUpdate() {
-    await new Promise(async (resolve) => {
-      await socket.emit('update_kks_all', () => {
-        resolve()
-      })
+  await new Promise(async (resolve) => {
+    await socket.emit('update_kks_all', () => {
+      resolve()
     })
+  })
 }
 
 /***

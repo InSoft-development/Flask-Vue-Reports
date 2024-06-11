@@ -106,6 +106,11 @@ export default {
       defaultChosenQuality = val
     }
 
+    const defaultLastValueChecked = ref(false)
+
+    const defaultIntervalDeepOfSearch = ref(0)
+    const defaultDimensionDeepOfSearch = ref('')
+
     const defaultDateDeepOfSearch = ref(new Date())
     const defaultMaxDateTime = ref(new Date())
 
@@ -131,6 +136,9 @@ export default {
           .map((item) => item.trim())
           .filter((item) => item.length),
         quality: defaultChosenQuality,
+        lastValueChecked: defaultLastValueChecked.value,
+        intervalDeepOfSearch: defaultIntervalDeepOfSearch.value,
+        dimensionDeepOfSearch: defaultDimensionDeepOfSearch.value,
         dateDeepOfSearch: defaultDateDeepOfSearch.value,
         interval: defaultInterval.value,
         dimension: defaultIntervalRadio.value,
@@ -164,6 +172,11 @@ export default {
       defaultQuality.value = applicationStore.defaultFields.quality
       defaultChosenQuality = applicationStore.defaultFields.quality
 
+      defaultLastValueChecked.value = applicationStore.defaultFields.lastValueChecked
+
+      defaultIntervalDeepOfSearch.value = applicationStore.defaultFields.intervalDeepOfSearch
+      defaultDimensionDeepOfSearch.value = applicationStore.defaultFields.dimensionDeepOfSearch
+
       defaultDateDeepOfSearch.value = applicationStore.defaultFields.dateDeepOfSearch
 
       defaultInterval.value = applicationStore.defaultFields.interval
@@ -185,6 +198,11 @@ export default {
 
       defaultQuality.value = applicationStore.defaultFields.quality
       defaultChosenQuality = applicationStore.defaultFields.quality
+
+      defaultLastValueChecked.value = applicationStore.defaultFields.lastValueChecked
+
+      defaultIntervalDeepOfSearch.value = applicationStore.defaultFields.intervalDeepOfSearch
+      defaultDimensionDeepOfSearch.value = applicationStore.defaultFields.dimensionDeepOfSearch
 
       defaultDateDeepOfSearch.value = applicationStore.defaultFields.dateDeepOfSearch
 
@@ -266,6 +284,9 @@ export default {
       defaultQuality,
       defaultChosenQuality,
       onDefaultMultiselectQualitiesChange,
+      defaultLastValueChecked,
+      defaultIntervalDeepOfSearch,
+      defaultDimensionDeepOfSearch,
       defaultDateDeepOfSearch,
       defaultMaxDateTime,
       onDefaultDateDeepOfSearchClick,
@@ -450,7 +471,7 @@ export default {
           </div>
           <div class="row">
             <div class="col">
-              <h4>Параметры отчетов срезов</h4>
+              <h4>Параметры отчетов</h4>
             </div>
           </div>
           <div class="row">
@@ -472,40 +493,102 @@ export default {
               ></Multiselect>
             </div>
             <div class="col text-end">
-              <label for="calendarDateDeepOfSearchSignals"
-                >Глубина поиска в архивах по умолчанию</label
-              >
-              <Calendar
-                id="calendarDateDeepOfSearchSignals"
-                v-model="defaultDateDeepOfSearch"
-                :maxDate="defaultMaxDateTime"
-                show-time
-                hour-format="24"
-                show-seconds="true"
-                placeholder="ДД/ММ/ГГ ЧЧ:ММ:СС"
-                :manualInput="true"
-                date-format="dd/mm/yy"
-                show-icon
-                show-button-bar
-                @click="onDefaultDateDeepOfSearchClick"
-                :showOnFocus="false"
-                @todayClick="onDefaultDateDeepOfSearchTodayClick"
-                :disabled="statusUpdateButtonActive"
-              ></Calendar>
+              <div class="row">
+                <div class="col-12">
+                  <label for="intervalDeepOfSearch">Глубина поиска в архивах по умолчанию</label>
+                  <InputNumber
+                    v-model="defaultIntervalDeepOfSearch"
+                    id="intervalDeepOfSearch"
+                    input-id="intervalDeepOfSearch"
+                    :useGrouping="false"
+                    mode="decimal"
+                    show-buttons
+                    :min="1"
+                    :step="1"
+                    :allow-empty="false"
+                    :disabled="statusUpdateButtonActive"
+                  >
+                  </InputNumber>
+                </div>
+                <div class="col-12">
+                  <RadioButton
+                    v-model="defaultDimensionDeepOfSearch"
+                    id="dayDefaultDeepOfSearch"
+                    inputId="dayDefaultDeepOfSearch"
+                    name="day"
+                    value="day"
+                    :disabled="statusUpdateButtonActive"
+                  />
+                  <label for="dayDefaultDeepOfSearch">&nbsp;День&nbsp;</label>
+                  <RadioButton
+                    v-model="defaultDimensionDeepOfSearch"
+                    id="hourDefaultDeepOfSearch"
+                    inputId="hourDefaultDeepOfSearch"
+                    name="hour"
+                    value="hour"
+                    :disabled="statusUpdateButtonActive"
+                  />
+                  <label for="hourDefaultDeepOfSearch">&nbsp;Час&nbsp;</label>
+                  <RadioButton
+                    v-model="defaultDimensionDeepOfSearch"
+                    id="minuteDefaultDeepOfSearch"
+                    inputId="minuteDefaultDeepOfSearch"
+                    name="minute"
+                    value="minute"
+                    :disabled="statusUpdateButtonActive"
+                  />
+                  <label for="minuteDefaultDeepOfSearch">&nbsp;Минута&nbsp;</label>
+                  <RadioButton
+                    v-model="defaultDimensionDeepOfSearch"
+                    id="secondDefaultDeepOfSearch"
+                    inputId="secondDefaultDeepOfSearch"
+                    name="second"
+                    value="second"
+                    :disabled="statusUpdateButtonActive"
+                  />
+                  <label for="secondDefaultDeepOfSearch">&nbsp;Секунда</label>
+                </div>
+                <div class="col-12">
+                  <label for="calendarDateDeepOfSearchSignals"
+                    >Дата глубины поиска в архивах по умолчанию</label
+                  >
+                  <Calendar
+                    id="calendarDateDeepOfSearchSignals"
+                    v-model="defaultDateDeepOfSearch"
+                    :maxDate="defaultMaxDateTime"
+                    show-time
+                    hour-format="24"
+                    show-seconds="true"
+                    placeholder="ДД/ММ/ГГ ЧЧ:ММ:СС"
+                    :manualInput="true"
+                    date-format="dd/mm/yy"
+                    show-icon
+                    show-button-bar
+                    @click="onDefaultDateDeepOfSearchClick"
+                    :showOnFocus="false"
+                    @todayClick="onDefaultDateDeepOfSearchTodayClick"
+                    :disabled="statusUpdateButtonActive"
+                  ></Calendar>
+                </div>
+                <div class="col-12">
+                  <Checkbox
+                    id="lastValueChecked"
+                    v-model="defaultLastValueChecked"
+                    :binary="true"
+                    :disabled="statusUpdateButtonActive"
+                  ></Checkbox>
+                  <label for="lastValueChecked">Искать последние по времени значения</label>
+                </div>
+              </div>
             </div>
           </div>
           <div class="row">
             <div class="col">
-              <h4>Параметры отчетов сетки и дребезга</h4>
-            </div>
-          </div>
-          <div class="row">
-            <div class="col">
-              <label for="intervalGrid">Интервал по умолчанию</label>
+              <label for="intervalDefaultGrid">Интервал по умолчанию</label>
               <InputNumber
                 v-model="defaultInterval"
-                id="intervalGrid"
-                input-id="intervalGrid"
+                id="intervalDefaultGrid"
+                input-id="intervalDefaultGrid"
                 :useGrouping="false"
                 mode="decimal"
                 show-buttons

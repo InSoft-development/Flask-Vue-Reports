@@ -36,7 +36,6 @@ export default {
       typesOfSensorsDataValue.value = applicationStore.defaultFields.typesOfSensors
       typesOfSensorsDataOptions.value[0].options = applicationStore.defaultFields.typesOfSensors
       chosenTypesOfSensorsData = applicationStore.defaultFields.typesOfSensors
-
       selectionTagRadio.value = applicationStore.defaultFields.selectionTag
 
       templates.templatesArray = []
@@ -55,7 +54,11 @@ export default {
       quality.value = applicationStore.defaultFields.quality
       chosenQuality = applicationStore.defaultFields.quality
 
+      intervalDeepOfSearch.value = applicationStore.defaultFields.intervalDeepOfSearch
+      intervalDeepOfSearchRadio.value = applicationStore.defaultFields.dimensionDeepOfSearch
+
       dateDeepOfSearch.value = applicationStore.defaultFields.dateDeepOfSearch
+      lastValueChecked.value = applicationStore.defaultFields.lastValueChecked
     }
 
     watch(
@@ -74,7 +77,6 @@ export default {
       }
     ])
     let chosenTypesOfSensorsData = applicationStore.defaultFields.typesOfSensors
-
     const selectionTagRadio = ref(applicationStore.defaultFields.selectionTag)
 
     const templates = reactive({
@@ -130,6 +132,13 @@ export default {
     let chosenQuality = applicationStore.defaultFields.quality
 
     const dateTime = ref(new Date())
+
+    const intervalDeepOfSearch = ref(applicationStore.defaultFields.intervalDeepOfSearch)
+    const intervalDeepOfSearchRadio = ref(applicationStore.defaultFields.dimensionDeepOfSearch)
+
+    const intervalOrDateChecked = ref(false)
+
+    const lastValueChecked = ref(applicationStore.defaultFields.lastValueChecked)
     const dateDeepOfSearch = ref(applicationStore.defaultFields.dateDeepOfSearch)
     const maxDateTime = ref(new Date())
     const dateTimeBeginReport = ref()
@@ -234,7 +243,8 @@ export default {
         emptyTemplateFlag ||
         !chosenQuality.length ||
         !dateTime.value ||
-        !dateDeepOfSearch.value
+        !intervalDeepOfSearch.value ||
+        (!dateDeepOfSearch.value && intervalOrDateChecked.value)
       ) {
         alert('Не заполнены параметры запроса!')
         return
@@ -385,6 +395,10 @@ export default {
         chosenSensorsAndTemplate,
         chosenQuality,
         dateTime.value,
+        lastValueChecked.value,
+        intervalOrDateChecked.value,
+        intervalDeepOfSearch.value,
+        intervalDeepOfSearchRadio.value,
         dateDeepOfSearch.value,
         dataTable,
         dataTableRequested
@@ -415,6 +429,10 @@ export default {
       quality,
       chosenQuality,
       onMultiselectQualitiesChange,
+      lastValueChecked,
+      intervalDeepOfSearch,
+      intervalDeepOfSearchRadio,
+      intervalOrDateChecked,
       dateTime,
       maxDateTime,
       dateDeepOfSearch,
@@ -537,7 +555,82 @@ export default {
       </div>
       <div class="row">
         <div class="col">
-          <label for="calendarDateDeepOfSearchSignalsReport">Глубина поиска в архивах</label>
+          <label for="intervalSignalReport">Глубина поиска в архивах</label>
+        </div>
+      </div>
+      <div class="row align-items-center">
+        <div class="col" style="padding-bottom: 20px">
+          <InputNumber
+            v-model="intervalDeepOfSearch"
+            id="intervalDeepOfSearchSignalReport"
+            input-id="intervalDeepOfSearch"
+            :useGrouping="false"
+            mode="decimal"
+            show-buttons
+            :min="1"
+            :step="1"
+            :allow-empty="false"
+            :disabled="progressBarSignalsActive || intervalOrDateChecked"
+          >
+          </InputNumber>
+        </div>
+        <div class="col" style="padding-bottom: 20px">
+          <RadioButton
+            v-model="intervalDeepOfSearchRadio"
+            inputId="day"
+            name="day"
+            value="day"
+            :disabled="progressBarSignalsActive || intervalOrDateChecked"
+          />
+          <label for="day">&nbsp;&nbsp;День</label>
+        </div>
+        <div class="col" style="padding-bottom: 20px">
+          <RadioButton
+            v-model="intervalDeepOfSearchRadio"
+            inputId="hour"
+            name="hour"
+            value="hour"
+            :disabled="progressBarSignalsActive || intervalOrDateChecked"
+          />
+          <label for="hour">&nbsp;&nbsp;Час</label>
+        </div>
+        <div class="col" style="padding-bottom: 20px">
+          <RadioButton
+            v-model="intervalDeepOfSearchRadio"
+            inputId="minute"
+            name="minute"
+            value="minute"
+            :disabled="progressBarSignalsActive || intervalOrDateChecked"
+          />
+          <label for="minute">&nbsp;&nbsp;Минута</label>
+        </div>
+        <div class="col" style="padding-bottom: 20px">
+          <RadioButton
+            v-model="intervalDeepOfSearchRadio"
+            inputId="second"
+            name="second"
+            value="second"
+            :disabled="progressBarSignalsActive || intervalOrDateChecked"
+          />
+          <label for="second">&nbsp;&nbsp;Секунда</label>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <Checkbox
+            id="intervalOrDateCheckedSignalReport"
+            v-model="intervalOrDateChecked"
+            :binary="true"
+            :disabled="progressBarSignalsActive"
+          ></Checkbox>
+          <label for="intervalOrDateCheckedSignalReport"
+            >Задать глубину поиска в архивах в виде даты</label
+          >
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <label for="calendarDateDeepOfSearchSignalsReport">Дата глубины поиска в архивах</label>
         </div>
       </div>
       <div class="row">
@@ -555,7 +648,7 @@ export default {
             show-icon
             show-button-bar
             @click="onDateDeepOfSearchClick"
-            :disabled="progressBarSignalsActive"
+            :disabled="progressBarSignalsActive || !intervalOrDateChecked"
             :showOnFocus="false"
             @todayClick="onDateDeepOfSearchTodayClick"
           ></Calendar>
@@ -568,21 +661,34 @@ export default {
       </div>
       <div class="row">
         <div class="col">
-          <Calendar
-            id="calendarDateSignalsReport"
-            v-model="dateTime"
-            show-time
-            hour-format="24"
-            :show-seconds="true"
-            placeholder="ДД/ММ/ГГ ЧЧ:ММ:СС"
-            :manualInput="true"
-            date-format="dd/mm/yy"
-            show-icon
-            show-button-bar
-            :disabled="progressBarSignalsActive"
-            :showOnFocus="false"
-            @todayClick="onDateTodayClick"
-          ></Calendar>
+          <div class="row">
+            <div class="col-12">
+              <Calendar
+                id="calendarDateSignalsReport"
+                v-model="dateTime"
+                show-time
+                hour-format="24"
+                :show-seconds="true"
+                placeholder="ДД/ММ/ГГ ЧЧ:ММ:СС"
+                :manualInput="true"
+                date-format="dd/mm/yy"
+                show-icon
+                show-button-bar
+                :disabled="progressBarSignalsActive"
+                :showOnFocus="false"
+                @todayClick="onDateTodayClick"
+              ></Calendar>
+            </div>
+            <div class="col-12">
+              <Checkbox
+                id="lastValueCheckedSignalReport"
+                v-model="lastValueChecked"
+                :binary="true"
+                :disabled="progressBarSignalsActive"
+              ></Checkbox>
+              <label for="lastValueCheckedSignalReport">Искать последние по времени значения</label>
+            </div>
+          </div>
         </div>
         <div class="col">
           <Button @click="onRequestButtonClick" :disabled="isLoadingSensorsAndTemplate"

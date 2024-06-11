@@ -454,7 +454,8 @@ def update_cancel():
 
 
 @socketio.on("get_signals_data")
-def get_signals_data(types_list, selection_tag, mask_list, kks_list, quality, date, date_deep_search):
+def get_signals_data(types_list, selection_tag, mask_list, kks_list, quality, date,
+                     last_value_checked, interval_or_date_checked, interval, dimension, date_deep_search):
     """
     Функция запуска гринлета выполнения запроса по срезам тегов
     :param types_list: массив выбранных пользователем типов данных
@@ -463,12 +464,18 @@ def get_signals_data(types_list, selection_tag, mask_list, kks_list, quality, da
     :param kks_list: массив kks напрямую, указанные пользователем
     :param quality: массив кодов качества, указанные пользователем
     :param date: дата, указанная пользователем в запросе
+    :param last_value_checked: флаг выдачи в таблицах срезов последних по времени значений
+    :param interval_or_date_checked: флаг формата задачи даты
+    :param interval: интервал
+    :param dimension: размерность интервала [день, час, минута, секунда]
     :param date_deep_search: дата глубины поиска данных в архивах
     :return: json объект для заполнения таблицы срезов тегов
     """
-    logger.info(f"get_signals_data({types_list}, {selection_tag}, {mask_list}, {kks_list}, {quality}, {date}, {date_deep_search})")
+    logger.info(f"get_signals_data({types_list}, {selection_tag}, {mask_list}, {kks_list}, {quality}, {date},"
+                f"{last_value_checked}, {interval_or_date_checked}, {interval}, {dimension}, {date_deep_search})")
 
-    def get_signals_data_spawn(types_list, selection_tag, mask_list, kks_list, quality, date, date_deep_search):
+    def get_signals_data_spawn(types_list, selection_tag, mask_list, kks_list, quality, date,
+                               last_value_checked, interval_or_date_checked, interval, dimension, date_deep_search):
         """
         Функция запуска выполнения запроса по срезам тегов
         :param types_list: массив выбранных пользователем типов данных
@@ -477,10 +484,15 @@ def get_signals_data(types_list, selection_tag, mask_list, kks_list, quality, da
         :param kks_list: массив kks напрямую, указанные пользователем
         :param quality: массив кодов качества, указанные пользователем
         :param date: дата, указанная пользователем в запросе
+        :param last_value_checked: флаг выдачи в таблицах срезов последних по времени значений
+        :param interval_or_date_checked: флаг формата задачи даты
+        :param interval: интервал
+        :param dimension: размерность интервала [день, час, минута, секунда]
         :param date_deep_search: дата глубины поиска данных в архивах
         :return: json объект для заполнения таблицы срезов тегов
         """
-        logger.info(f"get_signals_data_spawn({types_list}, {selection_tag}, {mask_list}, {kks_list}, {quality}, {date}, {date_deep_search})")
+        logger.info(f"get_signals_data_spawn({types_list}, {selection_tag}, {mask_list}, {kks_list}, {quality}, {date},"
+                    f"{last_value_checked}, {interval_or_date_checked}, {interval}, {dimension}, {date_deep_search})")
 
         logger.info(sid)
         global sid_proc
@@ -563,7 +575,12 @@ def get_signals_data(types_list, selection_tag, mask_list, kks_list, quality, da
                               to=sid)
 
                 # Получаем предельное время в часах для поиска в глубину в архивах
-                deep_search_in_hour = (parse(date) - parse(date_deep_search)).total_seconds() / 3600
+                if interval_or_date_checked:
+                    deep_search_in_hour = (parse(date) - parse(date_deep_search)).total_seconds() / 3600
+                else:
+                    delta_interval = interval * constants.DELTA_INTERVAL_IN_SECONDS[dimension]
+                    calculated_date_deep_search = (parse(date) - datetime.timedelta(seconds=delta_interval)).strftime("%Y-%m-%dT%H:%M:%SZ")
+                    deep_search_in_hour = (parse(date) - parse(calculated_date_deep_search)).total_seconds() / 3600
 
                 delta = 2  # Строим запрос на 2 секунды раньше
                 delta_prev = 0  # Формирование окна просмотра архива посредстовом сохранения предыдущего datetime
@@ -668,6 +685,13 @@ def get_signals_data(types_list, selection_tag, mask_list, kks_list, quality, da
                   'Качество': df_sqlite['status'],
                   'Код качества': list(map(lambda x: constants.QUALITY_DICT[x], df_sqlite['status'].to_list()))})
         df_report.fillna("NaN", inplace=True)
+
+        # Отбираем последние по времени значения
+        if last_value_checked:
+            grouped = df_report.groupby(by='Код сигнала (KKS)')
+            df_report = df_report.loc[grouped['Дата и время измерения'].idxmax()]
+            logger.info(df_report)
+
         df_report.to_csv(constants.CSV_SIGNALS, index=False, encoding='utf-8')
         logger.info("Датафрейм сформирован")
         shutil.copy(constants.CSV_SIGNALS, f'{constants.WEB_DIR}signals_slice.csv')
@@ -697,7 +721,8 @@ def get_signals_data(types_list, selection_tag, mask_list, kks_list, quality, da
     if any(started_greenlet):
         logger.warning(f"signals_greenlet is running")
         return f"Запрос уже выполняется для другого клиента. Попробуйте выполнить запрос позже"
-    signals_greenlet = spawn(get_signals_data_spawn, types_list, selection_tag, mask_list, kks_list, quality, date, date_deep_search)
+    signals_greenlet = spawn(get_signals_data_spawn, types_list, selection_tag, mask_list, kks_list, quality, date,
+                             last_value_checked, interval_or_date_checked, interval, dimension, date_deep_search)
     gevent.joinall([signals_greenlet])
     sid_proc = None
     return signals_greenlet.value
