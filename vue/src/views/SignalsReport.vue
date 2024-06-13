@@ -112,6 +112,11 @@ export default {
       templates.templatesArray = JSON.parse(JSON.stringify(tempTemplate))
     }
 
+    const searchPressed = () => {
+      disabledSensorsAndTemplate.value = !disabledSensorsAndTemplate.value
+      isLoadingSensorsAndTemplate.value = !isLoadingSensorsAndTemplate.value
+    }
+
     const sensorsAndTemplateValue = ref(applicationStore.defaultFields.sensorsAndTemplateValue)
     const sensorsAndTemplateOptions = ref([
       {
@@ -420,6 +425,7 @@ export default {
       changeTemplates,
       addClicked,
       removeClicked,
+      searchPressed,
       sensorsAndTemplateValue,
       sensorsAndTemplateOptions,
       chosenSensorsAndTemplate,
@@ -472,7 +478,7 @@ export default {
     <h1 align="center">Срезы сигналов</h1>
     <div class="container">
       <div class="row">
-        <div class="col" style="padding-bottom: 20px">
+        <div class="col components-margin-bottom">
           <label for="typesOfSensorsDataSignalsReport">Выберите тип данных тегов</label>
           <Multiselect
             id="typesOfSensorsDataSignalsReport"
@@ -491,8 +497,8 @@ export default {
         </div>
       </div>
       <div class="row align-items-center">
-        <div class="col-3" style="padding-bottom: 20px">Применять фильтр как:</div>
-        <div class="col-9" style="padding-bottom: 20px">
+        <div class="col-3 components-margin-bottom">Применять фильтр как:</div>
+        <div class="col-9 components-margin-bottom">
           <RadioButton
             v-model="selectionTagRadio"
             inputId="sequential"
@@ -504,8 +510,8 @@ export default {
         </div>
       </div>
       <div class="row align-items-center">
-        <div class="col-3" style="padding-bottom: 20px"></div>
-        <div class="col-9" style="padding-bottom: 20px">
+        <div class="col-3 components-margin-bottom"></div>
+        <div class="col-9 components-margin-bottom">
           <RadioButton
             v-model="selectionTagRadio"
             inputId="union"
@@ -518,10 +524,9 @@ export default {
       </div>
       <hr />
       <div
-        class="row align-items-center"
+        class="row align-items-center components-margin-bottom"
         v-for="template in templatesArray"
         :key="template"
-        style="margin-bottom: 30px"
       >
         <UTemplate
           :position="template.id"
@@ -532,11 +537,12 @@ export default {
           @addUTemplate="addClicked"
           @removeUTemplate="removeClicked"
           @changeTemplate="changeTemplates"
+          @searchPressed="searchPressed"
         ></UTemplate>
       </div>
       <hr />
       <div class="row">
-        <div class="col" style="padding-bottom: 20px">
+        <div class="col components-margin-bottom">
           <label for="qualitySignalsReport">Код качества сигнала</label>
           <Multiselect
             id="qualitySignalsReport"
@@ -548,6 +554,7 @@ export default {
             :options="qualitiesName"
             placeholder="Выберите код качества сигнала"
             :limit="-1"
+            noResultsText="Больше кодов качеств не найдено"
             @change="onMultiselectQualitiesChange"
             :disabled="progressBarSignalsActive"
           ></Multiselect>
@@ -559,7 +566,7 @@ export default {
         </div>
       </div>
       <div class="row align-items-center">
-        <div class="col" style="padding-bottom: 20px">
+        <div class="col components-margin-bottom">
           <InputNumber
             v-model="intervalDeepOfSearch"
             id="intervalDeepOfSearchSignalReport"
@@ -574,7 +581,7 @@ export default {
           >
           </InputNumber>
         </div>
-        <div class="col" style="padding-bottom: 20px">
+        <div class="col components-margin-bottom">
           <RadioButton
             v-model="intervalDeepOfSearchRadio"
             inputId="day"
@@ -584,7 +591,7 @@ export default {
           />
           <label for="day">&nbsp;&nbsp;День</label>
         </div>
-        <div class="col" style="padding-bottom: 20px">
+        <div class="col components-margin-bottom">
           <RadioButton
             v-model="intervalDeepOfSearchRadio"
             inputId="hour"
@@ -594,7 +601,7 @@ export default {
           />
           <label for="hour">&nbsp;&nbsp;Час</label>
         </div>
-        <div class="col" style="padding-bottom: 20px">
+        <div class="col components-margin-bottom">
           <RadioButton
             v-model="intervalDeepOfSearchRadio"
             inputId="minute"
@@ -604,7 +611,7 @@ export default {
           />
           <label for="minute">&nbsp;&nbsp;Минута</label>
         </div>
-        <div class="col" style="padding-bottom: 20px">
+        <div class="col components-margin-bottom">
           <RadioButton
             v-model="intervalDeepOfSearchRadio"
             inputId="second"
@@ -859,4 +866,9 @@ export default {
   </div>
 </template>
 
+<style>
+  .components-margin-bottom{
+    margin-bottom: 5px;
+  }
+</style>
 <!--<style src="@vueform/multiselect/themes/default.css"></style>-->

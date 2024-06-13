@@ -341,7 +341,7 @@ export default {
               <h4>Изменить параметры конфигурации</h4>
             </div>
           </div>
-          <div class="margin-label" style="margin-bottom: 20px"></div>
+          <div style="margin-bottom: 20px"></div>
           <div class="row">
             <div class="col">
               <FloatLabel>

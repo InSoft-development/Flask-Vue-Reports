@@ -12,24 +12,23 @@ export default {
     countOfTemplates: Number,
     types: Array()
   },
-  emits: ['addUTemplate', 'removeUTemplate', 'changeTemplate'],
+  emits: ['addUTemplate', 'removeUTemplate', 'changeTemplate', 'searchPressed'],
   setup(props, context) {
-    // const currentPosition = toRef(props, 'position')
-    const currentPosition = ref(props.position)
+    const currentPosition = toRef(props, 'position')
+    // const currentPosition = ref(props.position)
 
     // const templateText = toRef(props, 'template')
-    // const currentFlag = toRef(props, 'disabledFlag')
+    const currentFlag = toRef(props, 'disabledFlag')
     const templateText = ref(props.template)
-    const currentFlag = ref(props.disabledFlag)
+    // const currentFlag = ref(props.disabledFlag)
 
-    // const countOfTemplatesLength = toRef(props, 'countOfTemplates')
-    const countOfTemplatesLength = ref(props.countOfTemplates)
+    const countOfTemplatesLength = toRef(props, 'countOfTemplates')
+    // const countOfTemplatesLength = ref(props.countOfTemplates)
 
-    // const chosenTypes = toRef(props, 'types')
-    const chosenTypes = ref(props.types)
+    const chosenTypes = toRef(props, 'types')
+    // const chosenTypes = ref(props.types)
 
     const changeTemplateText = () => {
-      console.log(templateText.value)
       context.emit('changeTemplate', currentPosition.value, templateText.value)
     }
 
@@ -46,6 +45,7 @@ export default {
     const countOfTags = ref(0)
 
     const onButtonDialogSearchActive = async () => {
+      context.emit('searchPressed')
       localComponentTagsLoadingFlag.value = true
       await getKKSByTextMasksFromSearch(
         templateText,
@@ -55,6 +55,7 @@ export default {
       )
       localComponentTagsLoadingFlag.value = false
       dialogSearchActive.value = true
+      context.emit('searchPressed')
     }
 
     const localComponentTagsLoadingFlag = ref(false)
@@ -101,6 +102,7 @@ export default {
     {{ currentPosition }}
   </div>
   <div class="col-7">
+    <div class="components-between-hr-margin-bottom"></div>
     <FloatLabel>
       <InputText
         v-model="templateText"
@@ -201,3 +203,9 @@ export default {
     />
   </div>
 </template>
+
+<style>
+  .components-between-hr-margin-bottom{
+    margin-bottom: 10px;
+  }
+</style>

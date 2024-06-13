@@ -109,6 +109,11 @@ export default {
       templates.templatesArray = JSON.parse(JSON.stringify(tempTemplate))
     }
 
+    const searchPressed = () => {
+      disabledSensorsAndTemplate.value = !disabledSensorsAndTemplate.value
+      isLoadingSensorsAndTemplate.value = !isLoadingSensorsAndTemplate.value
+    }
+
     const sensorsAndTemplateValue = ref(applicationStore.defaultFields.sensorsAndTemplateValue)
     const sensorsAndTemplateOptions = ref([
       {
@@ -455,6 +460,7 @@ export default {
       changeTemplates,
       addClicked,
       removeClicked,
+      searchPressed,
       sensorsAndTemplateValue,
       sensorsAndTemplateOptions,
       chosenSensorsAndTemplate,
@@ -505,7 +511,7 @@ export default {
     <h1 align="center">Сетка сигналов</h1>
     <div class="container">
       <div class="row">
-        <div class="col" style="padding-bottom: 20px">
+        <div class="col components-margin-bottom">
           <label for="typesOfSensorsDataGridReport">Выберите тип данных тегов</label>
           <Multiselect
             id="typesOfSensorsDataGridReport"
@@ -524,8 +530,8 @@ export default {
         </div>
       </div>
       <div class="row align-items-center">
-        <div class="col-3" style="padding-bottom: 20px">Применять фильтр как:</div>
-        <div class="col-9" style="padding-bottom: 20px">
+        <div class="col-3 components-margin-bottom">Применять фильтр как:</div>
+        <div class="col-9 components-margin-bottom">
           <RadioButton
             v-model="selectionTagRadio"
             inputId="sequential"
@@ -537,8 +543,8 @@ export default {
         </div>
       </div>
       <div class="row align-items-center">
-        <div class="col-3" style="padding-bottom: 20px"></div>
-        <div class="col-9" style="padding-bottom: 20px">
+        <div class="col-3 components-margin-bottom"></div>
+        <div class="col-9 components-margin-bottom">
           <RadioButton
             v-model="selectionTagRadio"
             inputId="union"
@@ -554,7 +560,6 @@ export default {
         class="row align-items-center"
         v-for="template in templatesArray"
         :key="template"
-        style="margin-bottom: 30px"
       >
         <UTemplate
           :position="template.id"
@@ -565,6 +570,7 @@ export default {
           @addUTemplate="addClicked"
           @removeUTemplate="removeClicked"
           @changeTemplate="changeTemplates"
+          @searchPressed="searchPressed"
         ></UTemplate>
       </div>
       <hr />
@@ -577,7 +583,7 @@ export default {
         </div>
       </div>
       <div class="row">
-        <div class="col" style="padding-bottom: 20px">
+        <div class="col components-margin-bottom">
           <Calendar
             id="calendarDateBeginGridReport"
             v-model="dateTimeBegin"
@@ -595,7 +601,7 @@ export default {
           >
           </Calendar>
         </div>
-        <div class="col" style="padding-bottom: 20px">
+        <div class="col components-margin-bottom">
           <Calendar
             id="calendarDateEndGridReport"
             v-model="dateTimeEnd"
@@ -620,7 +626,7 @@ export default {
         </div>
       </div>
       <div class="row align-items-center">
-        <div class="col" style="padding-bottom: 20px">
+        <div class="col components-margin-bottom">
           <InputNumber
             v-model="interval"
             id="intervalGridReport"
@@ -635,7 +641,7 @@ export default {
           >
           </InputNumber>
         </div>
-        <div class="col" style="padding-bottom: 20px">
+        <div class="col components-margin-bottom">
           <RadioButton
             v-model="intervalRadio"
             inputId="day"
@@ -645,7 +651,7 @@ export default {
           />
           <label for="day">&nbsp;&nbsp;День</label>
         </div>
-        <div class="col" style="padding-bottom: 20px">
+        <div class="col components-margin-bottom">
           <RadioButton
             v-model="intervalRadio"
             inputId="hour"
@@ -655,7 +661,7 @@ export default {
           />
           <label for="hour">&nbsp;&nbsp;Час</label>
         </div>
-        <div class="col" style="padding-bottom: 20px">
+        <div class="col components-margin-bottom">
           <RadioButton
             v-model="intervalRadio"
             inputId="minute"
@@ -665,7 +671,7 @@ export default {
           />
           <label for="minute">&nbsp;&nbsp;Минута</label>
         </div>
-        <div class="col" style="padding-bottom: 20px">
+        <div class="col components-margin-bottom">
           <RadioButton
             v-model="intervalRadio"
             inputId="second"
@@ -677,7 +683,7 @@ export default {
         </div>
       </div>
       <div class="row">
-        <div class="col" style="padding-bottom: 20px">
+        <div class="col components-margin-bottom">
           <Button @click="onRequestButtonClick" :disabled="isLoadingSensorsAndTemplate"
             >Запрос</Button
           >
@@ -752,8 +758,8 @@ export default {
           >
         </div>
       </div>
-      <div class="row" style="padding-bottom: 20px">
-        <div style="padding-bottom: 20px">
+      <div class="row">
+        <div class="components-margin-bottom">
           <div class="card" v-if="dataTableRequested" id="code-table">
             <DataTable
               :value="dataCodeTable"
@@ -831,4 +837,8 @@ export default {
   </div>
 </template>
 
-<style></style>
+<style>
+  .components-margin-bottom{
+    margin-bottom: 5px;
+  }
+</style>
