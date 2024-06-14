@@ -358,7 +358,7 @@ export default {
       codeScroll = codeScroll.querySelector('.p-virtualscroller.p-virtualscroller-inline')
       let dataScroll = document.getElementById('data-table')
       dataScroll = dataScroll.querySelector('.p-virtualscroller.p-virtualscroller-inline')
-      codeScroll.scrollTop = dataScroll.scrollLeft * 0.25
+      codeScroll.scrollTop = dataScroll.scrollLeft * 0.3235
     }
 
     const synchroScrollByHref = (event) => {
@@ -366,7 +366,7 @@ export default {
       codeScroll = codeScroll.querySelector('.p-virtualscroller.p-virtualscroller-inline')
       let dataScroll = document.getElementById('data-table')
       dataScroll = dataScroll.querySelector('.p-virtualscroller.p-virtualscroller-inline')
-      dataScroll.scrollLeft = codeScroll.scrollTop / 0.25
+      dataScroll.scrollLeft = codeScroll.scrollTop / 0.3235
     }
 
     async function onButtonCancelBigRequestClick() {
@@ -809,8 +809,8 @@ export default {
                 v-bind:frozen="[col.field === 'Метка времени']"
                 v-bind:style="[
                   col.field === 'Метка времени'
-                    ? { 'min-width': '300px' }
-                    : { 'min-width': '200px' }
+                    ? { 'min-width': '250px' }
+                    : { 'min-width': '150px' }
                 ]"
               >
                 <template #body="slotProps">
