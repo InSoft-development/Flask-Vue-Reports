@@ -7,9 +7,10 @@ const mutex = new Mutex()
  * Процедура запуска обновления файла тегов kks_all.csv
  * @returns {Promise<void>}
  */
-export async function runUpdate() {
+export async function runUpdate(mode, rootDirectory, exceptionDirectories, exceptionExpert) {
   await new Promise(async (resolve) => {
-    await socket.emit('update_kks_all', () => {
+    console.log(mode, rootDirectory, exceptionDirectories, exceptionExpert)
+    await socket.emit('update_kks_all', mode, rootDirectory, exceptionDirectories, exceptionExpert, () => {
       resolve()
     })
   })

@@ -71,7 +71,11 @@ export async function getDefaultFields(defaultFields) {
       dateDeepOfSearch: new Date(),
       interval: 10,
       dimension: 'hour',
-      countShowSensors: 10
+      countShowSensors: 10,
+      modeOfFilter: 'historian',
+      rootDirectory: '',
+      exceptionDirectories: '',
+      exceptionExpertTags: false
     })
     alert(result)
   } else {

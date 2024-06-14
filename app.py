@@ -293,17 +293,25 @@ def get_kks(types_list, mask_list, kks_list, selection_tag=None):
 
 
 @socketio.on("update_kks_all")
-def update_kks_all():
+def update_kks_all(mode, root_directory, exception_directories, exception_expert):
     """
     Процедура запуска гринлета обновления файла тегов kks_all.csv
+    :param mode: выбранный режим фильтрации обновления тегов
+    :param root_directory: корневая папка
+    :param exception_directories: список исключений
+    :param exception_expert: флаг, исключения тегов, помеченных экспертом
     """
-    logger.info(f"update_kks_all()")
+    logger.info(f"update_kks_all({mode}, {root_directory}, {exception_directories}, {exception_expert})")
 
-    def update_kks_all_spawn():
+    def update_kks_all_spawn(mode, root_directory, exception_directories, exception_expert):
         """
         Процедура запуска обновления файла тегов kks_all.csv
+        :param mode: выбранный режим фильтрации обновления тегов
+        :param root_directory: корневая папка
+        :param exception_directories: список исключений
+        :param exception_expert: флаг, исключения тегов, помеченных экспертом
         """
-        logger.info(f"update_kks_all_spawn()")
+        logger.info(f"update_kks_all_spawn({mode}, {root_directory}, {exception_directories}, {exception_expert})")
 
         logger.info(sid)
         global sid_proc
@@ -421,7 +429,7 @@ def update_kks_all():
         return
 
     # Запуск процесса обновления тегов через gevent
-    update_greenlet = spawn(update_kks_all_spawn)
+    update_greenlet = spawn(update_kks_all_spawn, mode, root_directory, exception_directories, exception_expert)
     gevent.joinall([update_greenlet])
 
     sid_proc = None

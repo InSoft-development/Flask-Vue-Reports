@@ -51,6 +51,11 @@ export default {
     const ipOPC = ref('')
     const portOPC = ref(0)
 
+    const defaultModeOfFilterRadio = ref('')
+    const defaultRootDirectory = ref('')
+    const defaultExceptionDirectories = ref('')
+    const defaultExceptionExpertTags = ref(false)
+
     const buttonDialogConfiguratorIsDisabled = ref(false)
 
     const statusUpdateTextArea = ref('')
@@ -142,7 +147,11 @@ export default {
         dateDeepOfSearch: defaultDateDeepOfSearch.value,
         interval: defaultInterval.value,
         dimension: defaultIntervalRadio.value,
-        countShowSensors: defaultCountShowSensors.value
+        countShowSensors: defaultCountShowSensors.value,
+        modeOfFilter: defaultModeOfFilterRadio.value,
+        rootDirectory: defaultRootDirectory.value,
+        exceptionDirectories: defaultExceptionDirectories.value,
+        exceptionExpertTags: defaultExceptionExpertTags.value
       }
       applicationStore.setFields(defaultFields)
       alert('Параметры по умолчанию сохранены')
@@ -183,6 +192,11 @@ export default {
       defaultIntervalRadio.value = applicationStore.defaultFields.dimension
 
       defaultCountShowSensors.value = applicationStore.defaultFields.countShowSensors
+
+      defaultModeOfFilterRadio.value = applicationStore.defaultFields.modeOfFilter
+      defaultRootDirectory.value = applicationStore.defaultFields.rootDirectory
+      defaultExceptionDirectories.value = applicationStore.defaultFields.exceptionDirectories
+      defaultExceptionExpertTags.value = applicationStore.defaultFields.exceptionExpertTags
     })
 
     function onButtonDialogConfiguratorActive() {
@@ -210,13 +224,19 @@ export default {
       defaultIntervalRadio.value = applicationStore.defaultFields.dimension
 
       defaultCountShowSensors.value = applicationStore.defaultFields.countShowSensors
+
+      defaultModeOfFilterRadio.value = applicationStore.defaultFields.modeOfFilter
+      defaultRootDirectory.value = applicationStore.defaultFields.rootDirectory
+      defaultExceptionDirectories.value = applicationStore.defaultFields.exceptionDirectories
+      defaultExceptionExpertTags.value = applicationStore.defaultFields.exceptionExpertTags
     }
 
     async function onButtonDialogUpdate() {
       statusUpdateButtonActive.value = true
       statusUpdateTextArea.value = ''
       statusUpdateTextArea.value += 'Запуск обновления тегов...\n'
-      await runUpdate()
+      await runUpdate(defaultModeOfFilterRadio.value, defaultRootDirectory.value,
+              defaultExceptionDirectories.value, defaultExceptionExpertTags.value)
       await getServerConfig(configServer, checkFileActive)
       statusUpdateButtonActive.value = false
       if (!checkFileActive.value) {
@@ -265,6 +285,10 @@ export default {
       configServer,
       ipOPC,
       portOPC,
+      defaultModeOfFilterRadio,
+      defaultRootDirectory,
+      defaultExceptionDirectories,
+      defaultExceptionExpertTags,
       changeConfig,
       buttonDialogConfiguratorIsDisabled,
       statusUpdateTextArea,
@@ -317,7 +341,7 @@ export default {
         :modal="true"
         :draggable="true"
         :maximizable="true"
-        :style="{ width: '60rem', resize: 'both', overflow: 'auto' }"
+        :style="{ width: '80rem', resize: 'both', overflow: 'auto' }"
       >
         <div class="container">
           <div class="row">
@@ -408,6 +432,65 @@ export default {
           <div class="row">
             <div class="col">
               <h4>Отбор тегов</h4>
+            </div>
+          </div>
+          <div class="row align-items-center">
+            <div class="col-5">Режим фильтрации обновления тегов:</div>
+            <div class="col-3">
+              <RadioButton
+                v-model="defaultModeOfFilterRadio"
+                inputId="modeFilterHistorianDefault"
+                name="modeFilterHistorianDefault"
+                value="historian"
+                :disabled="statusUpdateButtonActive"
+              />
+              <label for="modeFilterHistorianDefault">&nbsp;&nbsp;Historian</label>
+            </div>
+            <div class="col-4">
+              <label for="default-root-directory"
+                >Корневая папка</label
+              >
+              <InputText
+                v-model="defaultRootDirectory"
+                type="text"
+                id="default-root-directory"
+                :disabled="statusUpdateButtonActive || (defaultModeOfFilterRadio === 'historian')"
+                style="width: 100%"
+              >
+              </InputText>
+            </div>
+          </div>
+          <div class="row align-items-center">
+            <div class="col-5"></div>
+            <div class="col-3">
+              <RadioButton
+                v-model="defaultModeOfFilterRadio"
+                inputId="modeFilterExceptionDefault"
+                name="modeFilterExceptionDefault"
+                value="modeFilterExceptionDefault"
+                :disabled="statusUpdateButtonActive"
+              />
+              <label for="modeFilterExceptionDefault">&nbsp;&nbsp;Список исключений</label>
+            </div>
+            <div class="col-4">
+              <label for="default-exception-directories"
+                >Список исключений (перечислите через запятую)</label
+              >
+              <InputText
+                v-model="defaultExceptionDirectories"
+                type="text"
+                id="default-exception-directories"
+                :disabled="statusUpdateButtonActive || (defaultModeOfFilterRadio === 'historian')"
+                style="width: 100%"
+              >
+              </InputText>
+              <Checkbox
+                    id="default-exception-expert-tags"
+                    v-model="defaultExceptionExpertTags"
+                    :binary="true"
+                    :disabled="statusUpdateButtonActive || (defaultModeOfFilterRadio === 'historian')"
+                  ></Checkbox>
+                  <label for="default-exception-expert-tags">Исключить теги, помеченные экспертом</label>
             </div>
           </div>
           <div class="row">
