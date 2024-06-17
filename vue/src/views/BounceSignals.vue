@@ -448,7 +448,7 @@ export default {
             value="sequential"
             :disabled="progressBarBounceSignalsActive"
           />
-          <label for="sequential">&nbsp;&nbsp;Последовательные шаблоны</label>
+          <label for="sequential" class="radio-interval-margin">Последовательные шаблоны</label>
         </div>
       </div>
       <div class="row align-items-center">
@@ -461,7 +461,7 @@ export default {
             value="union"
             :disabled="progressBarBounceSignalsActive"
           />
-          <label for="union">&nbsp;&nbsp;Объединение шаблонов</label>
+          <label for="union" class="radio-interval-margin">Объединение шаблонов</label>
         </div>
       </div>
       <hr />
@@ -515,7 +515,7 @@ export default {
             value="day"
             :disabled="progressBarBounceSignalsActive"
           />
-          <label for="day">&nbsp;&nbsp;День</label>
+          <label for="day" class="radio-interval-margin">День</label>
         </div>
         <div class="col-md-auto components-margin-bottom">
           <RadioButton
@@ -525,7 +525,7 @@ export default {
             value="hour"
             :disabled="progressBarBounceSignalsActive"
           />
-          <label for="hour">&nbsp;&nbsp;Час</label>
+          <label for="hour" class="radio-interval-margin">Час</label>
         </div>
         <div class="col-md-auto components-margin-bottom">
           <RadioButton
@@ -535,7 +535,7 @@ export default {
             value="minute"
             :disabled="progressBarBounceSignalsActive"
           />
-          <label for="minute">&nbsp;&nbsp;Минута</label>
+          <label for="minute" class="radio-interval-margin">Минута</label>
         </div>
         <div class="col-md-auto components-margin-bottom">
           <RadioButton
@@ -545,7 +545,7 @@ export default {
             value="second"
             :disabled="progressBarBounceSignalsActive"
           />
-          <label for="second">&nbsp;&nbsp;Секунда</label>
+          <label for="second" class="radio-interval-margin">Секунда</label>
         </div>
         <div class="col-md-auto components-margin-bottom">
           <Checkbox
@@ -555,7 +555,7 @@ export default {
             @change="onChangeCheckbox"
             :disabled="progressBarBounceSignalsActive"
           ></Checkbox>
-          <label for="current-date-checked">Использовать текущее время</label>
+          <label for="current-date-checked" class="checkbox-margin">Использовать текущее время</label>
         </div>
       </div>
       <div class="row">
@@ -720,5 +720,11 @@ export default {
 <style>
   .components-margin-bottom{
     margin-bottom: 5px;
+  }
+  .checkbox-margin{
+    margin-left: 5px;
+  }
+  .radio-interval-margin {
+    margin-left: 5px;
   }
 </style>

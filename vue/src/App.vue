@@ -353,8 +353,6 @@ export default {
             <div class="col">
               Дата последнего обновления файла тегов KKS: <b>{{ lastUpdateFileKKS }}</b>
             </div>
-          </div>
-          <div class="row">
             <div class="col">
               Параметры конфигурации: <b>{{ configServer }}</b>
             </div>
@@ -376,6 +374,7 @@ export default {
                   pattern="(\b25[0-5]|\b2[0-4][0-9]|\b[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}"
                   required
                   :disabled="statusUpdateButtonActive"
+                  style="width: 100%"
                 >
                 </InputText>
                 <label for="ip-opc-server-address">IP адрес сервера OPC UA</label>
@@ -395,13 +394,14 @@ export default {
                   :allow-empty="true"
                   :aria-label="portOPC"
                   :disabled="statusUpdateButtonActive"
+                  style="width: 100%"
                 >
                 </InputNumber>
                 <label for="port-opc-server-address">Порт сервера OPC UA</label>
               </FloatLabel>
             </div>
             <div class="col">
-              <Button @click="changeConfig" :disabled="statusUpdateButtonActive">Сохранить</Button>
+              <Button @click="changeConfig" :disabled="statusUpdateButtonActive" :label="'Сохранить'" style="width: 100%; text-align: center"></Button>
             </div>
           </div>
           <hr />
@@ -413,7 +413,7 @@ export default {
                 rows="3"
                 cols="80"
                 readonly
-                :style="{ resize: 'none', 'overflow-y': scroll }"
+                :style="{ resize: 'none', 'overflow-y': scroll, 'width': '100%' }"
                 >{{ statusUpdateTextArea }}</TextArea
               >
             </div>
@@ -435,7 +435,7 @@ export default {
             </div>
           </div>
           <div class="row align-items-center">
-            <div class="col-5">Режим фильтрации обновления тегов:</div>
+            <div class="col-4">Режим фильтрации обновления тегов:</div>
             <div class="col-3">
               <RadioButton
                 v-model="defaultModeOfFilterRadio"
@@ -444,12 +444,12 @@ export default {
                 value="historian"
                 :disabled="statusUpdateButtonActive"
               />
-              <label for="modeFilterHistorianDefault">&nbsp;&nbsp;Historian</label>
+              <label for="modeFilterHistorianDefault" class="radio-interval-margin">Historian</label>
             </div>
-            <div class="col-4">
+            <div class="col-5">
               <label for="default-root-directory"
                 >Корневая папка</label
-              >
+              ><br>
               <InputText
                 v-model="defaultRootDirectory"
                 type="text"
@@ -461,7 +461,7 @@ export default {
             </div>
           </div>
           <div class="row align-items-center">
-            <div class="col-5"></div>
+            <div class="col-4"></div>
             <div class="col-3">
               <RadioButton
                 v-model="defaultModeOfFilterRadio"
@@ -470,12 +470,12 @@ export default {
                 value="modeFilterExceptionDefault"
                 :disabled="statusUpdateButtonActive"
               />
-              <label for="modeFilterExceptionDefault">&nbsp;&nbsp;Список исключений</label>
+              <label for="modeFilterExceptionDefault" class="radio-interval-margin">Список исключений</label>
             </div>
-            <div class="col-4">
+            <div class="col-5">
               <label for="default-exception-directories"
                 >Список исключений (перечислите через запятую)</label
-              >
+              ><br>
               <InputText
                 v-model="defaultExceptionDirectories"
                 type="text"
@@ -490,7 +490,7 @@ export default {
                     :binary="true"
                     :disabled="statusUpdateButtonActive || (defaultModeOfFilterRadio === 'historian')"
                   ></Checkbox>
-                  <label for="default-exception-expert-tags">Исключить теги, помеченные экспертом</label>
+                  <label for="default-exception-expert-tags" class="checkbox-margin">Исключить теги, помеченные экспертом</label>
             </div>
           </div>
           <div class="row">
@@ -513,10 +513,8 @@ export default {
             </div>
           </div>
           <div class="row">
-            <div class="col">Применять фильтр по умолчанию как:</div>
-          </div>
-          <div class="row">
-            <div class="col">
+            <div class="col-4">Применять фильтр по умолчанию как:</div>
+            <div class="col-4">
               <RadioButton
                 v-model="defaultSelectionTagRadio"
                 id="sequentialDefault"
@@ -525,7 +523,9 @@ export default {
                 value="sequential"
                 :disabled="statusUpdateButtonActive"
               />
-              <label for="sequentialDefault">&nbsp;Последовательные шаблоны&nbsp;</label>
+              <label for="sequentialDefault" class="radio-interval-margin">Последовательные шаблоны</label>
+            </div>
+            <div class="col-4">
               <RadioButton
                 v-model="defaultSelectionTagRadio"
                 id="unionDefault"
@@ -534,7 +534,7 @@ export default {
                 value="union"
                 :disabled="statusUpdateButtonActive"
               />
-              <label for="unionDefault">&nbsp;Объединение шаблонов&nbsp;</label>
+              <label for="unionDefault" class="radio-interval-margin">Объединение шаблонов</label>
             </div>
           </div>
           <div class="row">
@@ -575,10 +575,10 @@ export default {
                 :disabled="statusUpdateButtonActive"
               ></Multiselect>
             </div>
-            <div class="col text-end">
+            <div class="col">
               <div class="row">
-                <div class="col-12">
-                  <label for="intervalDeepOfSearch">Глубина поиска в архивах по умолчанию</label>
+                <div class="col">
+                  <label for="intervalDeepOfSearch">Глубина поиска в архивах по умолчанию</label><br>
                   <InputNumber
                     v-model="defaultIntervalDeepOfSearch"
                     id="intervalDeepOfSearch"
@@ -590,51 +590,14 @@ export default {
                     :step="1"
                     :allow-empty="false"
                     :disabled="statusUpdateButtonActive"
+                    style="width: 100%"
                   >
                   </InputNumber>
                 </div>
-                <div class="col-12">
-                  <RadioButton
-                    v-model="defaultDimensionDeepOfSearch"
-                    id="dayDefaultDeepOfSearch"
-                    inputId="dayDefaultDeepOfSearch"
-                    name="day"
-                    value="day"
-                    :disabled="statusUpdateButtonActive"
-                  />
-                  <label for="dayDefaultDeepOfSearch">&nbsp;День&nbsp;</label>
-                  <RadioButton
-                    v-model="defaultDimensionDeepOfSearch"
-                    id="hourDefaultDeepOfSearch"
-                    inputId="hourDefaultDeepOfSearch"
-                    name="hour"
-                    value="hour"
-                    :disabled="statusUpdateButtonActive"
-                  />
-                  <label for="hourDefaultDeepOfSearch">&nbsp;Час&nbsp;</label>
-                  <RadioButton
-                    v-model="defaultDimensionDeepOfSearch"
-                    id="minuteDefaultDeepOfSearch"
-                    inputId="minuteDefaultDeepOfSearch"
-                    name="minute"
-                    value="minute"
-                    :disabled="statusUpdateButtonActive"
-                  />
-                  <label for="minuteDefaultDeepOfSearch">&nbsp;Минута&nbsp;</label>
-                  <RadioButton
-                    v-model="defaultDimensionDeepOfSearch"
-                    id="secondDefaultDeepOfSearch"
-                    inputId="secondDefaultDeepOfSearch"
-                    name="second"
-                    value="second"
-                    :disabled="statusUpdateButtonActive"
-                  />
-                  <label for="secondDefaultDeepOfSearch">&nbsp;Секунда</label>
-                </div>
-                <div class="col-12">
+                <div class="col">
                   <label for="calendarDateDeepOfSearchSignals"
                     >Дата глубины поиска в архивах по умолчанию</label
-                  >
+                  ><br>
                   <Calendar
                     id="calendarDateDeepOfSearchSignals"
                     v-model="defaultDateDeepOfSearch"
@@ -651,7 +614,46 @@ export default {
                     :showOnFocus="false"
                     @todayClick="onDefaultDateDeepOfSearchTodayClick"
                     :disabled="statusUpdateButtonActive"
+                    style="width: 100%"
                   ></Calendar>
+                </div>
+                <div class="col-12">
+                  <RadioButton
+                    v-model="defaultDimensionDeepOfSearch"
+                    id="dayDefaultDeepOfSearch"
+                    inputId="dayDefaultDeepOfSearch"
+                    name="day"
+                    value="day"
+                    :disabled="statusUpdateButtonActive"
+                  />
+                  <label for="dayDefaultDeepOfSearch" class="radio-interval-margin">День</label>
+                  <RadioButton
+                    v-model="defaultDimensionDeepOfSearch"
+                    id="hourDefaultDeepOfSearch"
+                    inputId="hourDefaultDeepOfSearch"
+                    name="hour"
+                    value="hour"
+                    :disabled="statusUpdateButtonActive"
+                  />
+                  <label for="hourDefaultDeepOfSearch" class="radio-interval-margin">Час</label>
+                  <RadioButton
+                    v-model="defaultDimensionDeepOfSearch"
+                    id="minuteDefaultDeepOfSearch"
+                    inputId="minuteDefaultDeepOfSearch"
+                    name="minute"
+                    value="minute"
+                    :disabled="statusUpdateButtonActive"
+                  />
+                  <label for="minuteDefaultDeepOfSearch" class="radio-interval-margin">Минута</label>
+                  <RadioButton
+                    v-model="defaultDimensionDeepOfSearch"
+                    id="secondDefaultDeepOfSearch"
+                    inputId="secondDefaultDeepOfSearch"
+                    name="second"
+                    value="second"
+                    :disabled="statusUpdateButtonActive"
+                  />
+                  <label for="secondDefaultDeepOfSearch" class="radio-interval-margin">Секунда</label>
                 </div>
                 <div class="col-12">
                   <Checkbox
@@ -660,14 +662,14 @@ export default {
                     :binary="true"
                     :disabled="statusUpdateButtonActive"
                   ></Checkbox>
-                  <label for="lastValueChecked">Искать последние по времени значения</label>
+                  <label for="lastValueChecked" class="checkbox-margin">Искать последние по времени значения</label>
                 </div>
               </div>
             </div>
           </div>
           <div class="row">
             <div class="col">
-              <label for="intervalDefaultGrid">Интервал по умолчанию</label>
+              <label for="intervalDefaultGrid">Интервал по умолчанию: </label><br>
               <InputNumber
                 v-model="defaultInterval"
                 id="intervalDefaultGrid"
@@ -682,8 +684,8 @@ export default {
               >
               </InputNumber>
             </div>
-            <div class="col text-end">
-              <label for="show-default-sensors">Показываемые датчики по умолчанию</label>
+            <div class="col">
+              <label for="show-default-sensors">Показываемые датчики по умолчанию</label><br>
               <InputNumber
                 v-model="defaultCountShowSensors"
                 id="show-default-sensors"
@@ -709,7 +711,7 @@ export default {
                 value="day"
                 :disabled="statusUpdateButtonActive"
               />
-              <label for="dayDefault">&nbsp;День&nbsp;</label>
+              <label for="dayDefault" class="radio-interval-margin">День</label>
               <RadioButton
                 v-model="defaultIntervalRadio"
                 id="hourDefault"
@@ -718,7 +720,7 @@ export default {
                 value="hour"
                 :disabled="statusUpdateButtonActive"
               />
-              <label for="hourDefault">&nbsp;Час&nbsp;</label>
+              <label for="hourDefault" class="radio-interval-margin">Час</label>
               <RadioButton
                 v-model="defaultIntervalRadio"
                 id="minuteDefault"
@@ -727,7 +729,7 @@ export default {
                 value="minute"
                 :disabled="statusUpdateButtonActive"
               />
-              <label for="minuteDefault">&nbsp;Минута&nbsp;</label>
+              <label for="minuteDefault" class="radio-interval-margin">Минута</label>
               <RadioButton
                 v-model="defaultIntervalRadio"
                 id="secondDefault"
@@ -736,7 +738,7 @@ export default {
                 value="second"
                 :disabled="statusUpdateButtonActive"
               />
-              <label for="secondDefault">&nbsp;Секунда</label>
+              <label for="secondDefault" class="radio-interval-margin">Секунда</label>
             </div>
             <div class="col"></div>
           </div>
@@ -793,5 +795,13 @@ export default {
 
 .container {
   max-width: 900px;
+}
+
+.checkbox-margin {
+  margin-left: 5px;
+}
+.radio-interval-margin {
+  margin-left: 10px;
+  margin-right: 10px;
 }
 </style>

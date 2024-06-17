@@ -506,7 +506,7 @@ export default {
             value="sequential"
             :disabled="progressBarSignalsActive"
           />
-          <label for="sequential">&nbsp;&nbsp;Последовательные шаблоны</label>
+          <label for="sequential" class="radio-interval-margin">Последовательные шаблоны</label>
         </div>
       </div>
       <div class="row align-items-center">
@@ -519,7 +519,7 @@ export default {
             value="union"
             :disabled="progressBarSignalsActive"
           />
-          <label for="union">&nbsp;&nbsp;Объединение шаблонов</label>
+          <label for="union" class="radio-interval-margin">Объединение шаблонов</label>
         </div>
       </div>
       <hr />
@@ -589,7 +589,7 @@ export default {
             value="day"
             :disabled="progressBarSignalsActive || intervalOrDateChecked"
           />
-          <label for="day">&nbsp;&nbsp;День</label>
+          <label for="day" class="radio-interval-margin">День</label>
         </div>
         <div class="col components-margin-bottom">
           <RadioButton
@@ -599,7 +599,7 @@ export default {
             value="hour"
             :disabled="progressBarSignalsActive || intervalOrDateChecked"
           />
-          <label for="hour">&nbsp;&nbsp;Час</label>
+          <label for="hour" class="radio-interval-margin">Час</label>
         </div>
         <div class="col components-margin-bottom">
           <RadioButton
@@ -609,7 +609,7 @@ export default {
             value="minute"
             :disabled="progressBarSignalsActive || intervalOrDateChecked"
           />
-          <label for="minute">&nbsp;&nbsp;Минута</label>
+          <label for="minute" class="radio-interval-margin">Минута</label>
         </div>
         <div class="col components-margin-bottom">
           <RadioButton
@@ -619,7 +619,7 @@ export default {
             value="second"
             :disabled="progressBarSignalsActive || intervalOrDateChecked"
           />
-          <label for="second">&nbsp;&nbsp;Секунда</label>
+          <label for="second" class="radio-interval-margin">Секунда</label>
         </div>
       </div>
       <div class="row">
@@ -630,7 +630,7 @@ export default {
             :binary="true"
             :disabled="progressBarSignalsActive"
           ></Checkbox>
-          <label for="intervalOrDateCheckedSignalReport"
+          <label for="intervalOrDateCheckedSignalReport" class="checkbox-margin"
             >Задать глубину поиска в архивах в виде даты</label
           >
         </div>
@@ -693,7 +693,7 @@ export default {
                 :binary="true"
                 :disabled="progressBarSignalsActive"
               ></Checkbox>
-              <label for="lastValueCheckedSignalReport">Искать последние по времени значения</label>
+              <label for="lastValueCheckedSignalReport" class="checkbox-margin">Искать последние по времени значения</label>
             </div>
           </div>
         </div>
@@ -869,6 +869,12 @@ export default {
 <style>
   .components-margin-bottom{
     margin-bottom: 5px;
+  }
+  .checkbox-margin{
+    margin-left: 5px;
+  }
+  .radio-interval-margin {
+    margin-left: 5px;
   }
 </style>
 <!--<style src="@vueform/multiselect/themes/default.css"></style>-->

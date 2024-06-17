@@ -539,7 +539,7 @@ export default {
             value="sequential"
             :disabled="progressBarGridActive"
           />
-          <label for="sequential">&nbsp;&nbsp;Последовательные шаблоны</label>
+          <label for="sequential" class="radio-interval-margin">Последовательные шаблоны</label>
         </div>
       </div>
       <div class="row align-items-center">
@@ -552,7 +552,7 @@ export default {
             value="union"
             :disabled="progressBarGridActive"
           />
-          <label for="union">&nbsp;&nbsp;Объединение шаблонов</label>
+          <label for="union" class="radio-interval-margin">Объединение шаблонов</label>
         </div>
       </div>
       <hr />
@@ -649,7 +649,7 @@ export default {
             value="day"
             :disabled="progressBarGridActive"
           />
-          <label for="day">&nbsp;&nbsp;День</label>
+          <label for="day" class="radio-interval-margin">День</label>
         </div>
         <div class="col components-margin-bottom">
           <RadioButton
@@ -659,7 +659,7 @@ export default {
             value="hour"
             :disabled="progressBarGridActive"
           />
-          <label for="hour">&nbsp;&nbsp;Час</label>
+          <label for="hour" class="radio-interval-margin">Час</label>
         </div>
         <div class="col components-margin-bottom">
           <RadioButton
@@ -669,7 +669,7 @@ export default {
             value="minute"
             :disabled="progressBarGridActive"
           />
-          <label for="minute">&nbsp;&nbsp;Минута</label>
+          <label for="minute" class="radio-interval-margin">Минута</label>
         </div>
         <div class="col components-margin-bottom">
           <RadioButton
@@ -679,7 +679,7 @@ export default {
             value="second"
             :disabled="progressBarGridActive"
           />
-          <label for="second">&nbsp;&nbsp;Секунда</label>
+          <label for="second" class="radio-interval-margin">Секунда</label>
         </div>
       </div>
       <div class="row">
@@ -791,10 +791,10 @@ export default {
             <DataTable
               v-model:filters="filters"
               :value="dataTable"
-              scrollable="true"
+              :scrollable="true"
               scrollHeight="1000px"
-              columnResizeMode="fit"
-              showGridlines="true"
+              :columnResizeMode="fit"
+              :showGridlines="true"
               :virtualScrollerOptions="{ itemSize: 50 }"
               tableStyle="min-width: 50rem"
               dataKey="Метка времени"
@@ -840,5 +840,8 @@ export default {
 <style>
   .components-margin-bottom{
     margin-bottom: 5px;
+  }
+  .radio-interval-margin {
+    margin-left: 5px;
   }
 </style>

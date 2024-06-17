@@ -103,8 +103,8 @@ def get_last_update_file_kks():
     logger.info(f"get_last_update_file_kks()")
     if not os.path.isfile(constants.DATA_KKS_ALL):
         return f"Файл {constants.DATA_KKS_ALL} не найден"
-    logger.info(str(datetime.datetime.fromtimestamp(os.path.getmtime(constants.DATA_KKS_ALL))))
-    return str(datetime.datetime.fromtimestamp(os.path.getmtime(constants.DATA_KKS_ALL)))
+    logger.info(str(datetime.datetime.fromtimestamp(os.path.getmtime(constants.DATA_KKS_ALL)).strftime('%Y-%m-%d %H:%M:%S')))
+    return str(datetime.datetime.fromtimestamp(os.path.getmtime(constants.DATA_KKS_ALL)).strftime('%Y-%m-%d %H:%M:%S'))
 
 
 @socketio.on("get_ip_port_config")
