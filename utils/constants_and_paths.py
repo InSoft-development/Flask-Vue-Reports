@@ -7,6 +7,7 @@ DATA_DIRECTORY = f'data{os.sep}'
 DATA_ANALOG = f'{DATA_DIRECTORY}data_AM.txt'
 DATA_DISCRETE = f'{DATA_DIRECTORY}democub_all.csv'
 DATA_KKS_ALL = f'{DATA_DIRECTORY}kks_all.csv'
+DATA_KKS_ALL_BACK = f'{DATA_DIRECTORY}kks_all_back.csv'
 DATA_DEFAULT_FIELDS_CONFIG = f'{DATA_DIRECTORY}default_fields.json'
 
 REPORTS_DIRECTORY = f'reports{os.sep}'

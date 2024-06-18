@@ -9,8 +9,22 @@ const mutex = new Mutex()
  */
 export async function runUpdate(mode, rootDirectory, exceptionDirectories, exceptionExpert) {
   await new Promise(async (resolve) => {
-    console.log(mode, rootDirectory, exceptionDirectories, exceptionExpert)
     await socket.emit('update_kks_all', mode, rootDirectory, exceptionDirectories, exceptionExpert, () => {
+      resolve()
+    })
+  })
+}
+
+/***
+ * Процедура применения списка исключений к уже выкаченному файлу kks_all.csv
+ * @param rootDirectory
+ * @param exceptionDirectories
+ * @param exceptionExpert
+ * @returns {Promise<void>}
+ */
+export async function changeUpdateFile(rootDirectory, exceptionDirectories, exceptionExpert) {
+  await new Promise(async (resolve) => {
+    await socket.emit('change_update_kks_all', rootDirectory, exceptionDirectories, exceptionExpert, () => {
       resolve()
     })
   })

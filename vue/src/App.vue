@@ -8,6 +8,7 @@ import {
   getServerConfig,
   getLastUpdateFileKKS,
   runUpdate,
+  changeUpdateFile,
   cancelUpdate,
   getIpAndPortConfig,
   changeOpcServerConfig,
@@ -81,6 +82,21 @@ export default {
       })
     }
 
+    const changeUpdate = async () => {
+      statusUpdateButtonActive.value = true
+      await changeUpdateFile(defaultRootDirectory.value,
+              defaultExceptionDirectories.value.split(',').map((item) => item.trim()).filter((item) => item.length),
+              defaultExceptionExpertTags.value)
+      await getServerConfig(configServer, checkFileActive)
+      statusUpdateButtonActive.value = false
+      if (!checkFileActive.value) {
+        alert('Файл тегов не найден')
+        return
+      }
+      checkFileActive.value = true
+      await getLastUpdateFileKKS(lastUpdateFileKKS)
+    }
+
     const defaultTypesOfSensorsDataValue = ref([])
     const defaultTypesOfSensorsDataOptions = ref([
       {
@@ -150,7 +166,7 @@ export default {
         countShowSensors: defaultCountShowSensors.value,
         modeOfFilter: defaultModeOfFilterRadio.value,
         rootDirectory: defaultRootDirectory.value,
-        exceptionDirectories: defaultExceptionDirectories.value,
+        exceptionDirectories: defaultExceptionDirectories.value.split(',').map((item) => item.trim()).filter((item) => item.length),
         exceptionExpertTags: defaultExceptionExpertTags.value
       }
       applicationStore.setFields(defaultFields)
@@ -195,7 +211,7 @@ export default {
 
       defaultModeOfFilterRadio.value = applicationStore.defaultFields.modeOfFilter
       defaultRootDirectory.value = applicationStore.defaultFields.rootDirectory
-      defaultExceptionDirectories.value = applicationStore.defaultFields.exceptionDirectories
+      defaultExceptionDirectories.value = applicationStore.defaultFields.exceptionDirectories.join(', ')
       defaultExceptionExpertTags.value = applicationStore.defaultFields.exceptionExpertTags
     })
 
@@ -227,7 +243,7 @@ export default {
 
       defaultModeOfFilterRadio.value = applicationStore.defaultFields.modeOfFilter
       defaultRootDirectory.value = applicationStore.defaultFields.rootDirectory
-      defaultExceptionDirectories.value = applicationStore.defaultFields.exceptionDirectories
+      defaultExceptionDirectories.value = applicationStore.defaultFields.exceptionDirectories.join(', ')
       defaultExceptionExpertTags.value = applicationStore.defaultFields.exceptionExpertTags
     }
 
@@ -236,7 +252,8 @@ export default {
       statusUpdateTextArea.value = ''
       statusUpdateTextArea.value += 'Запуск обновления тегов...\n'
       await runUpdate(defaultModeOfFilterRadio.value, defaultRootDirectory.value,
-              defaultExceptionDirectories.value, defaultExceptionExpertTags.value)
+              defaultExceptionDirectories.value.split(',').map((item) => item.trim()).filter((item) => item.length),
+              defaultExceptionExpertTags.value)
       await getServerConfig(configServer, checkFileActive)
       statusUpdateButtonActive.value = false
       if (!checkFileActive.value) {
@@ -298,6 +315,7 @@ export default {
       onButtonCancelUpdateClick,
       toggleButton,
       confirmUpdate,
+      changeUpdate,
       defaultTypesOfSensorsDataValue,
       defaultTypesOfSensorsDataOptions,
       defaultChosenTypesOfSensorsData,
@@ -461,7 +479,11 @@ export default {
             </div>
           </div>
           <div class="row align-items-center">
-            <div class="col-4"></div>
+            <div class="col-4">
+              <Button @click="changeUpdate" :disabled="statusUpdateButtonActive || (defaultModeOfFilterRadio === 'historian')"
+                >Применить список исключений к уже обновленному файлу тегов</Button
+              >
+            </div>
             <div class="col-3">
               <RadioButton
                 v-model="defaultModeOfFilterRadio"
@@ -474,7 +496,7 @@ export default {
             </div>
             <div class="col-5">
               <label for="default-exception-directories"
-                >Список исключений (перечислите через запятую)</label
+                >Список исключений (перечислите через запятую регулярные выражения)</label
               ><br>
               <InputText
                 v-model="defaultExceptionDirectories"

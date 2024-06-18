@@ -51,6 +51,8 @@ sid_proc = None
 
 # Переменная под объект гринлета обновления тегов
 update_greenlet = None
+# Переменная под объект гринлета изменения обновлененного файла тегов на основе списка исключений
+change_update_greenlet = None
 # Переменная под объект модуля subprocess процесса обновления тегов
 p_kks_all = None
 # Переменная под объект гринлета выполнения запроса по срезам тегов
@@ -317,8 +319,11 @@ def update_kks_all(mode, root_directory, exception_directories, exception_expert
         global sid_proc
         sid_proc = sid
 
+        if not mode:
+            root_directory = "all"
+
         socketio.sleep(5)
-        command_kks_all_string = ["./client", "-k", "all", "-c"]
+        command_kks_all_string = ["./client", "-k", root_directory, "-c"]
         command_tail_kks_all_string = f"wc -l {constants.CLIENT_KKS} && tail -1 {constants.CLIENT_KKS}"
         logger.info(f'get from OPC_UA all kks and types')
         logger.info(command_kks_all_string)
@@ -400,10 +405,25 @@ def update_kks_all(mode, root_directory, exception_directories, exception_expert
             return run_time_exception
 
         shutil.copy(constants.CLIENT_KKS, constants.DATA_KKS_ALL)  # копируем kks.csv в data/kks_all.csv
+        shutil.copy(constants.CLIENT_KKS, constants.DATA_KKS_ALL_BACK)  # копируем kks.csv в data/kks_all_back.csv
         # Пытаемся загрузить kks_all.csv, если он существует в переменную
         try:
             global KKS_ALL
+            global KKS_ALL_BACK
             KKS_ALL = pd.read_csv(constants.DATA_KKS_ALL, header=None, sep=';')
+            KKS_ALL_BACK = pd.read_csv(constants.DATA_KKS_ALL_BACK, header=None, sep=';')
+            if mode:
+                for exception_directory in exception_directories:
+                    KKS_ALL = KKS_ALL[~KKS_ALL[0].str.contains(exception_directory, regex=True)]
+                KKS_ALL.to_csv(constants.DATA_KKS_ALL ,header=None, sep=';', index=False)
+                KKS_ALL = pd.read_csv(constants.DATA_KKS_ALL, header=None, sep=';')
+        except re.error as regular_expression_except:
+            logger.error(f"Неверный синтаксис регулярного выражения {regular_expression_except}")
+            socketio.emit("setUpdateStatus",
+                          {"statusString": f"Неверный синтаксис регулярного выражения {regular_expression_except}\n",
+                           "serviceFlag": True},
+                          to=sid)
+            return regular_expression_except
         except FileNotFoundError as csv_exception:
             logger.error(csv_exception)
             socketio.emit("setUpdateStatus",
@@ -447,6 +467,7 @@ def update_cancel():
         return
 
     global update_greenlet
+    global change_update_greenlet
     global p_kks_all
     if update_greenlet:
         if p_kks_all:
@@ -459,6 +480,89 @@ def update_cancel():
                       {"statusString": f"Обновление тегов прервано пользователем\n", "serviceFlag": True},
                       to=request.sid)
         update_greenlet = None
+
+    if change_update_greenlet:
+        gevent.killall([change_update_greenlet])
+        logger.info(f"change_update_greenlet убит")
+        socketio.emit("setUpdateStatus",
+                      {"statusString": f"Применение списка исключений прервано пользователем\n", "serviceFlag": True},
+                      to=request.sid)
+        change_update_greenlet = None
+
+
+@socketio.on("change_update_kks_all")
+def change_update_kks_all(root_directory, exception_directories, exception_expert):
+    """
+    Процедура отмены процесса обновления и уничтожения гринлета gevent
+    :param root_directory: корневая папка
+    :param exception_directories: список исключений
+    :param exception_expert: флаг, исключения тегов, помеченных экспертом
+    """
+    logger.info(f"change_update_kks_all({root_directory}, {exception_directories}, {exception_expert})")
+
+    def change_update_kks_all_spawn(root_directory, exception_directories, exception_expert):
+        """
+        Процедура отмены процесса обновления и уничтожения гринлета gevent
+        :param root_directory: корневая папка
+        :param exception_directories: список исключений
+        :param exception_expert: флаг, исключения тегов, помеченных экспертом
+        """
+        logger.info(f"change_update_kks_all_spawn({root_directory}, {exception_directories}, {exception_expert})")
+
+        logger.info(sid)
+        global sid_proc
+        sid_proc = sid
+
+        socketio.emit("setUpdateStatus",
+                      {"statusString": f"Применение списка исключений к уже обновленному файлу тегов\n",
+                       "serviceFlag": False}, to=sid)
+        try:
+            global KKS_ALL
+            global KKS_ALL_BACK
+            KKS_ALL = KKS_ALL_BACK.copy(deep=True)
+            logger.info(KKS_ALL)
+            KKS_ALL = KKS_ALL[KKS_ALL[0].str.contains(root_directory, regex=True)]
+            logger.info(KKS_ALL)
+            for exception_directory in exception_directories:
+                KKS_ALL = KKS_ALL[~KKS_ALL[0].str.contains(exception_directory, regex=True)]
+                logger.info(KKS_ALL)
+            KKS_ALL.to_csv(constants.DATA_KKS_ALL, header=None, sep=';', index=False)
+            KKS_ALL = pd.read_csv(constants.DATA_KKS_ALL, header=None, sep=';')
+        except re.error as regular_expression_except:
+            logger.error(f"Неверный синтаксис регулярного выражения {regular_expression_except}")
+            socketio.emit("setUpdateStatus",
+                          {"statusString": f"Неверный синтаксис регулярного выражения {regular_expression_except}\n",
+                           "serviceFlag": True},
+                          to=sid)
+            return regular_expression_except
+        except FileNotFoundError as csv_exception:
+            logger.error(csv_exception)
+            socketio.emit("setUpdateStatus",
+                          {"statusString": f"Ошибка при попытке загрузить файл kks_all.csv\nОшибка: {csv_exception}\n",
+                           "serviceFlag": True},
+                          to=sid)
+            return csv_exception
+        socketio.emit("setUpdateStatus", {"statusString": f"Применение списка исключений успешно завершено\n",
+                                          "serviceFlag": False}, to=sid)
+
+    sid = request.sid
+
+    # Запуск гринлета обновления тегов
+    global change_update_greenlet
+    global sid_proc
+    # Если обновление уже идет, выводим в веб-приложении
+    if change_update_greenlet:
+        logger.warning(f"change_update_greenlet is running")
+        socketio.emit("setUpdateStatus",
+                      {"statusString": f"Обновление тегов уже было начато на сервере\n", "serviceFlag": True},
+                      to=sid)
+        return
+
+    # Запуск процесса изменения обновленного файла тегов на основе списка исключений через gevent
+    change_update_greenlet = spawn(change_update_kks_all_spawn, root_directory, exception_directories, exception_expert)
+    gevent.joinall([change_update_greenlet])
+
+    sid_proc = None
 
 
 @socketio.on("get_signals_data")
@@ -1164,13 +1268,16 @@ if __name__ == '__main__':
 
     check_correct_application_structure()
 
-    # Пытаемся загрузить kks_all.csv если он существует
+    # Пытаемся загрузить kks_all.csv и kks_all_back.csv если они существуют
     try:
         KKS_ALL = pd.read_csv(constants.DATA_KKS_ALL, header=None, sep=';')
+        KKS_ALL_BACK = pd.read_csv(constants.DATA_KKS_ALL_BACK, header=None, sep=';')
     except FileNotFoundError as e:
         logger.info(e)
         KKS_ALL = pd.DataFrame()
+        KKS_ALL_BACK = pd.DataFrame()
 
     logger.info(f"dataframe {constants.DATA_KKS_ALL} has been loaded")
+    logger.info(f"dataframe {constants.DATA_KKS_ALL_BACK} has been loaded")
 
     socketio.run(app, host=args.host, port=args.port)
