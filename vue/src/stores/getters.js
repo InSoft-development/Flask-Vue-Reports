@@ -175,7 +175,7 @@ export async function getKKSByMasksForTable(
       resolve(kks)
     })
   })
-  if (result[0] === ['']) {
+  if (result[0] === '') {
     alert('Неверный синтаксис регулярного выражения. Ничего не нашлось')
     return
   }
@@ -209,8 +209,10 @@ export async function getKKSByTextMasksFromSearch(
       resolve(kks)
     })
   })
-  if (result[0] === ['']) {
+  if (result[0] === '') {
     alert('Неверный синтаксис регулярного выражения. Ничего не нашлось')
+    countOfTags.value = 0
+    dialogSearchedTagsTextArea.value = 'Неверный синтаксис регулярного выражения. Ничего не нашлось'
     return
   }
   countOfTags.value = result.length
