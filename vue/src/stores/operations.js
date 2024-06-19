@@ -9,9 +9,16 @@ const mutex = new Mutex()
  */
 export async function runUpdate(mode, rootDirectory, exceptionDirectories, exceptionExpert) {
   await new Promise(async (resolve) => {
-    await socket.emit('update_kks_all', mode, rootDirectory, exceptionDirectories, exceptionExpert, () => {
-      resolve()
-    })
+    await socket.emit(
+      'update_kks_all',
+      mode,
+      rootDirectory,
+      exceptionDirectories,
+      exceptionExpert,
+      () => {
+        resolve()
+      }
+    )
   })
 }
 
@@ -24,9 +31,15 @@ export async function runUpdate(mode, rootDirectory, exceptionDirectories, excep
  */
 export async function changeUpdateFile(rootDirectory, exceptionDirectories, exceptionExpert) {
   await new Promise(async (resolve) => {
-    await socket.emit('change_update_kks_all', rootDirectory, exceptionDirectories, exceptionExpert, () => {
-      resolve()
-    })
+    await socket.emit(
+      'change_update_kks_all',
+      rootDirectory,
+      exceptionDirectories,
+      exceptionExpert,
+      () => {
+        resolve()
+      }
+    )
   })
 }
 

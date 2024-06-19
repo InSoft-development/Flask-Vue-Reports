@@ -693,7 +693,9 @@ export default {
                 :binary="true"
                 :disabled="progressBarSignalsActive"
               ></Checkbox>
-              <label for="lastValueCheckedSignalReport" class="checkbox-margin">Искать последние по времени значения</label>
+              <label for="lastValueCheckedSignalReport" class="checkbox-margin"
+                >Искать последние по времени значения</label
+              >
             </div>
           </div>
         </div>
@@ -867,14 +869,14 @@ export default {
 </template>
 
 <style>
-  .components-margin-bottom{
-    margin-bottom: 5px;
-  }
-  .checkbox-margin{
-    margin-left: 5px;
-  }
-  .radio-interval-margin {
-    margin-left: 5px;
-  }
+.components-margin-bottom {
+  margin-bottom: 5px;
+}
+.checkbox-margin {
+  margin-left: 5px;
+}
+.radio-interval-margin {
+  margin-left: 5px;
+}
 </style>
 <!--<style src="@vueform/multiselect/themes/default.css"></style>-->

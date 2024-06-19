@@ -84,9 +84,14 @@ export default {
 
     const changeUpdate = async () => {
       statusUpdateButtonActive.value = true
-      await changeUpdateFile(defaultRootDirectory.value,
-              defaultExceptionDirectories.value.split(',').map((item) => item.trim()).filter((item) => item.length),
-              defaultExceptionExpertTags.value)
+      await changeUpdateFile(
+        defaultRootDirectory.value,
+        defaultExceptionDirectories.value
+          .split(',')
+          .map((item) => item.trim())
+          .filter((item) => item.length),
+        defaultExceptionExpertTags.value
+      )
       await getServerConfig(configServer, checkFileActive)
       statusUpdateButtonActive.value = false
       if (!checkFileActive.value) {
@@ -166,7 +171,10 @@ export default {
         countShowSensors: defaultCountShowSensors.value,
         modeOfFilter: defaultModeOfFilterRadio.value,
         rootDirectory: defaultRootDirectory.value,
-        exceptionDirectories: defaultExceptionDirectories.value.split(',').map((item) => item.trim()).filter((item) => item.length),
+        exceptionDirectories: defaultExceptionDirectories.value
+          .split(',')
+          .map((item) => item.trim())
+          .filter((item) => item.length),
         exceptionExpertTags: defaultExceptionExpertTags.value
       }
       applicationStore.setFields(defaultFields)
@@ -211,7 +219,8 @@ export default {
 
       defaultModeOfFilterRadio.value = applicationStore.defaultFields.modeOfFilter
       defaultRootDirectory.value = applicationStore.defaultFields.rootDirectory
-      defaultExceptionDirectories.value = applicationStore.defaultFields.exceptionDirectories.join(', ')
+      defaultExceptionDirectories.value =
+        applicationStore.defaultFields.exceptionDirectories.join(', ')
       defaultExceptionExpertTags.value = applicationStore.defaultFields.exceptionExpertTags
     })
 
@@ -243,7 +252,8 @@ export default {
 
       defaultModeOfFilterRadio.value = applicationStore.defaultFields.modeOfFilter
       defaultRootDirectory.value = applicationStore.defaultFields.rootDirectory
-      defaultExceptionDirectories.value = applicationStore.defaultFields.exceptionDirectories.join(', ')
+      defaultExceptionDirectories.value =
+        applicationStore.defaultFields.exceptionDirectories.join(', ')
       defaultExceptionExpertTags.value = applicationStore.defaultFields.exceptionExpertTags
     }
 
@@ -251,9 +261,15 @@ export default {
       statusUpdateButtonActive.value = true
       statusUpdateTextArea.value = ''
       statusUpdateTextArea.value += 'Запуск обновления тегов...\n'
-      await runUpdate(defaultModeOfFilterRadio.value, defaultRootDirectory.value,
-              defaultExceptionDirectories.value.split(',').map((item) => item.trim()).filter((item) => item.length),
-              defaultExceptionExpertTags.value)
+      await runUpdate(
+        defaultModeOfFilterRadio.value,
+        defaultRootDirectory.value,
+        defaultExceptionDirectories.value
+          .split(',')
+          .map((item) => item.trim())
+          .filter((item) => item.length),
+        defaultExceptionExpertTags.value
+      )
       await getServerConfig(configServer, checkFileActive)
       statusUpdateButtonActive.value = false
       if (!checkFileActive.value) {
@@ -419,7 +435,12 @@ export default {
               </FloatLabel>
             </div>
             <div class="col">
-              <Button @click="changeConfig" :disabled="statusUpdateButtonActive" :label="'Сохранить'" style="width: 100%; text-align: center"></Button>
+              <Button
+                @click="changeConfig"
+                :disabled="statusUpdateButtonActive"
+                :label="'Сохранить'"
+                style="width: 100%; text-align: center"
+              ></Button>
             </div>
           </div>
           <hr />
@@ -431,7 +452,7 @@ export default {
                 rows="3"
                 cols="80"
                 readonly
-                :style="{ resize: 'none', 'overflow-y': scroll, 'width': '100%' }"
+                :style="{ resize: 'none', 'overflow-y': scroll, width: '100%' }"
                 >{{ statusUpdateTextArea }}</TextArea
               >
             </div>
@@ -462,17 +483,17 @@ export default {
                 value="historian"
                 :disabled="statusUpdateButtonActive"
               />
-              <label for="modeFilterHistorianDefault" class="radio-interval-margin">Historian</label>
+              <label for="modeFilterHistorianDefault" class="radio-interval-margin"
+                >Historian</label
+              >
             </div>
             <div class="col-5">
-              <label for="default-root-directory"
-                >Корневая папка</label
-              ><br>
+              <label for="default-root-directory">Корневая папка</label><br />
               <InputText
                 v-model="defaultRootDirectory"
                 type="text"
                 id="default-root-directory"
-                :disabled="statusUpdateButtonActive || (defaultModeOfFilterRadio === 'historian')"
+                :disabled="statusUpdateButtonActive || defaultModeOfFilterRadio === 'historian'"
                 style="width: 100%"
               >
               </InputText>
@@ -480,7 +501,9 @@ export default {
           </div>
           <div class="row align-items-center">
             <div class="col-4">
-              <Button @click="changeUpdate" :disabled="statusUpdateButtonActive || (defaultModeOfFilterRadio === 'historian')"
+              <Button
+                @click="changeUpdate"
+                :disabled="statusUpdateButtonActive || defaultModeOfFilterRadio === 'historian'"
                 >Применить список исключений к уже обновленному файлу тегов</Button
               >
             </div>
@@ -492,27 +515,31 @@ export default {
                 value="modeFilterExceptionDefault"
                 :disabled="statusUpdateButtonActive"
               />
-              <label for="modeFilterExceptionDefault" class="radio-interval-margin">Список исключений</label>
+              <label for="modeFilterExceptionDefault" class="radio-interval-margin"
+                >Список исключений</label
+              >
             </div>
             <div class="col-5">
               <label for="default-exception-directories"
                 >Список исключений (перечислите через запятую регулярные выражения)</label
-              ><br>
+              ><br />
               <InputText
                 v-model="defaultExceptionDirectories"
                 type="text"
                 id="default-exception-directories"
-                :disabled="statusUpdateButtonActive || (defaultModeOfFilterRadio === 'historian')"
+                :disabled="statusUpdateButtonActive || defaultModeOfFilterRadio === 'historian'"
                 style="width: 100%"
               >
               </InputText>
               <Checkbox
-                    id="default-exception-expert-tags"
-                    v-model="defaultExceptionExpertTags"
-                    :binary="true"
-                    :disabled="statusUpdateButtonActive || (defaultModeOfFilterRadio === 'historian')"
-                  ></Checkbox>
-                  <label for="default-exception-expert-tags" class="checkbox-margin">Исключить теги, помеченные экспертом</label>
+                id="default-exception-expert-tags"
+                v-model="defaultExceptionExpertTags"
+                :binary="true"
+                :disabled="statusUpdateButtonActive || defaultModeOfFilterRadio === 'historian'"
+              ></Checkbox>
+              <label for="default-exception-expert-tags" class="checkbox-margin"
+                >Исключить теги, помеченные экспертом</label
+              >
             </div>
           </div>
           <div class="row">
@@ -545,7 +572,9 @@ export default {
                 value="sequential"
                 :disabled="statusUpdateButtonActive"
               />
-              <label for="sequentialDefault" class="radio-interval-margin">Последовательные шаблоны</label>
+              <label for="sequentialDefault" class="radio-interval-margin"
+                >Последовательные шаблоны</label
+              >
             </div>
             <div class="col-4">
               <RadioButton
@@ -600,7 +629,8 @@ export default {
             <div class="col">
               <div class="row">
                 <div class="col">
-                  <label for="intervalDeepOfSearch">Глубина поиска в архивах по умолчанию</label><br>
+                  <label for="intervalDeepOfSearch">Глубина поиска в архивах по умолчанию</label
+                  ><br />
                   <InputNumber
                     v-model="defaultIntervalDeepOfSearch"
                     id="intervalDeepOfSearch"
@@ -619,7 +649,7 @@ export default {
                 <div class="col">
                   <label for="calendarDateDeepOfSearchSignals"
                     >Дата глубины поиска в архивах по умолчанию</label
-                  ><br>
+                  ><br />
                   <Calendar
                     id="calendarDateDeepOfSearchSignals"
                     v-model="defaultDateDeepOfSearch"
@@ -666,7 +696,9 @@ export default {
                     value="minute"
                     :disabled="statusUpdateButtonActive"
                   />
-                  <label for="minuteDefaultDeepOfSearch" class="radio-interval-margin">Минута</label>
+                  <label for="minuteDefaultDeepOfSearch" class="radio-interval-margin"
+                    >Минута</label
+                  >
                   <RadioButton
                     v-model="defaultDimensionDeepOfSearch"
                     id="secondDefaultDeepOfSearch"
@@ -675,7 +707,9 @@ export default {
                     value="second"
                     :disabled="statusUpdateButtonActive"
                   />
-                  <label for="secondDefaultDeepOfSearch" class="radio-interval-margin">Секунда</label>
+                  <label for="secondDefaultDeepOfSearch" class="radio-interval-margin"
+                    >Секунда</label
+                  >
                 </div>
                 <div class="col-12">
                   <Checkbox
@@ -684,14 +718,16 @@ export default {
                     :binary="true"
                     :disabled="statusUpdateButtonActive"
                   ></Checkbox>
-                  <label for="lastValueChecked" class="checkbox-margin">Искать последние по времени значения</label>
+                  <label for="lastValueChecked" class="checkbox-margin"
+                    >Искать последние по времени значения</label
+                  >
                 </div>
               </div>
             </div>
           </div>
           <div class="row">
             <div class="col">
-              <label for="intervalDefaultGrid">Интервал по умолчанию: </label><br>
+              <label for="intervalDefaultGrid">Интервал по умолчанию: </label><br />
               <InputNumber
                 v-model="defaultInterval"
                 id="intervalDefaultGrid"
@@ -707,7 +743,7 @@ export default {
               </InputNumber>
             </div>
             <div class="col">
-              <label for="show-default-sensors">Показываемые датчики по умолчанию</label><br>
+              <label for="show-default-sensors">Показываемые датчики по умолчанию</label><br />
               <InputNumber
                 v-model="defaultCountShowSensors"
                 id="show-default-sensors"

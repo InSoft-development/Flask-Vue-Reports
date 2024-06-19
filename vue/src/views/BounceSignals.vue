@@ -465,11 +465,7 @@ export default {
         </div>
       </div>
       <hr />
-      <div
-        class="row align-items-center"
-        v-for="template in templatesArray"
-        :key="template"
-      >
+      <div class="row align-items-center" v-for="template in templatesArray" :key="template">
         <UTemplate
           :position="template.id"
           :disabledFlag="disabledSensorsAndTemplate || progressBarBounceSignalsActive"
@@ -555,7 +551,9 @@ export default {
             @change="onChangeCheckbox"
             :disabled="progressBarBounceSignalsActive"
           ></Checkbox>
-          <label for="current-date-checked" class="checkbox-margin">Использовать текущее время</label>
+          <label for="current-date-checked" class="checkbox-margin"
+            >Использовать текущее время</label
+          >
         </div>
       </div>
       <div class="row">
@@ -718,13 +716,13 @@ export default {
 </template>
 
 <style>
-  .components-margin-bottom{
-    margin-bottom: 5px;
-  }
-  .checkbox-margin{
-    margin-left: 5px;
-  }
-  .radio-interval-margin {
-    margin-left: 5px;
-  }
+.components-margin-bottom {
+  margin-bottom: 5px;
+}
+.checkbox-margin {
+  margin-left: 5px;
+}
+.radio-interval-margin {
+  margin-left: 5px;
+}
 </style>

@@ -98,11 +98,11 @@ export default {
 </script>
 
 <template>
+  <div class="components-between-hr-margin-bottom"></div>
   <div class="col-1">
     {{ currentPosition }}
   </div>
   <div class="col-7">
-    <div class="components-between-hr-margin-bottom"></div>
     <FloatLabel>
       <InputText
         v-model="templateText"
@@ -205,7 +205,7 @@ export default {
 </template>
 
 <style>
-  .components-between-hr-margin-bottom{
-    margin-bottom: 10px;
-  }
+.components-between-hr-margin-bottom {
+  margin-bottom: 15px;
+}
 </style>

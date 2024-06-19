@@ -556,11 +556,7 @@ export default {
         </div>
       </div>
       <hr />
-      <div
-        class="row align-items-center"
-        v-for="template in templatesArray"
-        :key="template"
-      >
+      <div class="row align-items-center" v-for="template in templatesArray" :key="template">
         <UTemplate
           :position="template.id"
           :disabledFlag="disabledSensorsAndTemplate || progressBarGridActive"
@@ -838,10 +834,10 @@ export default {
 </template>
 
 <style>
-  .components-margin-bottom{
-    margin-bottom: 5px;
-  }
-  .radio-interval-margin {
-    margin-left: 5px;
-  }
+.components-margin-bottom {
+  margin-bottom: 5px;
+}
+.radio-interval-margin {
+  margin-left: 5px;
+}
 </style>
