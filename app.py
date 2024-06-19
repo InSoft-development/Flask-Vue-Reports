@@ -274,8 +274,9 @@ def get_kks(types_list, mask_list, kks_list, selection_tag=None):
                     kks_mask_set = kks_mask_set.union(template_kks_set)
                 kks_mask_list = list(kks_mask_set)
     except re.error as regular_expression_except:
-        logger.error(f"Неверный синтаксис регулярного выражения {regular_expression_except}")
-        return ['']
+        logger.info(mask)
+        logger.error(f"Неверный синтаксис регулярного выражения {regular_expression_except} в {mask}")
+        return ['', mask]
 
     # Отбор тегов,указанных вручную с их объединением
     if kks_list:

@@ -176,7 +176,8 @@ export async function getKKSByMasksForTable(
     })
   })
   if (result[0] === '') {
-    alert('Неверный синтаксис регулярного выражения. Ничего не нашлось')
+    console.log(result)
+    alert('Неверный синтаксис регулярного выражения. Ничего не нашлось в маске: ' + result[1])
     return
   }
   chosenSensors.value = result
