@@ -255,7 +255,7 @@ export default {
         return
       }
 
-      if (dateTime.value <= dateDeepOfSearch.value) {
+      if ((dateTime.value <= dateDeepOfSearch.value) && intervalOrDateChecked.value) {
         alert('Глубина поиска в архивах не должна превышать указанную дату запроса')
         return
       }
@@ -809,7 +809,7 @@ export default {
               field="Дата и время измерения"
               header="Дата и время измерения"
               sortable
-              style="width: 30%"
+              style="width: 20%"
             >
               <template #filter="{ filterModel, filterCallback }">
                 <InputText
@@ -820,7 +820,7 @@ export default {
                 />
               </template>
             </Column>
-            <Column field="Значение" header="Значение" sortable style="width: 10%">
+            <Column field="Значение" header="Значение" sortable style="width: 15%">
               <template #filter="{ filterModel, filterCallback }">
                 <InputText
                   v-model="filterModel.value"
@@ -845,7 +845,7 @@ export default {
                 </div>
               </template>
             </Column>
-            <Column field="Код качества" header="Код качества" sortable style="width: 5%">
+            <Column field="Код качества" header="Код качества" sortable style="width: 10%">
               <template #filter="{ filterModel, filterCallback }">
                 <InputText
                   v-model="filterModel.value"
