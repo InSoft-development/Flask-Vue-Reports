@@ -68,6 +68,7 @@ export async function getDefaultFields(defaultFields) {
       sensorsAndTemplateValue: ['Sochi2\\.GT\\.AM\\.\\S*-AM\\.Q?$'],
       quality: ['8 - (BNC) - ОТКАЗ СВЯЗИ (TIMEOUT)', '192 - (GOD) – ХОРОШ'],
       lastValueChecked: false,
+      filterTableChecked: false,
       dateDeepOfSearch: new Date(),
       interval: 10,
       dimension: 'hour',

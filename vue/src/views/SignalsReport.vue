@@ -59,6 +59,8 @@ export default {
 
       dateDeepOfSearch.value = applicationStore.defaultFields.dateDeepOfSearch
       lastValueChecked.value = applicationStore.defaultFields.lastValueChecked
+
+      filterTableChecked.value = applicationStore.defaultFields.filterTableChecked
     }
 
     watch(
@@ -154,6 +156,7 @@ export default {
     const dataTableStartRequested = ref(false)
 
     const filters = ref(null)
+    const filterTableChecked = ref(applicationStore.defaultFields.filterTableChecked)
 
     const progressBarSignals = ref('0')
     const progressBarSignalsActive = ref(false)
@@ -454,6 +457,7 @@ export default {
       dataTableRequested,
       dataTableStartRequested,
       filters,
+      filterTableChecked,
       qualityClass,
       codeOfQualityClass,
       progressBarSignals,
@@ -686,17 +690,6 @@ export default {
                 @todayClick="onDateTodayClick"
               ></Calendar>
             </div>
-            <div class="col-12">
-              <Checkbox
-                id="lastValueCheckedSignalReport"
-                v-model="lastValueChecked"
-                :binary="true"
-                :disabled="progressBarSignalsActive"
-              ></Checkbox>
-              <label for="lastValueCheckedSignalReport" class="checkbox-margin"
-                >Искать последние по времени значения</label
-              >
-            </div>
           </div>
         </div>
         <div class="col">
@@ -748,6 +741,19 @@ export default {
           <Button @click="onButtonDownloadCsvClick">Загрузить CSV</Button>
         </div>
       </div>
+      <div class="row">
+        <div class="col-12">
+          <Checkbox
+            id="lastValueCheckedSignalReport"
+            v-model="lastValueChecked"
+            :binary="true"
+            :disabled="progressBarSignalsActive"
+          ></Checkbox>
+          <label for="lastValueCheckedSignalReport" class="checkbox-margin"
+            >Искать последние по времени значения</label
+          >
+        </div>
+      </div>
       <div class="row" v-if="dataTableStartRequested">
         Старт построения отчета: {{ dateTimeBeginReport }}
       </div>
@@ -796,7 +802,7 @@ export default {
               sortable
               style="width: 35%"
             >
-              <template #filter="{ filterModel, filterCallback }">
+              <template #filter="{ filterModel, filterCallback }" v-if="filterTableChecked">
                 <InputText
                   v-model="filterModel.value"
                   type="text"
@@ -811,7 +817,7 @@ export default {
               sortable
               style="width: 20%"
             >
-              <template #filter="{ filterModel, filterCallback }">
+              <template #filter="{ filterModel, filterCallback }" v-if="filterTableChecked">
                 <InputText
                   v-model="filterModel.value"
                   type="text"
@@ -821,7 +827,7 @@ export default {
               </template>
             </Column>
             <Column field="Значение" header="Значение" sortable style="width: 15%">
-              <template #filter="{ filterModel, filterCallback }">
+              <template #filter="{ filterModel, filterCallback }" v-if="filterTableChecked">
                 <InputText
                   v-model="filterModel.value"
                   type="text"
@@ -831,7 +837,7 @@ export default {
               </template>
             </Column>
             <Column field="Качество" header="Качество" sortable style="width: 20%">
-              <template #filter="{ filterModel, filterCallback }">
+              <template #filter="{ filterModel, filterCallback }" v-if="filterTableChecked">
                 <InputText
                   v-model="filterModel.value"
                   type="text"
@@ -846,7 +852,7 @@ export default {
               </template>
             </Column>
             <Column field="Код качества" header="Код качества" sortable style="width: 10%">
-              <template #filter="{ filterModel, filterCallback }">
+              <template #filter="{ filterModel, filterCallback }" v-if="filterTableChecked">
                 <InputText
                   v-model="filterModel.value"
                   type="text"

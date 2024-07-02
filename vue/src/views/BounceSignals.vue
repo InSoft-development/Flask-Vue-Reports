@@ -56,6 +56,8 @@ export default {
       interval.value = applicationStore.defaultFields.interval
       intervalRadio.value = applicationStore.defaultFields.dimension
       countShowSensors.value = applicationStore.defaultFields.countShowSensors
+
+      filterTableChecked.value = applicationStore.defaultFields.filterTableChecked
     }
 
     watch(
@@ -156,6 +158,7 @@ export default {
     const dataTableStartRequested = ref(false)
 
     const filters = ref(null)
+    const filterTableChecked = ref(applicationStore.defaultFields.filterTableChecked)
 
     const estimatedTime = ref(0.0)
     const chosenSensors = ref([])
@@ -398,6 +401,7 @@ export default {
       dataTableRequested,
       dataTableStartRequested,
       filters,
+      filterTableChecked,
       onRequestButtonClick,
       onInterruptRequestButtonClick,
       interruptDisabledFlag,
@@ -688,7 +692,7 @@ export default {
             filterDisplay="row"
           >
             <Column field="Наименование датчика" header="Наименование датчика" sortable>
-              <template #filter="{ filterModel, filterCallback }">
+              <template #filter="{ filterModel, filterCallback }" v-if="filterTableChecked">
                 <InputText
                   v-model="filterModel.value"
                   type="text"
@@ -698,7 +702,7 @@ export default {
               </template>
             </Column>
             <Column field="Частота" header="Частота" sortable>
-              <template #filter="{ filterModel, filterCallback }">
+              <template #filter="{ filterModel, filterCallback }" v-if="filterTableChecked">
                 <InputText
                   v-model="filterModel.value"
                   type="text"

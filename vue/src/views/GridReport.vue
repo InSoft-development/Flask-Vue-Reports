@@ -55,6 +55,8 @@ export default {
 
       interval.value = applicationStore.defaultFields.interval
       intervalRadio.value = applicationStore.defaultFields.dimension
+
+      filterTableChecked.value = applicationStore.defaultFields.filterTableChecked
     }
 
     watch(
@@ -157,6 +159,7 @@ export default {
     const dataTableStartRequested = ref(false)
 
     const filters = ref(null)
+    const filterTableChecked = ref(applicationStore.defaultFields.filterTableChecked)
 
     const estimatedTime = ref(0.0)
     const chosenSensors = ref([])
@@ -487,6 +490,7 @@ export default {
       dataTableRequested,
       dataTableStartRequested,
       filters,
+      filterTableChecked,
       onRequestButtonClick,
       onInterruptRequestButtonClick,
       interruptDisabledFlag,
@@ -814,7 +818,7 @@ export default {
                     {{ slotProps.data[slotProps.field] }}
                   </div>
                 </template>
-                <template #filter="{ filterModel, filterCallback }">
+                <template #filter="{ filterModel, filterCallback }" v-if="filterTableChecked">
                   <InputText
                     :id="col.header"
                     v-model="filterModel.value"

@@ -133,6 +133,7 @@ export default {
     }
 
     const defaultLastValueChecked = ref(false)
+    const defaultFilterTableChecked = ref(false)
 
     const defaultIntervalDeepOfSearch = ref(0)
     const defaultDimensionDeepOfSearch = ref('')
@@ -163,6 +164,7 @@ export default {
           .filter((item) => item.length),
         quality: defaultChosenQuality,
         lastValueChecked: defaultLastValueChecked.value,
+        filterTableChecked: defaultFilterTableChecked.value,
         intervalDeepOfSearch: defaultIntervalDeepOfSearch.value,
         dimensionDeepOfSearch: defaultDimensionDeepOfSearch.value,
         dateDeepOfSearch: defaultDateDeepOfSearch.value,
@@ -206,6 +208,7 @@ export default {
       defaultChosenQuality = applicationStore.defaultFields.quality
 
       defaultLastValueChecked.value = applicationStore.defaultFields.lastValueChecked
+      defaultFilterTableChecked.value = applicationStore.defaultFields.filterTableChecked
 
       defaultIntervalDeepOfSearch.value = applicationStore.defaultFields.intervalDeepOfSearch
       defaultDimensionDeepOfSearch.value = applicationStore.defaultFields.dimensionDeepOfSearch
@@ -239,6 +242,7 @@ export default {
       defaultChosenQuality = applicationStore.defaultFields.quality
 
       defaultLastValueChecked.value = applicationStore.defaultFields.lastValueChecked
+      defaultFilterTableChecked.value = applicationStore.defaultFields.filterTableChecked
 
       defaultIntervalDeepOfSearch.value = applicationStore.defaultFields.intervalDeepOfSearch
       defaultDimensionDeepOfSearch.value = applicationStore.defaultFields.dimensionDeepOfSearch
@@ -343,6 +347,7 @@ export default {
       defaultChosenQuality,
       onDefaultMultiselectQualitiesChange,
       defaultLastValueChecked,
+      defaultFilterTableChecked,
       defaultIntervalDeepOfSearch,
       defaultDimensionDeepOfSearch,
       defaultDateDeepOfSearch,
@@ -370,7 +375,7 @@ export default {
         v-model="dialogConfiguratorActive"
         :visible="dialogConfiguratorActive"
         :closable="false"
-        header="Конфигуратор клиента OPC UA"
+        header="Конфигуратор"
         position="left"
         :modal="true"
         :draggable="true"
@@ -394,7 +399,7 @@ export default {
           <hr />
           <div class="row">
             <div class="col">
-              <h4>Изменить параметры конфигурации</h4>
+              <h4>Изменить параметры конфигурации клиента</h4>
             </div>
           </div>
           <div style="margin-bottom: 20px"></div>
@@ -720,6 +725,17 @@ export default {
                   ></Checkbox>
                   <label for="lastValueChecked" class="checkbox-margin"
                     >Искать последние по времени значения</label
+                  >
+                </div>
+                <div class="col-12">
+                  <Checkbox
+                        id="filterTableChecked"
+                        v-model="defaultFilterTableChecked"
+                        :binary="true"
+                        :disabled="statusUpdateButtonActive"
+                  ></Checkbox>
+                  <label for="filterTableChecked" class="checkbox-margin"
+                    >Добавить фильтры к таблицам отчетов</label
                   >
                 </div>
               </div>
