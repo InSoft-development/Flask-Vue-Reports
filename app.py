@@ -82,6 +82,16 @@ def disconnect():
     logger.info(request.sid)
 
 
+@socketio.on("get_file_checked")
+def get_file_checked():
+    """
+    Функция возвращает результат проверки существования файла тегов kks_all.csv
+    :return: True/False результат проверки существования файла тегов kks_all.csv
+    """
+    logger.info(f"get_file_checked()")
+    return os.path.isfile(constants.DATA_KKS_ALL)
+
+
 @socketio.on("get_server_config")
 def get_server_config():
     """
@@ -93,7 +103,7 @@ def get_server_config():
         server_config = readfile.readline()
         logger.info(server_config)
 
-    return server_config, os.path.isfile(constants.DATA_KKS_ALL)
+    return f'Текущая конфигурация клиента OPC UA: {server_config}', os.path.isfile(constants.DATA_KKS_ALL)
 
 
 @socketio.on("get_last_update_file_kks")
@@ -159,7 +169,8 @@ def change_opc_server_config(ip, port):
         writefile.write(f"opc.tcp://{ip}:{port}")
 
     with open(constants.CLIENT_SERVER_CONF, "r") as readfile:
-        socketio.emit("setUpdateStatus", {"statusString": f"{readfile.read()}\n", "serviceFlag": False}, to=request.sid)
+        socketio.emit("setUpdateStatus", {"statusString": f"Конфигурация клиента OPC UA обновлена на: "
+                                                          f"{readfile.read()}\n", "serviceFlag": False}, to=request.sid)
 
 
 @socketio.on("change_default_fields")
@@ -320,7 +331,7 @@ def update_kks_all(mode, root_directory, exception_directories, exception_expert
         global sid_proc
         sid_proc = sid
 
-        if not mode:
+        if mode == "historian":
             root_directory = "all"
 
         socketio.sleep(5)
@@ -413,7 +424,7 @@ def update_kks_all(mode, root_directory, exception_directories, exception_expert
             global KKS_ALL_BACK
             KKS_ALL = pd.read_csv(constants.DATA_KKS_ALL, header=None, sep=';')
             KKS_ALL_BACK = pd.read_csv(constants.DATA_KKS_ALL_BACK, header=None, sep=';')
-            if mode:
+            if mode == "exception":
                 for exception_directory in exception_directories:
                     KKS_ALL = KKS_ALL[~KKS_ALL[0].str.contains(exception_directory, regex=True)]
                 KKS_ALL.to_csv(constants.DATA_KKS_ALL ,header=None, sep=';', index=False)

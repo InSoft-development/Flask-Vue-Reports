@@ -1,7 +1,13 @@
-import { Mutex } from 'async-mutex'
 import { socket } from '../socket'
 
-const mutex = new Mutex()
+export async function getFileChecked(checkFileActive) {
+  await new Promise((resolve) => {
+    socket.emit('get_file_checked', (checkFile) => {
+      checkFileActive.value = checkFile
+      resolve(checkFile)
+    })
+  })
+}
 
 /***
  * Процедура получения конфигурации сервера OPC UA и проверки файла kks_all.csv

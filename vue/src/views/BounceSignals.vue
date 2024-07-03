@@ -645,11 +645,17 @@ export default {
             </template>
           </Dialog>
         </div>
-        <div class="col" v-if="dataTableRequested">
-          <Button @click="onButtonDownloadPdfClick">Загрузить отчет</Button>
+        <div class="col align-self-center" v-if="dataTableRequested">
+          <a href="report/bounce.pdf" download="report/bounce.pdf" type="application/octet-stream"
+            >Загрузить отчет</a
+          >
+          <!--          <Button @click="onButtonDownloadPdfClick">Загрузить отчет</Button>-->
         </div>
-        <div class="col" v-if="dataTableRequested">
-          <Button @click="onButtonDownloadCsvClick">Загрузить CSV</Button>
+        <div class="col align-self-center" v-if="dataTableRequested">
+          <a href="bounce.csv" download="bounce.csv" type="application/octet-stream"
+            >Загрузить отчет</a
+          >
+          <!--          <Button @click="onButtonDownloadCsvClick">Загрузить CSV</Button>-->
         </div>
       </div>
       <div class="row" v-if="dataTableStartRequested">

@@ -258,7 +258,7 @@ export default {
         return
       }
 
-      if ((dateTime.value <= dateDeepOfSearch.value) && intervalOrDateChecked.value) {
+      if (dateTime.value <= dateDeepOfSearch.value && intervalOrDateChecked.value) {
         alert('Глубина поиска в архивах не должна превышать указанную дату запроса')
         return
       }
@@ -734,11 +734,20 @@ export default {
             </template>
           </Dialog>
         </div>
-        <div class="col" v-if="dataTableRequested">
-          <Button @click="onButtonDownloadPdfClick">Загрузить отчет</Button>
+        <div class="col align-self-center" v-if="dataTableRequested">
+          <a
+            href="report/signals_slice.pdf"
+            download="report/signals_slice.pdf"
+            type="application/octet-stream"
+            >Загрузить отчет</a
+          >
+          <!--          <Button @click="onButtonDownloadPdfClick">Загрузить отчет</Button>-->
         </div>
-        <div class="col" v-if="dataTableRequested">
-          <Button @click="onButtonDownloadCsvClick">Загрузить CSV</Button>
+        <div class="col align-self-center" v-if="dataTableRequested">
+          <a href="signals_slice.csv" download="signals_slice.csv" type="application/octet-stream"
+            >Загрузить CSV</a
+          >
+          <!--          <Button @click="onButtonDownloadCsvClick">Загрузить CSV</Button>-->
         </div>
       </div>
       <div class="row">
@@ -789,7 +798,7 @@ export default {
             :rows="10"
             :rowsPerPageOptions="[10, 20, 50, 100]"
             scrollable="true"
-            scrollHeight="1000px"
+            scrollHeight="flex"
             columnResizeMode="fit"
             showGridlines="true"
             tableStyle="min-width: 50rem"
@@ -797,6 +806,7 @@ export default {
             filterDisplay="row"
           >
             <Column
+              class="myTable"
               field="Код сигнала (KKS)"
               header="Код сигнала (KKS)"
               sortable
@@ -884,5 +894,8 @@ export default {
 .radio-interval-margin {
   margin-left: 5px;
 }
+/*td{*/
+/*  font-size: 8px;*/
+/*}*/
 </style>
 <!--<style src="@vueform/multiselect/themes/default.css"></style>-->

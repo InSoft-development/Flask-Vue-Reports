@@ -725,11 +725,15 @@ export default {
             </template>
           </Dialog>
         </div>
-        <div class="col" v-if="dataTableRequested">
-          <Button @click="onButtonDownloadPdfClick">Загрузить отчет</Button>
+        <div class="col align-self-center" v-if="dataTableRequested">
+          <a href="report/grid.zip" download="report/grid.zip" type="application/octet-stream"
+            >Загрузить отчет</a
+          >
+          <!--          <Button @click="onButtonDownloadPdfClick">Загрузить отчет</Button>-->
         </div>
-        <div class="col" v-if="dataTableRequested">
-          <Button @click="onButtonDownloadCsvClick">Загрузить CSV</Button>
+        <div class="col align-self-center" v-if="dataTableRequested">
+          <a href="grid.csv" download="grid.csv" type="application/octet-stream">Загрузить CSV</a>
+          <!--          <Button @click="onButtonDownloadCsvClick">Загрузить CSV</Button>-->
         </div>
       </div>
       <div class="row" v-if="dataTableStartRequested">
@@ -799,6 +803,7 @@ export default {
               tableStyle="min-width: 50rem"
               dataKey="Метка времени"
               filterDisplay="row"
+              class="grid-table"
             >
               <Column
                 v-for="col of columnsTable"
@@ -843,5 +848,8 @@ export default {
 }
 .radio-interval-margin {
   margin-left: 5px;
+}
+.grid-table td {
+  font-size: 8px;
 }
 </style>
