@@ -30,46 +30,7 @@ export default {
   },
   setup(props) {
     const applicationStore = useApplicationStore()
-
-    // function updateDefaultFields() {
-    //   typesOfSensorsDataValue.value = applicationStore.defaultFields.typesOfSensors
-    //   typesOfSensorsDataOptions.value[0].options = applicationStore.defaultFields.typesOfSensors
-    //   chosenTypesOfSensorsData = applicationStore.defaultFields.typesOfSensors
-    //   selectionTagRadio.value = applicationStore.defaultFields.selectionTag
-    //
-    //   templates.templatesArray = []
-    //   for (const [
-    //     index,
-    //     template
-    //   ] of applicationStore.defaultFields.sensorsAndTemplateValue.entries()) {
-    //     templates.templatesArray.push({ id: index, templateText: template })
-    //   }
-    //
-    //   sensorsAndTemplateValue.value = applicationStore.defaultFields.sensorsAndTemplateValue
-    //   sensorsAndTemplateOptions.value[0].options =
-    //     applicationStore.defaultFields.sensorsAndTemplateValue
-    //   chosenSensorsAndTemplate = applicationStore.defaultFields.sensorsAndTemplateValue
-    //
-    //   quality.value = applicationStore.defaultFields.quality
-    //   chosenQuality = applicationStore.defaultFields.quality
-    //
-    //   intervalDeepOfSearch.value = applicationStore.defaultFields.intervalDeepOfSearch
-    //   intervalDeepOfSearchRadio.value = applicationStore.defaultFields.dimensionDeepOfSearch
-    //
-    //   dateDeepOfSearch.value = applicationStore.defaultFields.dateDeepOfSearch
-    //   lastValueChecked.value = applicationStore.defaultFields.lastValueChecked
-    //
-    //   filterTableChecked.value = applicationStore.defaultFields.filterTableChecked
-    // }
-    //
-    // watch(
-    //   () => applicationStore.defaultFields,
-    //   (before, after) => {
-    //     updateDefaultFields()
-    //   },
-    //   { deep: true }
-    // )
-
+    
     const typesOfSensorsDataValue = ref(applicationStore.defaultFields.typesOfSensors)
     const typesOfSensorsDataOptions = ref([
       {
