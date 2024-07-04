@@ -37,6 +37,8 @@ export default {
     const statusUpdateTextArea = ref('Лог')
     const statusUpdateButtonActive = ref(false)
 
+    const runUpdateFlag = ref(false)
+
     const checkFileActive = ref(false)
 
     const confirm = useConfirm()
@@ -159,6 +161,8 @@ export default {
     }
 
     onMounted(async () => {
+      statusUpdateButtonActive.value = true
+
       await getServerConfig(configServer, checkFileActive)
       await getLastUpdateFileKKS(lastUpdateFileKKS)
       await getIpAndPortConfig(ipOPC, portOPC)
@@ -199,6 +203,8 @@ export default {
       defaultExceptionDirectories.value =
         applicationStore.defaultFields.exceptionDirectories.join(', ')
       defaultExceptionExpertTags.value = applicationStore.defaultFields.exceptionExpertTags
+
+      statusUpdateButtonActive.value = false
     })
 
     onBeforeUnmount(async () => {
@@ -208,8 +214,9 @@ export default {
     onUnmounted(async () => {
       await cancelUpdate()
     })
-    
+
     async function onButtonDialogUpdate() {
+      runUpdateFlag.value = true
       statusUpdateButtonActive.value = true
       statusUpdateTextArea.value = ''
       statusUpdateTextArea.value += 'Запуск обновления тегов...\n'
@@ -222,6 +229,7 @@ export default {
           .filter((item) => item.length),
         defaultExceptionExpertTags.value
       )
+      runUpdateFlag.value = false
       await getServerConfig(configServer, checkFileActive)
       statusUpdateButtonActive.value = false
       if (!checkFileActive.value) {
@@ -281,6 +289,7 @@ export default {
       changeConfig,
       statusUpdateTextArea,
       statusUpdateButtonActive,
+      runUpdateFlag,
       checkFileActive,
       onButtonCancelUpdateClick,
       confirmUpdate,
@@ -330,8 +339,7 @@ export default {
         <h4>Изменить параметры конфигурации клиента</h4>
       </div>
     </div>
-    <div style="margin-bottom: 20px"></div>
-    <div class="row">
+    <div class="row components-margin-bottom">
       <div class="col">
         <FloatLabel>
           <InputText
@@ -370,7 +378,7 @@ export default {
       </div>
       <div class="col">
         <Button
-          v-if="statusUpdateButtonActive"
+          v-if="statusUpdateButtonActive && runUpdateFlag"
           label="Отмена"
           icon="pi pi-times"
           @click="onButtonCancelUpdateClick"
@@ -379,7 +387,7 @@ export default {
         />
         <ConfirmDialog></ConfirmDialog>
         <Button
-          v-if="!statusUpdateButtonActive"
+          v-if="!statusUpdateButtonActive || !runUpdateFlag"
           label="Обновить"
           icon="pi pi-check"
           :disabled="statusUpdateButtonActive"
@@ -388,8 +396,7 @@ export default {
         />
       </div>
     </div>
-    <div style="margin-bottom: 20px"></div>
-    <div class="row">
+    <div class="row components-margin-bottom">
       <div class="col">
         <h4>Отбор тегов</h4>
       </div>
@@ -461,8 +468,7 @@ export default {
         >
       </div>
     </div>
-    <div style="margin-bottom: 20px"></div>
-    <div class="row">
+    <div class="row components-margin-bottom">
       <div class="col">
         <TextArea
           id="status-text-area"
@@ -505,7 +511,7 @@ export default {
         ></Multiselect>
       </div>
     </div>
-    <div class="row">
+    <div class="row align-items-center">
       <div class="col-4">Применять фильтр по умолчанию как:</div>
       <div class="col-4">
         <RadioButton
@@ -752,3 +758,17 @@ export default {
     </div>
   </div>
 </template>
+
+<style>
+.checkbox-margin {
+  margin-left: 5px;
+}
+.radio-interval-margin {
+  margin-left: 10px;
+  margin-right: 10px;
+}
+.components-margin-bottom {
+  margin-bottom: 10px;
+  margin-top: 10px;
+}
+</style>

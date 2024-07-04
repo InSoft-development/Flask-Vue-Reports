@@ -1,5 +1,6 @@
 <script>
-import { ref, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
+import { ref, onMounted, computed } from 'vue'
 
 import Multiselect from '@vueform/multiselect'
 
@@ -40,6 +41,9 @@ export default {
     const collapsed = ref(false)
     const checkFileActive = ref(false)
 
+    const route = useRoute()
+    const routePath = computed(() => route.path)
+
     onMounted(async () => {
       await getFileChecked(checkFileActive)
       if (!checkFileActive.value)
@@ -53,6 +57,7 @@ export default {
       sidebarMenu,
       collapsed,
       checkFileActive,
+      routePath
     }
   }
 }
@@ -63,11 +68,11 @@ export default {
   </sidebar-menu>
   <div id="content" :class="[{ collapsed: collapsed }]">
     <div class="content">
-      <div class="container" v-if="!checkFileActive">
+      <div class="container" v-if="!checkFileActive && (routePath !== '/configurator')">
         <h1>Не найден файл kks_all.csv.</h1>
-        <h1>Сконфигурируйте клиент OPC UA и обновите файл тегов.</h1>
+        <h1>Сконфигурируйте клиент OPC UA и обновите файл тегов на странице "Конфигуратор".</h1>
       </div>
-      <div class="container" v-if="checkFileActive">
+      <div class="container" v-if="checkFileActive || (routePath === '/configurator')">
         <RouterView :collapsed-sidebar="collapsed" />
       </div>
     </div>
@@ -100,13 +105,5 @@ export default {
 
 .container {
   max-width: 900px;
-}
-
-.checkbox-margin {
-  margin-left: 5px;
-}
-.radio-interval-margin {
-  margin-left: 10px;
-  margin-right: 10px;
 }
 </style>

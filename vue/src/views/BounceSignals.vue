@@ -10,7 +10,6 @@ import {
   onUnmounted,
   onBeforeUnmount,
   computed,
-  watch
 } from 'vue'
 import {
   getKKSFilterByMasks,
@@ -31,7 +30,7 @@ export default {
   },
   setup(props) {
     const applicationStore = useApplicationStore()
-    
+
     const typesOfSensorsDataValue = ref(applicationStore.defaultFields.typesOfSensors)
     const typesOfSensorsDataOptions = ref([
       {
