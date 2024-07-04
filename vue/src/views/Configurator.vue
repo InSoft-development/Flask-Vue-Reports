@@ -1,5 +1,5 @@
 <script>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onBeforeUnmount, onUnmounted } from 'vue'
 import { useConfirm } from 'primevue/useconfirm'
 
 import Multiselect from '@vueform/multiselect'
@@ -23,8 +23,6 @@ export default {
   components: { Multiselect },
   setup() {
     const applicationStore = useApplicationStore()
-
-    // applicationStore.getFields()
 
     const lastUpdateFileKKS = ref('')
     const configServer = ref('')
@@ -83,7 +81,7 @@ export default {
     const defaultTypesOfSensorsDataOptions = ref([
       {
         label: 'Выбрать все типы данных',
-        options: applicationStore.defaultFields.typesOfSensors
+        options: []
       }
     ])
     let defaultChosenTypesOfSensorsData = []
@@ -172,8 +170,8 @@ export default {
         await cancelUpdate()
       })
 
-      defaultTypesOfSensorsDataValue.value = applicationStore.defaultFields.typesOfSensors
       await getTypesOfSensors(defaultTypesOfSensorsDataOptions)
+      defaultTypesOfSensorsDataValue.value = applicationStore.defaultFields.typesOfSensors
       defaultChosenTypesOfSensorsData = applicationStore.defaultFields.typesOfSensors
 
       defaultSelectionTagRadio.value = applicationStore.defaultFields.selectionTag
@@ -203,38 +201,14 @@ export default {
       defaultExceptionExpertTags.value = applicationStore.defaultFields.exceptionExpertTags
     })
 
-    // function onButtonDialogConfiguratorActive() {
-    //   defaultTypesOfSensorsDataValue.value = applicationStore.defaultFields.typesOfSensors
-    //   getTypesOfSensors(defaultTypesOfSensorsDataOptions)
-    //   defaultChosenTypesOfSensorsData = applicationStore.defaultFields.typesOfSensors
-    //
-    //   defaultSelectionTagRadio.value = applicationStore.defaultFields.selectionTag
-    //
-    //   defaultTemplate.value = applicationStore.defaultFields.sensorsAndTemplateValue.join(', ')
-    //
-    //   defaultQuality.value = applicationStore.defaultFields.quality
-    //   defaultChosenQuality = applicationStore.defaultFields.quality
-    //
-    //   defaultLastValueChecked.value = applicationStore.defaultFields.lastValueChecked
-    //   defaultFilterTableChecked.value = applicationStore.defaultFields.filterTableChecked
-    //
-    //   defaultIntervalDeepOfSearch.value = applicationStore.defaultFields.intervalDeepOfSearch
-    //   defaultDimensionDeepOfSearch.value = applicationStore.defaultFields.dimensionDeepOfSearch
-    //
-    //   defaultDateDeepOfSearch.value = applicationStore.defaultFields.dateDeepOfSearch
-    //
-    //   defaultInterval.value = applicationStore.defaultFields.interval
-    //   defaultIntervalRadio.value = applicationStore.defaultFields.dimension
-    //
-    //   defaultCountShowSensors.value = applicationStore.defaultFields.countShowSensors
-    //
-    //   defaultModeOfFilterRadio.value = applicationStore.defaultFields.modeOfFilter
-    //   defaultRootDirectory.value = applicationStore.defaultFields.rootDirectory
-    //   defaultExceptionDirectories.value =
-    //     applicationStore.defaultFields.exceptionDirectories.join(', ')
-    //   defaultExceptionExpertTags.value = applicationStore.defaultFields.exceptionExpertTags
-    // }
+    onBeforeUnmount(async () => {
+      window.removeEventListener('beforeunload', async (event) => {})
+    })
 
+    onUnmounted(async () => {
+      await cancelUpdate()
+    })
+    
     async function onButtonDialogUpdate() {
       statusUpdateButtonActive.value = true
       statusUpdateTextArea.value = ''

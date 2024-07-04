@@ -65,11 +65,19 @@ bounce_greenlet = None
 
 @app.route('/')
 def hello():
+    """
+    Функция для проверки работы веб-сервера Flask
+    :return: Возвращает заголовк при запросе URL на порт Flask
+    """
     return "<h1> HELLO WORLD </h1>"
 
 
 @socketio.on("connect")
 def connect():
+    """
+    Процедура регистрирует присоединение нового клиента и открытие сокета
+    :return:
+    """
     clients[request.sid] = request.sid
     logger.info("connect")
     logger.info(request.sid)
@@ -77,6 +85,10 @@ def connect():
 
 @socketio.on("disconnect")
 def disconnect():
+    """
+    Процедура регистрирует разъединение клиента и закрытие сокета
+    :return:
+    """
     del clients[request.sid]
     logger.info("disconnect")
     logger.info(request.sid)

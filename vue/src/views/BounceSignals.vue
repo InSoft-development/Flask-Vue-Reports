@@ -29,45 +29,9 @@ export default {
   props: {
     collapsedSidebar: Boolean
   },
-  emits: ['toggleButtonDialogConfigurator'],
-  setup(props, context) {
+  setup(props) {
     const applicationStore = useApplicationStore()
-
-    function updateDefaultFields() {
-      typesOfSensorsDataValue.value = applicationStore.defaultFields.typesOfSensors
-      typesOfSensorsDataOptions.value[0].options = applicationStore.defaultFields.typesOfSensors
-      chosenTypesOfSensorsData = applicationStore.defaultFields.typesOfSensors
-
-      selectionTagRadio.value = applicationStore.defaultFields.selectionTag
-
-      templates.templatesArray = []
-      for (const [
-        index,
-        template
-      ] of applicationStore.defaultFields.sensorsAndTemplateValue.entries()) {
-        templates.templatesArray.push({ id: index, templateText: template })
-      }
-
-      sensorsAndTemplateValue.value = applicationStore.defaultFields.sensorsAndTemplateValue
-      sensorsAndTemplateOptions.value[0].options =
-        applicationStore.defaultFields.sensorsAndTemplateValue
-      chosenSensorsAndTemplate = applicationStore.defaultFields.sensorsAndTemplateValue
-
-      interval.value = applicationStore.defaultFields.interval
-      intervalRadio.value = applicationStore.defaultFields.dimension
-      countShowSensors.value = applicationStore.defaultFields.countShowSensors
-
-      filterTableChecked.value = applicationStore.defaultFields.filterTableChecked
-    }
-
-    watch(
-      () => applicationStore.defaultFields,
-      (before, after) => {
-        updateDefaultFields()
-      },
-      { deep: true }
-    )
-
+    
     const typesOfSensorsDataValue = ref(applicationStore.defaultFields.typesOfSensors)
     const typesOfSensorsDataOptions = ref([
       {
@@ -192,8 +156,6 @@ export default {
     })
 
     onUnmounted(async () => {
-      if (progressBarBounceSignalsActive.value)
-        await context.emit('toggleButtonDialogConfigurator', false)
       await cancelBounce()
     })
 
@@ -236,7 +198,6 @@ export default {
 
       if (progressBarBounceSignalsActive.value) return
       dateTimeBeginReport.value = new Date().toLocaleString()
-      await context.emit('toggleButtonDialogConfigurator', true)
 
       dataTableStartRequested.value = true
 
@@ -267,8 +228,6 @@ export default {
     }
 
     function onInterruptRequestButtonClick() {
-      if (progressBarBounceSignalsActive.value)
-        context.emit('toggleButtonDialogConfigurator', false)
       cancelBounce()
       dataTableStartRequested.value = false
       progressBarBounceSignalsActive.value = false
@@ -326,7 +285,6 @@ export default {
       dialogBigRequestActive.value = false
       progressBarBounceSignals.value = '100'
       progressBarBounceSignalsActive.value = false
-      await context.emit('toggleButtonDialogConfigurator', false)
     }
 
     async function onBigRequestButtonClick() {
@@ -360,7 +318,6 @@ export default {
       dateTimeEndReport.value = new Date().toLocaleString()
       progressBarBounceSignals.value = '100'
       progressBarBounceSignalsActive.value = false
-      await context.emit('toggleButtonDialogConfigurator', false)
     }
 
     function onDateTodayClick() {
@@ -368,7 +325,6 @@ export default {
     }
 
     return {
-      updateDefaultFields,
       typesOfSensorsDataValue,
       typesOfSensorsDataOptions,
       chosenTypesOfSensorsData,
