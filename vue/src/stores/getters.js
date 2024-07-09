@@ -340,10 +340,11 @@ export async function getGrid(
       formatDateEnd,
       interval,
       dimension,
-      (data, status) => {
+      (data, status, dataLength) => {
         result[0] = data
         result[1] = status
-        resolve([data, status])
+        result[3] = dataLength
+        resolve([data, status, dataLength])
       }
     )
   })
@@ -352,10 +353,123 @@ export async function getGrid(
     alert(result)
   }
   if (Array.isArray(result)) {
-    dataTable.value = result[0]
-    dataTableStatus.value = result[1]
+    // dataTable.value = result[0]
+    dataTable.value = Array.from({ length: result[3]})
+    Array.prototype.splice.apply(dataTable.value, [...[0, 40], ...result[0].slice(0, 40)])
+
+    // dataTableStatus.value = result[1]
+    dataTableStatus.value = Array.from({ length: result[3]})
+    Array.prototype.splice.apply(dataTableStatus.value, [...[0, 40], ...result[1].slice(0, 40)])
     dataTableRequested.value = true
   }
+}
+
+/***
+ * Процедура lazy-загрузки по частям сетки
+ * @param loadedData
+ * @param dataTableRequested
+ * @param loadedDataStatus
+ * @param first
+ * @param last
+ * @returns {Promise<void>}
+ */
+export async function getPartOfData(
+  loadedData,
+  dataTableRequested,
+  loadedDataStatus,
+  first,
+  last
+) {
+  let result = Array()
+
+  await new Promise((resolve) => {
+    socket.emit(
+      'get_grid_part_data',
+       first,
+       last,
+       (partData, partStatus) => {
+          result[0] = partData
+          result[1] = partStatus
+          resolve([partData, partStatus])
+       }
+    )
+  })
+  if (typeof result === 'string') {
+    dataTableRequested.value = false
+    alert(result)
+  }
+  if (Array.isArray(result)) {
+    loadedData.value = result[0]
+    loadedDataStatus.value = result[1]
+    dataTableRequested.value = true
+  }
+}
+
+/***
+ * Процедура загрузки части отфильтрованных данных таблицы сетки
+ * @param filters
+ * @param loadedData
+ * @param dataTableRequested
+ * @param loadedDataStatus
+ * @returns {Promise<void>}
+ */
+export async function getFilterData(
+  filters,
+  dataTable,
+  dataTableStatus,
+) {
+  let result = Array()
+
+  await new Promise((resolve) => {
+    socket.emit(
+      'get_grid_filtered_data',
+       JSON.stringify(filters.value),
+       (partData, partStatus, dataLength) => {
+          result[0] = partData
+          result[1] = partStatus
+          result[3] = dataLength
+          resolve([partData, partStatus, dataLength])
+       }
+    )
+  })
+  dataTable.value = Array.from({ length: result[3]})
+  Array.prototype.splice.apply(dataTable.value, [...[0, 40], ...result[0].slice(0, 40)])
+
+  dataTableStatus.value = Array.from({ length: result[3]})
+  Array.prototype.splice.apply(dataTableStatus.value, [...[0, 40], ...result[1].slice(0, 40)])
+}
+
+/***
+ * Процедура загрузки части отсортированных и отфильтрованных данных таблицы сетки
+ * @param lazyParams
+ * @param dataTable
+ * @param dataTableStatus
+ * @returns {Promise<void>}
+ */
+export async function getSortedData(
+  lazyParams,
+  dataTable,
+  dataTableStatus,
+) {
+  let result = Array
+
+  await new Promise((resolve) => {
+    socket.emit(
+      'get_grid_sorted_data',
+       JSON.stringify(lazyParams),
+       (partData, partStatus, dataLength) => {
+          result[0] = partData
+          result[1] = partStatus
+          result[3] = dataLength
+          resolve([partData, partStatus, dataLength])
+       }
+    )
+  })
+  dataTable.value = Array.from({ length: result[3]})
+  Array.prototype.splice.apply(dataTable.value, [...[0, 40], ...result[0].slice(0, 40)])
+
+  dataTableStatus.value = Array.from({ length: result[3]})
+  Array.prototype.splice.apply(dataTableStatus.value, [...[0, 40], ...result[1].slice(0, 40)])
 }
 
 /***

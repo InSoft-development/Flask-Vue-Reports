@@ -439,7 +439,7 @@ def update_kks_all(mode, root_directory, exception_directories, exception_expert
             if mode == "exception":
                 for exception_directory in exception_directories:
                     KKS_ALL = KKS_ALL[~KKS_ALL[0].str.contains(exception_directory, regex=True)]
-                KKS_ALL.to_csv(constants.DATA_KKS_ALL ,header=None, sep=';', index=False)
+                KKS_ALL.to_csv(constants.DATA_KKS_ALL, header=None, sep=';', index=False)
                 KKS_ALL = pd.read_csv(constants.DATA_KKS_ALL, header=None, sep=';')
         except re.error as regular_expression_except:
             logger.error(f"Неверный синтаксис регулярного выражения {regular_expression_except}")
@@ -898,7 +898,7 @@ def get_grid_data(kks, date_begin, date_end, interval, dimension):
     :param date_end: конечная дата сетки
     :param interval: интервал
     :param dimension: размерность интервала [день, час, минута, секунда]
-    :return: json объект для заполнения таблицы сеток
+    :return: json объект для заполнения таблицы сеток и размер датафрейма
     """
     logger.info(f"get_grid_data({kks}, {date_begin}, {date_end}, {interval}, {dimension})")
 
@@ -916,6 +916,8 @@ def get_grid_data(kks, date_begin, date_end, interval, dimension):
 
         logger.info(sid)
         global sid_proc
+        global REPORT_DF
+        global REPORT_DF_STATUS
         sid_proc = sid
 
         # Сохранение датчика с KKS
@@ -1010,8 +1012,17 @@ def get_grid_data(kks, date_begin, date_end, interval, dimension):
         code = pd.DataFrame(data={
             '№': [i for i in range(len(df_slice_csv.columns.tolist()[1:]))],
             'Обозначение сигнала': [kks for kks in df_slice_csv.columns.tolist()[1:]]})
+
+        REPORT_DF = df_report.copy(deep=True)
+        REPORT_DF_STATUS = df_report_slice.copy(deep=True)
+
         code.to_csv(constants.CSV_CODE, index=False, encoding='utf-8')
         df_report.to_csv(constants.CSV_GRID, index=False, encoding='utf-8')
+        df_report_slice.to_csv(constants.CSV_GRID_STATUS, index=False, encoding='utf-8')
+
+        REPORT_DF = pd.read_csv(constants.CSV_GRID)
+        REPORT_DF_STATUS = pd.read_csv(constants.CSV_GRID_STATUS)
+
         logger.info("Датафреймы сформированы")
 
         shutil.copy(constants.CSV_GRID, f'{constants.WEB_DIR}grid.csv')
@@ -1074,7 +1085,9 @@ def get_grid_data(kks, date_begin, date_end, interval, dimension):
         socketio.emit("setProgressBarGrid", {"count": 95}, to=sid)
         socketio.emit("setUpdateGridRequestStatus", {"message": f"Передача данных в веб-приложение...\n"}, to=sid)
 
-        return json.loads(df_report.to_json(orient='records')), json.loads(df_report_slice.to_json(orient='records'))
+        return json.loads(df_report[:40].to_json(orient='records')),\
+               json.loads(df_report_slice[:40].to_json(orient='records')),\
+               len(df_report)
 
     sid = request.sid
 
@@ -1091,6 +1104,219 @@ def get_grid_data(kks, date_begin, date_end, interval, dimension):
     gevent.joinall([grid_greenlet])
     sid_proc = None
     return grid_greenlet.value
+
+
+@socketio.on("get_grid_part_data")
+def get_grid_part_data(first, last):
+    """
+    Функция выгрузки части данных таблицы сетки
+    :param first: индекс начальной строки выгрузки скроллера
+    :param last: индекс конечной строки выгрузки скроллера
+    :return: json объекты для заполнения таблицы сетки
+    """
+    logger.info(f"get_grid_part_data({first}, {last})")
+    global REPORT_DF
+    global REPORT_DF_STATUS
+
+    return json.loads(REPORT_DF.iloc[first:last].to_json(orient='records')),\
+           json.loads(REPORT_DF_STATUS.iloc[first:last].to_json(orient='records'))
+
+
+def apply_filters(filters):
+    """
+    Процедура применения фильтров по столбцов
+    :param filters: объект фильтра таблицы сетки
+    :return:
+    """
+    logger.info(f"apply_filters({filters})")
+
+    for key, value in filters.items():
+        if value["value"] is None:
+            continue
+
+        if value["value"].isspace():
+            continue
+
+        FILTERS_OPERATIONS[value["matchMode"]](key, value["value"])
+
+
+@socketio.on("get_grid_filtered_data")
+def get_grid_filtered_data(filters):
+    """
+    Функция фильтрации по столбцам таблицы сетки
+    :param filters: объект фильтра таблицы сетки
+    :return: json объекты для заполнения отфильтрованной таблицы сетки и размер получившегося датафрейма
+    """
+    logger.info(f"get_grid_filtered_data({filters})")
+    global REPORT_DF
+    global REPORT_DF_STATUS
+
+    REPORT_DF = pd.read_csv(constants.CSV_GRID)
+    REPORT_DF_STATUS = pd.read_csv(constants.CSV_GRID_STATUS)
+
+    filters = json.loads(filters)
+
+    apply_filters(filters)
+
+    return json.loads(REPORT_DF.iloc[constants.FIRST:constants.LAST].to_json(orient='records')), \
+           json.loads(REPORT_DF_STATUS.iloc[constants.FIRST:constants.LAST].to_json(orient='records')),\
+           len(REPORT_DF)
+
+
+@socketio.on("get_grid_sorted_data")
+def get_grid_sorted_data(params):
+    """
+    Функция сортировки по столбцам таблицы сетки
+    :param params: объект сортировки и фильтра таблицы сетки
+    :return: json объекты для заполнения осортированной таблицы сетки и размер получившегося датафрейма
+    """
+    logger.info(f"get_grid_sorted_data({params})")
+    global REPORT_DF
+    global REPORT_DF_STATUS
+
+    params = json.loads(params)
+
+    apply_filters(params["filters"])
+
+    REPORT_DF.sort_values(by=[params["sortField"]],
+                          ascending=[False if params["sortOrder"] == -1 else True],
+                          inplace=True)
+    REPORT_DF_STATUS = REPORT_DF_STATUS.reindex(REPORT_DF.index)
+
+    return json.loads(REPORT_DF.iloc[constants.FIRST:constants.LAST].to_json(orient='records')), \
+           json.loads(REPORT_DF_STATUS.iloc[constants.FIRST:constants.LAST].to_json(orient='records')),\
+           len(REPORT_DF)
+
+
+def starts_with(col, val):
+    """
+    Процедура фильтрации колонки датафрейма по началу значения
+    :param col: наименование колонки
+    :param val: значение поля фильтрации
+    :return:
+    """
+    logger.info(f"starts_with({col}, {val})")
+    global REPORT_DF
+    global REPORT_DF_STATUS
+
+    REPORT_DF[col] = REPORT_DF[col].astype(str)
+
+    REPORT_DF = REPORT_DF.loc[REPORT_DF[col].str.startswith(val, na=False)]
+    REPORT_DF_STATUS = REPORT_DF_STATUS.loc[REPORT_DF_STATUS['Метка времени'].isin(REPORT_DF['Метка времени'])]
+
+    if col != 'Метка времени':
+        REPORT_DF[col] = REPORT_DF[col].astype(float)
+
+
+def contains(col, val):
+    """
+    Процедура фильтрации колонки датафрейма по содержимому значения
+    :param col: наименование колонки
+    :param val: значение поля фильтрации
+    :return:
+    """
+    logger.info(f"contains({col}, {val})")
+    global REPORT_DF
+    global REPORT_DF_STATUS
+
+    REPORT_DF[col] = REPORT_DF[col].astype(str)
+
+    REPORT_DF = REPORT_DF.loc[REPORT_DF[col].str.contains(val, na=False, regex=True)]
+    REPORT_DF_STATUS = REPORT_DF_STATUS.loc[REPORT_DF_STATUS['Метка времени'].isin(REPORT_DF['Метка времени'])]
+
+    if col != 'Метка времени':
+        REPORT_DF[col] = REPORT_DF[col].astype(float)
+
+
+def not_contains(col, val):
+    """
+    Процедура фильтрации колонки датафрейма по отсутсвию содержания значения
+    :param col: наименование колонки
+    :param val: значение поля фильтрации
+    :return:
+    """
+    logger.info(f"not_contains({col}, {val})")
+    global REPORT_DF
+    global REPORT_DF_STATUS
+
+    REPORT_DF[col] = REPORT_DF[col].astype(str)
+
+    REPORT_DF = REPORT_DF.loc[~REPORT_DF[col].str.contains(val, na=False, regex=True)]
+    REPORT_DF_STATUS = REPORT_DF_STATUS.loc[REPORT_DF_STATUS['Метка времени'].isin(REPORT_DF['Метка времени'])]
+
+    if col != 'Метка времени':
+        REPORT_DF[col] = REPORT_DF[col].astype(float)
+
+
+def ends_with(col, val):
+    """
+    Процедура фильтрации колонки датафрейма по окончанию значения
+    :param col: наименование колонки
+    :param val: значение поля фильтрации
+    :return:
+    """
+    logger.info(f"ends_with({col}, {val})")
+    global REPORT_DF
+    global REPORT_DF_STATUS
+
+    REPORT_DF[col] = REPORT_DF[col].astype(str)
+
+    REPORT_DF = REPORT_DF.loc[REPORT_DF[col].str.endswith(val, na=False)]
+    REPORT_DF_STATUS = REPORT_DF_STATUS.loc[REPORT_DF_STATUS['Метка времени'].isin(REPORT_DF['Метка времени'])]
+
+    if col != 'Метка времени':
+        REPORT_DF[col] = REPORT_DF[col].astype(float)
+
+
+def equals(col, val):
+    """
+    Процедура фильтрации колонки датафрейма по равенству значения
+    :param col: наименование колонки
+    :param val: значение поля фильтрации
+    :return:
+    """
+    logger.info(f"equals({col}, {val})")
+    global REPORT_DF
+    global REPORT_DF_STATUS
+
+    REPORT_DF[col] = REPORT_DF[col].astype(str)
+
+    REPORT_DF = REPORT_DF.loc[REPORT_DF[col] == val]
+    REPORT_DF_STATUS = REPORT_DF_STATUS.loc[REPORT_DF_STATUS['Метка времени'].isin(REPORT_DF['Метка времени'])]
+
+    if col != 'Метка времени':
+        REPORT_DF[col] = REPORT_DF[col].astype(float)
+
+
+def not_equals(col, val):
+    """
+    Процедура фильтрации колонки датафрейма по не равенству значения
+    :param col: наименование колонки
+    :param val: значение поля фильтрации
+    :return:
+    """
+    logger.info(f"not_equals({col}, {val})")
+    global REPORT_DF
+    global REPORT_DF_STATUS
+
+    REPORT_DF[col] = REPORT_DF[col].astype(str)
+
+    REPORT_DF = REPORT_DF.loc[REPORT_DF[col] != val]
+    REPORT_DF_STATUS = REPORT_DF_STATUS.loc[REPORT_DF_STATUS['Метка времени'].isin(REPORT_DF['Метка времени'])]
+
+    if col != 'Метка времени':
+        REPORT_DF[col] = REPORT_DF[col].astype(float)
+
+
+def no_filter(col, val):
+    """
+    Процедура сброса фильтра
+    :param col: наименование колонки
+    :param val: значение поля фильтрации
+    :return:
+    """
+    logger.info(f"no_filter({col}, {val})")
+    return
 
 
 @socketio.on("grid_data_cancel")
@@ -1304,4 +1530,18 @@ if __name__ == '__main__':
     logger.info(f"dataframe {constants.DATA_KKS_ALL} has been loaded")
     logger.info(f"dataframe {constants.DATA_KKS_ALL_BACK} has been loaded")
 
+    REPORT_DF = None
+    REPORT_DF_STATUS = None
+
+    FILTERS_OPERATIONS = {
+        "startsWith": starts_with,
+        "contains": contains,
+        "notContains": not_contains,
+        "endsWith": ends_with,
+        "equals": equals,
+        "notEquals": not_equals,
+        "noFilter": no_filter
+    }
+
     socketio.run(app, host=args.host, port=args.port)
+

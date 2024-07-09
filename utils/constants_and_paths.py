@@ -26,6 +26,7 @@ CSV_DISCRETE_GRID = f'{REPORTS_DIRECTORY}discrete_grid.csv'
 CSV_BOUNCE = f'{REPORTS_DIRECTORY}bounce.csv'
 CSV_SIGNALS = f'{REPORTS_DIRECTORY}signals_slice.csv'
 CSV_GRID = f'{REPORTS_DIRECTORY}grid.csv'
+CSV_GRID_STATUS = f'{REPORTS_DIRECTORY}grid_status.csv'
 CSV_CODE = f'{REPORTS_DIRECTORY}code.csv'
 CSV_TAGS = f'{REPORTS_DIRECTORY}tags.csv'
 
@@ -142,6 +143,9 @@ PDF_OPTIONS = {
 }
 
 SEPARATED_COUNT = 5
+
+FIRST = 0
+LAST = 40
 
 # DOWNLOADED_STYLES_AND_JS_PATH = {
 #     f'vue{os.sep}node_modules{os.sep}bootstrap{os.sep}dist{os.sep}css{os.sep}bootstrap.css': 'bootstrap.css',

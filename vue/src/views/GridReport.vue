@@ -10,12 +10,16 @@ import {
   onUnmounted,
   onBeforeUnmount,
   computed,
+  watch,
 } from 'vue'
 import {
   getKKSFilterByMasks,
   getTypesOfSensors,
   getKKSByMasksForTable,
   getGrid,
+  getPartOfData,
+  getFilterData,
+  getSortedData,
   cancelGrid
 } from '../stores'
 
@@ -122,8 +126,86 @@ export default {
     const dataTableRequested = ref(false)
     const dataTableStartRequested = ref(false)
 
+    const lazyLoading = ref(false)
+    const loadLazyTimeout = ref()
+    const loadedData = ref([])
+    const loadedDataStatus = ref([])
+    const tempLoadedData = ref()
+    const tempLoadedStatus = ref()
+    const loadDataLazy = (event) => {
+      lazyLoading.value = true
+
+      if (loadLazyTimeout.value) {
+        clearTimeout(loadLazyTimeout.value)
+      }
+
+
+      loadLazyTimeout.value = setTimeout(async () => {
+        let _loadedData = [...dataTable.value]
+        let _loadedDataStatus = [...dataTableStatus.value]
+
+
+        let { first, last } = event
+
+        // вызов загрузки данных с Flask
+        await getPartOfData(tempLoadedData, dataTableRequested, tempLoadedStatus, first, last)
+
+        Array.prototype.splice.apply(_loadedData, [...[first, last - first], ...tempLoadedData.value])
+        Array.prototype.splice.apply(_loadedDataStatus, [...[first, last - first], ...tempLoadedStatus.value])
+
+        loadedData.value = _loadedData
+        loadedDataStatus.value = _loadedDataStatus
+
+        dataTable.value = loadedData.value
+        dataTableStatus.value = loadedDataStatus.value
+
+        lazyLoading.value = false
+      }, 50)
+    }
+
     const filters = ref(null)
     const filterTableChecked = ref(applicationStore.defaultFields.filterTableChecked)
+
+    let loadOnFilterTimeout = null
+    const onSort = (event) => {
+      lazyLoading.value = true
+
+      if (loadOnFilterTimeout) {
+        clearTimeout(loadOnFilterTimeout)
+      }
+
+      loadOnFilterTimeout = setTimeout(async () => {
+        let lazyParams = {
+          filters: filters.value,
+          sortField: String(event.sortField),
+          sortOrder: event.sortOrder
+        }
+        await getSortedData(lazyParams, dataTable, dataTableStatus)
+        lazyLoading.value = false
+      }, 500)
+    }
+
+    const onFilter = () => {
+      lazyLoading.value = true
+
+      if (loadOnFilterTimeout) {
+        clearTimeout(loadOnFilterTimeout)
+      }
+
+      loadOnFilterTimeout = setTimeout(async () => {
+        await getFilterData(filters, dataTable, dataTableStatus)
+        lazyLoading.value = false
+      }, 2000)
+    }
+
+    watch(
+  () => filters,
+    (before, after) => {
+          if (!dataTableRequested.value) return
+          onFilter()
+        },
+ { deep: true }
+      )
 
     const estimatedTime = ref(0.0)
     const chosenSensors = ref([])
@@ -313,6 +395,13 @@ export default {
             dataTableStatus.value[index][String(field)] === 'missed' ||
             dataTableStatus.value[index][String(field)] === 'NaN' ||
             dataTable.value[index][String(field)] === 'NaN'
+          // 'text-danger': applicationStore.badCode.includes(
+          //   loadedDataStatus.value[index][String(field)]
+          // ),
+          // 'text-warning':
+          //   loadedDataStatus.value[index][String(field)] === 'missed' ||
+          //   loadedDataStatus.value[index][String(field)] === 'NaN' ||
+          //   loadedData.value[index][String(field)] === 'NaN'
         }
       ]
     }
@@ -353,6 +442,7 @@ export default {
           matchMode: FilterMatchMode.STARTS_WITH
         }
       }
+
       let codeTableArray = Array()
       let columnsTableArray = [{ field: 'Метка времени', header: 'Метка времени' }]
 
@@ -377,6 +467,7 @@ export default {
         dataTableRequested,
         dataTableStatus
       )
+      // await getPartOfData(dataTable, dataTableRequested, dataTableStatus, 0, 40)
 
       // countOfDataTable.value = Math.ceil(chosenSensors.value.length / 5)
       //
@@ -447,8 +538,13 @@ export default {
       columnsTableArrayOfArray,
       dataTableRequested,
       dataTableStartRequested,
+      lazyLoading,
+      loadLazyTimeout,
+      loadDataLazy,
       filters,
       filterTableChecked,
+      onSort,
+      onFilter,
       onRequestButtonClick,
       onInterruptRequestButtonClick,
       interruptDisabledFlag,
@@ -752,17 +848,32 @@ export default {
           <div class="card" v-if="dataTableRequested" id="data-table">
             <DataTable
               v-model:filters="filters"
+              :lazy="true"
               :value="dataTable"
               :scrollable="true"
               scrollHeight="1000px"
               :columnResizeMode="fit"
               :showGridlines="true"
-              :virtualScrollerOptions="{ itemSize: 50 }"
+              :virtualScrollerOptions="{ lazy: true, onLazyLoad: loadDataLazy, itemSize: 50, delay: 200, showLoader: true, loading: lazyLoading, numToleratedItems: 10 }"
               tableStyle="min-width: 50rem"
               dataKey="Метка времени"
               filterDisplay="row"
               class="grid-table"
+              @sort="onSort($event)"
             >
+<!--            <DataTable-->
+<!--              v-model:filters="filters"-->
+<!--              :value="dataTable"-->
+<!--              :scrollable="true"-->
+<!--              scrollHeight="1000px"-->
+<!--              :columnResizeMode="fit"-->
+<!--              :showGridlines="true"-->
+<!--              :virtualScrollerOptions="{ itemSize: 50 }"-->
+<!--              tableStyle="min-width: 50rem"-->
+<!--              dataKey="Метка времени"-->
+<!--              filterDisplay="row"-->
+<!--              class="grid-table"-->
+<!--            >-->
               <Column
                 v-for="col of columnsTable"
                 :key="col.field"
@@ -782,13 +893,27 @@ export default {
                   </div>
                 </template>
                 <template #filter="{ filterModel, filterCallback }" v-if="filterTableChecked">
+<!--                  <InputText-->
+<!--                    :id="col.header"-->
+<!--                    v-model="filterModel.value"-->
+<!--                    @input="onFilter(filterModel.value)"-->
+<!--                    type="text"-->
+<!--                    class="p-column-filter"-->
+<!--                    :fluid="true"-->
+<!--                  />-->
                   <InputText
                     :id="col.header"
                     v-model="filterModel.value"
+                    @input="filterCallback($event)"
                     type="text"
-                    @input="filterCallback()"
                     class="p-column-filter"
+                    :fluid="true"
                   />
+                </template>
+                <template #loading>
+                  <div class="flex items-center" :style="{ height: '17px', 'flex-grow': '1', overflow: 'hidden' }">
+                    <Skeleton width="60%" height="1rem" />
+                  </div>
                 </template>
               </Column>
             </DataTable>
