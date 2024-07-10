@@ -1085,8 +1085,8 @@ def get_grid_data(kks, date_begin, date_end, interval, dimension):
         socketio.emit("setProgressBarGrid", {"count": 95}, to=sid)
         socketio.emit("setUpdateGridRequestStatus", {"message": f"Передача данных в веб-приложение...\n"}, to=sid)
 
-        return json.loads(df_report[:40].to_json(orient='records')),\
-               json.loads(df_report_slice[:40].to_json(orient='records')),\
+        return json.loads(df_report[constants.FIRST:constants.LAST].to_json(orient='records')),\
+               json.loads(df_report_slice[constants.FIRST:constants.LAST].to_json(orient='records')),\
                len(df_report)
 
     sid = request.sid

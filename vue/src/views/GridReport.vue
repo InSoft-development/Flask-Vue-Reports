@@ -132,6 +132,7 @@ export default {
     const loadedDataStatus = ref([])
     const tempLoadedData = ref()
     const tempLoadedStatus = ref()
+    const itemSize = ref(applicationStore.itemSize)
     const loadDataLazy = (event) => {
       lazyLoading.value = true
 
@@ -143,7 +144,6 @@ export default {
       loadLazyTimeout.value = setTimeout(async () => {
         let _loadedData = [...dataTable.value]
         let _loadedDataStatus = [...dataTableStatus.value]
-
 
         let { first, last } = event
 
@@ -180,7 +180,7 @@ export default {
           sortField: String(event.sortField),
           sortOrder: event.sortOrder
         }
-        await getSortedData(lazyParams, dataTable, dataTableStatus)
+        await getSortedData(lazyParams, dataTable, dataTableStatus, applicationStore.firstRaw, applicationStore.lastRaw)
         lazyLoading.value = false
       }, 500)
     }
@@ -193,7 +193,7 @@ export default {
       }
 
       loadOnFilterTimeout = setTimeout(async () => {
-        await getFilterData(filters, dataTable, dataTableStatus)
+        await getFilterData(filters, dataTable, dataTableStatus, applicationStore.firstRaw, applicationStore.lastRaw)
         lazyLoading.value = false
       }, 2000)
     }
@@ -465,9 +465,10 @@ export default {
         intervalRadio.value,
         dataTable,
         dataTableRequested,
-        dataTableStatus
+        dataTableStatus,
+        applicationStore.firstRaw,
+        applicationStore.lastRaw
       )
-      // await getPartOfData(dataTable, dataTableRequested, dataTableStatus, 0, 40)
 
       // countOfDataTable.value = Math.ceil(chosenSensors.value.length / 5)
       //
@@ -540,6 +541,7 @@ export default {
       dataTableStartRequested,
       lazyLoading,
       loadLazyTimeout,
+      itemSize,
       loadDataLazy,
       filters,
       filterTableChecked,
@@ -854,7 +856,7 @@ export default {
               scrollHeight="1000px"
               :columnResizeMode="fit"
               :showGridlines="true"
-              :virtualScrollerOptions="{ lazy: true, onLazyLoad: loadDataLazy, itemSize: 50, delay: 200, showLoader: true, loading: lazyLoading, numToleratedItems: 10 }"
+              :virtualScrollerOptions="{ lazy: true, onLazyLoad: loadDataLazy, itemSize: itemSize, delay: 200, showLoader: true, loading: lazyLoading, numToleratedItems: 10 }"
               tableStyle="min-width: 50rem"
               dataKey="Метка времени"
               filterDisplay="row"
@@ -893,14 +895,6 @@ export default {
                   </div>
                 </template>
                 <template #filter="{ filterModel, filterCallback }" v-if="filterTableChecked">
-<!--                  <InputText-->
-<!--                    :id="col.header"-->
-<!--                    v-model="filterModel.value"-->
-<!--                    @input="onFilter(filterModel.value)"-->
-<!--                    type="text"-->
-<!--                    class="p-column-filter"-->
-<!--                    :fluid="true"-->
-<!--                  />-->
                   <InputText
                     :id="col.header"
                     v-model="filterModel.value"
@@ -934,5 +928,8 @@ export default {
 }
 .grid-table td {
   font-size: 8px;
+  vertical-align: middle;
+  padding-bottom: 0;
+  padding-top: 0;
 }
 </style>

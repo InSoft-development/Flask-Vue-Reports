@@ -50,6 +50,10 @@ export const useApplicationStore = defineStore('ApplicationStore', () => {
     await changeDefaultFields(defaultFields)
   }
 
+  const firstRaw = 0
+  const lastRaw = 100
+  const itemSize = 12
+
   return {
     badCode,
     qualitiesName,
@@ -63,6 +67,9 @@ export const useApplicationStore = defineStore('ApplicationStore', () => {
     bounceTimeLimitInHours,
     defaultFields,
     getFields,
-    setFields
+    setFields,
+    firstRaw,
+    lastRaw,
+    itemSize
   }
 })

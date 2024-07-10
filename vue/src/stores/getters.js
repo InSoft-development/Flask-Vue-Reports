@@ -326,7 +326,9 @@ export async function getGrid(
   dimension,
   dataTable,
   dataTableRequested,
-  dataTableStatus
+  dataTableStatus,
+  first,
+  last
 ) {
   let formatDateBegin = new Date(dateBegin.toString().split('GMT')[0] + ' UTC').toISOString()
   let formatDateEnd = new Date(dateEnd.toString().split('GMT')[0] + ' UTC').toISOString()
@@ -353,13 +355,11 @@ export async function getGrid(
     alert(result)
   }
   if (Array.isArray(result)) {
-    // dataTable.value = result[0]
-    dataTable.value = Array.from({ length: result[3]})
-    Array.prototype.splice.apply(dataTable.value, [...[0, 40], ...result[0].slice(0, 40)])
+    dataTable.value = Array.from({ length: result[3]}, () => "None")
+    Array.prototype.splice.apply(dataTable.value, [...[first, last], ...result[0].slice(first, last)])
 
-    // dataTableStatus.value = result[1]
-    dataTableStatus.value = Array.from({ length: result[3]})
-    Array.prototype.splice.apply(dataTableStatus.value, [...[0, 40], ...result[1].slice(0, 40)])
+    dataTableStatus.value = Array.from({ length: result[3]}, () => "None")
+    Array.prototype.splice.apply(dataTableStatus.value, [...[first, last], ...result[1].slice(first, last)])
     dataTableRequested.value = true
   }
 }
@@ -417,6 +417,8 @@ export async function getFilterData(
   filters,
   dataTable,
   dataTableStatus,
+  first,
+  last
 ) {
   let result = Array()
 
@@ -432,11 +434,11 @@ export async function getFilterData(
        }
     )
   })
-  dataTable.value = Array.from({ length: result[3]})
-  Array.prototype.splice.apply(dataTable.value, [...[0, 40], ...result[0].slice(0, 40)])
+  dataTable.value = Array.from({ length: result[3]}, () => "None")
+  Array.prototype.splice.apply(dataTable.value, [...[first, last], ...result[0].slice(first, last)])
 
-  dataTableStatus.value = Array.from({ length: result[3]})
-  Array.prototype.splice.apply(dataTableStatus.value, [...[0, 40], ...result[1].slice(0, 40)])
+  dataTableStatus.value = Array.from({ length: result[3]}, () => "None")
+  Array.prototype.splice.apply(dataTableStatus.value, [...[first, last], ...result[1].slice(first, last)])
 }
 
 /***
@@ -450,6 +452,8 @@ export async function getSortedData(
   lazyParams,
   dataTable,
   dataTableStatus,
+  first,
+  last
 ) {
   let result = Array
 
@@ -465,11 +469,11 @@ export async function getSortedData(
        }
     )
   })
-  dataTable.value = Array.from({ length: result[3]})
-  Array.prototype.splice.apply(dataTable.value, [...[0, 40], ...result[0].slice(0, 40)])
+  dataTable.value = Array.from({ length: result[3]}, () => "None")
+  Array.prototype.splice.apply(dataTable.value, [...[first, last], ...result[0].slice(first, last)])
 
-  dataTableStatus.value = Array.from({ length: result[3]})
-  Array.prototype.splice.apply(dataTableStatus.value, [...[0, 40], ...result[1].slice(0, 40)])
+  dataTableStatus.value = Array.from({ length: result[3]}, () => "None")
+  Array.prototype.splice.apply(dataTableStatus.value, [...[first, last], ...result[1].slice(first, last)])
 }
 
 /***
