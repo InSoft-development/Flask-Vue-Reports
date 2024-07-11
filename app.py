@@ -1140,39 +1140,19 @@ def apply_filters(filters):
         FILTERS_OPERATIONS[value["matchMode"]](key, value["value"])
 
 
-@socketio.on("get_grid_filtered_data")
-def get_grid_filtered_data(filters):
+@socketio.on("get_grid_sorted_and_filtered_data")
+def get_grid_sorted_and_filtered_data(params):
     """
     Функция фильтрации по столбцам таблицы сетки
-    :param filters: объект фильтра таблицы сетки
-    :return: json объекты для заполнения отфильтрованной таблицы сетки и размер получившегося датафрейма
+    :param params: объект сортировки и фильтра таблицы сетки
+    :return: json объекты для заполнения осортированной таблицы сетки и размер получившегося датафрейма
     """
-    logger.info(f"get_grid_filtered_data({filters})")
+    logger.info(f"get_grid_sorted_and_filtered_data({params})")
     global REPORT_DF
     global REPORT_DF_STATUS
 
     REPORT_DF = pd.read_csv(constants.CSV_GRID)
     REPORT_DF_STATUS = pd.read_csv(constants.CSV_GRID_STATUS)
-
-    filters = json.loads(filters)
-
-    apply_filters(filters)
-
-    return json.loads(REPORT_DF.iloc[constants.FIRST:constants.LAST].to_json(orient='records')), \
-           json.loads(REPORT_DF_STATUS.iloc[constants.FIRST:constants.LAST].to_json(orient='records')),\
-           len(REPORT_DF)
-
-
-@socketio.on("get_grid_sorted_data")
-def get_grid_sorted_data(params):
-    """
-    Функция сортировки по столбцам таблицы сетки
-    :param params: объект сортировки и фильтра таблицы сетки
-    :return: json объекты для заполнения осортированной таблицы сетки и размер получившегося датафрейма
-    """
-    logger.info(f"get_grid_sorted_data({params})")
-    global REPORT_DF
-    global REPORT_DF_STATUS
 
     params = json.loads(params)
 
@@ -1184,7 +1164,7 @@ def get_grid_sorted_data(params):
     REPORT_DF_STATUS = REPORT_DF_STATUS.reindex(REPORT_DF.index)
 
     return json.loads(REPORT_DF.iloc[constants.FIRST:constants.LAST].to_json(orient='records')), \
-           json.loads(REPORT_DF_STATUS.iloc[constants.FIRST:constants.LAST].to_json(orient='records')),\
+           json.loads(REPORT_DF_STATUS.iloc[constants.FIRST:constants.LAST].to_json(orient='records')), \
            len(REPORT_DF)
 
 

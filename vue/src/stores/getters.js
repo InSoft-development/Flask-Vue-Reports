@@ -406,49 +406,15 @@ export async function getPartOfData(
 }
 
 /***
- * Процедура загрузки части отфильтрованных данных таблицы сетки
- * @param filters
- * @param loadedData
- * @param dataTableRequested
- * @param loadedDataStatus
- * @returns {Promise<void>}
- */
-export async function getFilterData(
-  filters,
-  dataTable,
-  dataTableStatus,
-  first,
-  last
-) {
-  let result = Array()
-
-  await new Promise((resolve) => {
-    socket.emit(
-      'get_grid_filtered_data',
-       JSON.stringify(filters.value),
-       (partData, partStatus, dataLength) => {
-          result[0] = partData
-          result[1] = partStatus
-          result[3] = dataLength
-          resolve([partData, partStatus, dataLength])
-       }
-    )
-  })
-  dataTable.value = Array.from({ length: result[3]}, () => "None")
-  Array.prototype.splice.apply(dataTable.value, [...[first, last], ...result[0].slice(first, last)])
-
-  dataTableStatus.value = Array.from({ length: result[3]}, () => "None")
-  Array.prototype.splice.apply(dataTableStatus.value, [...[first, last], ...result[1].slice(first, last)])
-}
-
-/***
  * Процедура загрузки части отсортированных и отфильтрованных данных таблицы сетки
  * @param lazyParams
  * @param dataTable
  * @param dataTableStatus
+ * @param first
+ * @param last
  * @returns {Promise<void>}
  */
-export async function getSortedData(
+export async function getSortedAndFilteredData(
   lazyParams,
   dataTable,
   dataTableStatus,
@@ -459,7 +425,7 @@ export async function getSortedData(
 
   await new Promise((resolve) => {
     socket.emit(
-      'get_grid_sorted_data',
+      'get_grid_sorted_and_filtered_data',
        JSON.stringify(lazyParams),
        (partData, partStatus, dataLength) => {
           result[0] = partData

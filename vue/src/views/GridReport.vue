@@ -18,8 +18,7 @@ import {
   getKKSByMasksForTable,
   getGrid,
   getPartOfData,
-  getFilterData,
-  getSortedData,
+  getSortedAndFilteredData,
   cancelGrid
 } from '../stores'
 
@@ -165,27 +164,29 @@ export default {
 
     const filters = ref(null)
     const filterTableChecked = ref(applicationStore.defaultFields.filterTableChecked)
+    const lazyParams = ref({
+      filters: null,
+      sortField: null,
+      sortOrder: null
+    })
 
     let loadOnFilterTimeout = null
-    const onSort = (event) => {
-      lazyLoading.value = true
 
-      if (loadOnFilterTimeout) {
-        clearTimeout(loadOnFilterTimeout)
+    const onSort = async (event) => {
+      lazyParams.value = {
+        filters: filters.value,
+        sortField: String(event.sortField),
+        sortOrder: event.sortOrder
       }
-
-      loadOnFilterTimeout = setTimeout(async () => {
-        let lazyParams = {
-          filters: filters.value,
-          sortField: String(event.sortField),
-          sortOrder: event.sortOrder
-        }
-        await getSortedData(lazyParams, dataTable, dataTableStatus, applicationStore.firstRaw, applicationStore.lastRaw)
-        lazyLoading.value = false
-      }, 500)
+      await onSortAndFilter()
     }
 
-    const onFilter = () => {
+    const onFilter = async () => {
+      lazyParams.value.filters = filters.value
+      await onSortAndFilter()
+    }
+
+    const onSortAndFilter = () => {
       lazyLoading.value = true
 
       if (loadOnFilterTimeout) {
@@ -193,7 +194,8 @@ export default {
       }
 
       loadOnFilterTimeout = setTimeout(async () => {
-        await getFilterData(filters, dataTable, dataTableStatus, applicationStore.firstRaw, applicationStore.lastRaw)
+        console.log(lazyParams.value)
+        await getSortedAndFilteredData(lazyParams.value, dataTable, dataTableStatus, applicationStore.firstRaw, applicationStore.lastRaw)
         lazyLoading.value = false
       }, 2000)
     }
