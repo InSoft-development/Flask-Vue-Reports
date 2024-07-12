@@ -51,7 +51,7 @@ export const useApplicationStore = defineStore('ApplicationStore', () => {
   }
 
   const firstRaw = 0
-  const lastRaw = 100
+  const lastRaw = 30
   const itemSize = 12
 
   return {

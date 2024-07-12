@@ -1,15 +1,7 @@
 <script>
 import { FilterMatchMode } from 'primevue/api'
 import Multiselect from '@vueform/multiselect'
-import {
-  ref,
-  reactive,
-  toRefs,
-  onMounted,
-  onUnmounted,
-  onBeforeUnmount,
-  computed,
-} from 'vue'
+import { ref, reactive, toRefs, onMounted, onUnmounted, onBeforeUnmount, computed } from 'vue'
 import {
   getKKSFilterByMasks,
   getTypesOfSensors,

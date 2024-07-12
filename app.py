@@ -1158,10 +1158,11 @@ def get_grid_sorted_and_filtered_data(params):
 
     apply_filters(params["filters"])
 
-    REPORT_DF.sort_values(by=[params["sortField"]],
-                          ascending=[False if params["sortOrder"] == -1 else True],
-                          inplace=True)
-    REPORT_DF_STATUS = REPORT_DF_STATUS.reindex(REPORT_DF.index)
+    if (params["sortField"] is not None) and (params["sortsortOrder"] is not None):
+        REPORT_DF.sort_values(by=[params["sortField"]],
+                              ascending=[False if params["sortOrder"] == -1 else True],
+                              inplace=True)
+        REPORT_DF_STATUS = REPORT_DF_STATUS.reindex(REPORT_DF.index)
 
     return json.loads(REPORT_DF.iloc[constants.FIRST:constants.LAST].to_json(orient='records')), \
            json.loads(REPORT_DF_STATUS.iloc[constants.FIRST:constants.LAST].to_json(orient='records')), \

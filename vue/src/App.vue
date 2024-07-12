@@ -64,15 +64,14 @@ export default {
 </script>
 
 <template>
-  <sidebar-menu v-model:collapsed="collapsed" :menu="sidebarMenu">
-  </sidebar-menu>
+  <sidebar-menu v-model:collapsed="collapsed" :menu="sidebarMenu"> </sidebar-menu>
   <div id="content" :class="[{ collapsed: collapsed }]">
     <div class="content">
-      <div class="container" v-if="!checkFileActive && (routePath !== '/configurator')">
+      <div class="container" v-if="!checkFileActive && routePath !== '/configurator'">
         <h1>Не найден файл kks_all.csv.</h1>
         <h1>Сконфигурируйте клиент OPC UA и обновите файл тегов на странице "Конфигуратор".</h1>
       </div>
-      <div class="container" v-if="checkFileActive || (routePath === '/configurator')">
+      <div class="container" v-if="checkFileActive || routePath === '/configurator'">
         <RouterView :collapsed-sidebar="collapsed" />
       </div>
     </div>

@@ -355,11 +355,17 @@ export async function getGrid(
     alert(result)
   }
   if (Array.isArray(result)) {
-    dataTable.value = Array.from({ length: result[3]}, () => "None")
-    Array.prototype.splice.apply(dataTable.value, [...[first, last], ...result[0].slice(first, last)])
+    dataTable.value = Array.from({ length: result[3] }, () => 'None')
+    Array.prototype.splice.apply(dataTable.value, [
+      ...[first, last],
+      ...result[0].slice(first, last)
+    ])
 
-    dataTableStatus.value = Array.from({ length: result[3]}, () => "None")
-    Array.prototype.splice.apply(dataTableStatus.value, [...[first, last], ...result[1].slice(first, last)])
+    dataTableStatus.value = Array.from({ length: result[3] }, () => 'None')
+    Array.prototype.splice.apply(dataTableStatus.value, [
+      ...[first, last],
+      ...result[1].slice(first, last)
+    ])
     dataTableRequested.value = true
   }
 }
@@ -373,26 +379,15 @@ export async function getGrid(
  * @param last
  * @returns {Promise<void>}
  */
-export async function getPartOfData(
-  loadedData,
-  dataTableRequested,
-  loadedDataStatus,
-  first,
-  last
-) {
+export async function getPartOfData(loadedData, dataTableRequested, loadedDataStatus, first, last) {
   let result = Array()
 
   await new Promise((resolve) => {
-    socket.emit(
-      'get_grid_part_data',
-       first,
-       last,
-       (partData, partStatus) => {
-          result[0] = partData
-          result[1] = partStatus
-          resolve([partData, partStatus])
-       }
-    )
+    socket.emit('get_grid_part_data', first, last, (partData, partStatus) => {
+      result[0] = partData
+      result[1] = partStatus
+      resolve([partData, partStatus])
+    })
   })
   if (typeof result === 'string') {
     dataTableRequested.value = false
@@ -426,20 +421,23 @@ export async function getSortedAndFilteredData(
   await new Promise((resolve) => {
     socket.emit(
       'get_grid_sorted_and_filtered_data',
-       JSON.stringify(lazyParams),
-       (partData, partStatus, dataLength) => {
-          result[0] = partData
-          result[1] = partStatus
-          result[3] = dataLength
-          resolve([partData, partStatus, dataLength])
-       }
+      JSON.stringify(lazyParams),
+      (partData, partStatus, dataLength) => {
+        result[0] = partData
+        result[1] = partStatus
+        result[3] = dataLength
+        resolve([partData, partStatus, dataLength])
+      }
     )
   })
-  dataTable.value = Array.from({ length: result[3]}, () => "None")
+  dataTable.value = Array.from({ length: result[3] }, () => 'None')
   Array.prototype.splice.apply(dataTable.value, [...[first, last], ...result[0].slice(first, last)])
 
-  dataTableStatus.value = Array.from({ length: result[3]}, () => "None")
-  Array.prototype.splice.apply(dataTableStatus.value, [...[first, last], ...result[1].slice(first, last)])
+  dataTableStatus.value = Array.from({ length: result[3] }, () => 'None')
+  Array.prototype.splice.apply(dataTableStatus.value, [
+    ...[first, last],
+    ...result[1].slice(first, last)
+  ])
 }
 
 /***

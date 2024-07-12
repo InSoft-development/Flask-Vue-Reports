@@ -10,7 +10,7 @@ import {
   onUnmounted,
   onBeforeUnmount,
   computed,
-  watch,
+  watch
 } from 'vue'
 import {
   getKKSFilterByMasks,
@@ -139,7 +139,6 @@ export default {
         clearTimeout(loadLazyTimeout.value)
       }
 
-
       loadLazyTimeout.value = setTimeout(async () => {
         let _loadedData = [...dataTable.value]
         let _loadedDataStatus = [...dataTableStatus.value]
@@ -149,8 +148,14 @@ export default {
         // вызов загрузки данных с Flask
         await getPartOfData(tempLoadedData, dataTableRequested, tempLoadedStatus, first, last)
 
-        Array.prototype.splice.apply(_loadedData, [...[first, last - first], ...tempLoadedData.value])
-        Array.prototype.splice.apply(_loadedDataStatus, [...[first, last - first], ...tempLoadedStatus.value])
+        Array.prototype.splice.apply(_loadedData, [
+          ...[first, last - first],
+          ...tempLoadedData.value
+        ])
+        Array.prototype.splice.apply(_loadedDataStatus, [
+          ...[first, last - first],
+          ...tempLoadedStatus.value
+        ])
 
         loadedData.value = _loadedData
         loadedDataStatus.value = _loadedDataStatus
@@ -195,19 +200,25 @@ export default {
 
       loadOnFilterTimeout = setTimeout(async () => {
         console.log(lazyParams.value)
-        await getSortedAndFilteredData(lazyParams.value, dataTable, dataTableStatus, applicationStore.firstRaw, applicationStore.lastRaw)
+        await getSortedAndFilteredData(
+          lazyParams.value,
+          dataTable,
+          dataTableStatus,
+          applicationStore.firstRaw,
+          applicationStore.lastRaw
+        )
         lazyLoading.value = false
       }, 2000)
     }
 
     watch(
-  () => filters,
-    (before, after) => {
-          if (!dataTableRequested.value) return
-          onFilter()
-        },
- { deep: true }
-      )
+      () => filters,
+      (before, after) => {
+        if (!dataTableRequested.value) return
+        onFilter()
+      },
+      { deep: true }
+    )
 
     const estimatedTime = ref(0.0)
     const chosenSensors = ref([])
@@ -397,13 +408,6 @@ export default {
             dataTableStatus.value[index][String(field)] === 'missed' ||
             dataTableStatus.value[index][String(field)] === 'NaN' ||
             dataTable.value[index][String(field)] === 'NaN'
-          // 'text-danger': applicationStore.badCode.includes(
-          //   loadedDataStatus.value[index][String(field)]
-          // ),
-          // 'text-warning':
-          //   loadedDataStatus.value[index][String(field)] === 'missed' ||
-          //   loadedDataStatus.value[index][String(field)] === 'NaN' ||
-          //   loadedData.value[index][String(field)] === 'NaN'
         }
       ]
     }
@@ -413,7 +417,7 @@ export default {
       codeScroll = codeScroll.querySelector('.p-virtualscroller.p-virtualscroller-inline')
       let dataScroll = document.getElementById('data-table')
       dataScroll = dataScroll.querySelector('.p-virtualscroller.p-virtualscroller-inline')
-      codeScroll.scrollTop = dataScroll.scrollLeft * 0.3235
+      codeScroll.scrollTop = dataScroll.scrollLeft * 0.395
     }
 
     const synchroScrollByHref = (event) => {
@@ -421,7 +425,7 @@ export default {
       codeScroll = codeScroll.querySelector('.p-virtualscroller.p-virtualscroller-inline')
       let dataScroll = document.getElementById('data-table')
       dataScroll = dataScroll.querySelector('.p-virtualscroller.p-virtualscroller-inline')
-      dataScroll.scrollLeft = codeScroll.scrollTop / 0.3235
+      dataScroll.scrollLeft = codeScroll.scrollTop / 0.395
     }
 
     async function onButtonCancelBigRequestClick() {
@@ -855,29 +859,37 @@ export default {
               :lazy="true"
               :value="dataTable"
               :scrollable="true"
-              scrollHeight="1000px"
+              scrollHeight="500px"
               :columnResizeMode="fit"
               :showGridlines="true"
-              :virtualScrollerOptions="{ lazy: true, onLazyLoad: loadDataLazy, itemSize: itemSize, delay: 200, showLoader: true, loading: lazyLoading, numToleratedItems: 10 }"
+              :virtualScrollerOptions="{
+                lazy: true,
+                onLazyLoad: loadDataLazy,
+                itemSize: itemSize,
+                delay: 200,
+                showLoader: true,
+                loading: lazyLoading,
+                numToleratedItems: 15
+              }"
               tableStyle="min-width: 50rem"
               dataKey="Метка времени"
               filterDisplay="row"
               class="grid-table"
               @sort="onSort($event)"
             >
-<!--            <DataTable-->
-<!--              v-model:filters="filters"-->
-<!--              :value="dataTable"-->
-<!--              :scrollable="true"-->
-<!--              scrollHeight="1000px"-->
-<!--              :columnResizeMode="fit"-->
-<!--              :showGridlines="true"-->
-<!--              :virtualScrollerOptions="{ itemSize: 50 }"-->
-<!--              tableStyle="min-width: 50rem"-->
-<!--              dataKey="Метка времени"-->
-<!--              filterDisplay="row"-->
-<!--              class="grid-table"-->
-<!--            >-->
+              <!--            <DataTable-->
+              <!--              v-model:filters="filters"-->
+              <!--              :value="dataTable"-->
+              <!--              :scrollable="true"-->
+              <!--              scrollHeight="1000px"-->
+              <!--              :columnResizeMode="fit"-->
+              <!--              :showGridlines="true"-->
+              <!--              :virtualScrollerOptions="{ itemSize: 50 }"-->
+              <!--              tableStyle="min-width: 50rem"-->
+              <!--              dataKey="Метка времени"-->
+              <!--              filterDisplay="row"-->
+              <!--              class="grid-table"-->
+              <!--            >-->
               <Column
                 v-for="col of columnsTable"
                 :key="col.field"
@@ -887,8 +899,8 @@ export default {
                 v-bind:frozen="[col.field === 'Метка времени']"
                 v-bind:style="[
                   col.field === 'Метка времени'
-                    ? { 'min-width': '250px' }
-                    : { 'min-width': '150px' }
+                    ? { 'min-width': '200px' }
+                    : { 'min-width': '125px' }
                 ]"
               >
                 <template #body="slotProps">
@@ -907,7 +919,10 @@ export default {
                   />
                 </template>
                 <template #loading>
-                  <div class="flex items-center" :style="{ height: '17px', 'flex-grow': '1', overflow: 'hidden' }">
+                  <div
+                    class="flex items-center"
+                    :style="{ height: '17px', 'flex-grow': '1', overflow: 'hidden' }"
+                  >
                     <Skeleton width="60%" height="1rem" />
                   </div>
                 </template>
