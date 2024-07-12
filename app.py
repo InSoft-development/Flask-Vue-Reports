@@ -1158,7 +1158,7 @@ def get_grid_sorted_and_filtered_data(params):
 
     apply_filters(params["filters"])
 
-    if (params["sortField"] is not None) and (params["sortsortOrder"] is not None):
+    if (params["sortField"] is not None) and (params["sortOrder"] is not None):
         REPORT_DF.sort_values(by=[params["sortField"]],
                               ascending=[False if params["sortOrder"] == -1 else True],
                               inplace=True)
