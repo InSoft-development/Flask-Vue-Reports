@@ -106,10 +106,9 @@ export default {
   max-width: 900px;
 }
 .p-radiobutton {
-   transform: scale(0.8);
+  transform: scale(0.8);
 }
 .p-checkbox {
   transform: scale(0.8);
 }
-
 </style>

@@ -604,7 +604,9 @@ export default {
             value="sequential"
             :disabled="progressBarGridActive"
           />
-          <label for="sequential" class="radio-grid-interval-margin">Последовательные шаблоны</label>
+          <label for="sequential" class="radio-grid-interval-margin"
+            >Последовательные шаблоны</label
+          >
         </div>
       </div>
       <div class="row align-items-center">

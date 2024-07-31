@@ -594,9 +594,7 @@ export default {
             </InputNumber>
           </div>
           <div class="col">
-            <label for="calendarDateDeepOfSearchSignals"
-              >Дата глубины поиска в архивах</label
-            ><br />
+            <label for="calendarDateDeepOfSearchSignals">Дата глубины поиска в архивах</label><br />
             <Calendar
               id="calendarDateDeepOfSearchSignals"
               v-model="defaultDateDeepOfSearch"

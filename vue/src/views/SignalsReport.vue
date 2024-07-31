@@ -86,11 +86,11 @@ export default {
     const isLoadingSensorsAndTemplate = ref(false)
 
     const qualitiesName = ref([
-        {
-         label: 'Выбрать все коды качества сигнала',
-         options: applicationStore.qualitiesName
-        }
-      ])
+      {
+        label: 'Выбрать все коды качества сигнала',
+        options: applicationStore.qualitiesName
+      }
+    ])
     const quality = ref(applicationStore.defaultFields.quality)
     let chosenQuality = applicationStore.defaultFields.quality
 
@@ -458,7 +458,9 @@ export default {
             value="sequential"
             :disabled="progressBarSignalsActive"
           />
-          <label for="sequential" class="radio-signals-interval-margin">Последовательные шаблоны</label>
+          <label for="sequential" class="radio-signals-interval-margin"
+            >Последовательные шаблоны</label
+          >
         </div>
       </div>
       <div class="row align-items-center">

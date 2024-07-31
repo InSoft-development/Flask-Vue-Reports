@@ -399,7 +399,9 @@ export default {
             value="sequential"
             :disabled="progressBarBounceSignalsActive"
           />
-          <label for="sequential" class="radio-bounce-interval-margin">Последовательные шаблоны</label>
+          <label for="sequential" class="radio-bounce-interval-margin"
+            >Последовательные шаблоны</label
+          >
         </div>
       </div>
       <div class="row align-items-center">
