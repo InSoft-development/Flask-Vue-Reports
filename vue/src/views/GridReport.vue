@@ -199,7 +199,6 @@ export default {
       }
 
       loadOnFilterTimeout = setTimeout(async () => {
-        console.log(lazyParams.value)
         await getSortedAndFilteredData(
           lazyParams.value,
           dataTable,
@@ -577,7 +576,7 @@ export default {
     <h1 align="center">Сетка сигналов</h1>
     <div class="container">
       <div class="row">
-        <div class="col components-margin-bottom">
+        <div class="col components-grid-margin-bottom">
           <label for="typesOfSensorsDataGridReport">Выберите тип данных тегов</label>
           <Multiselect
             id="typesOfSensorsDataGridReport"
@@ -596,8 +595,8 @@ export default {
         </div>
       </div>
       <div class="row align-items-center">
-        <div class="col-3 components-margin-bottom">Применять фильтр как:</div>
-        <div class="col-9 components-margin-bottom">
+        <div class="col-3 components-grid-margin-bottom">Применять фильтр как:</div>
+        <div class="col-9 components-grid-margin-bottom">
           <RadioButton
             v-model="selectionTagRadio"
             inputId="sequential"
@@ -605,12 +604,12 @@ export default {
             value="sequential"
             :disabled="progressBarGridActive"
           />
-          <label for="sequential" class="radio-interval-margin">Последовательные шаблоны</label>
+          <label for="sequential" class="radio-grid-interval-margin">Последовательные шаблоны</label>
         </div>
       </div>
       <div class="row align-items-center">
-        <div class="col-3 components-margin-bottom"></div>
-        <div class="col-9 components-margin-bottom">
+        <div class="col-3 components-grid-margin-bottom"></div>
+        <div class="col-9 components-grid-margin-bottom">
           <RadioButton
             v-model="selectionTagRadio"
             inputId="union"
@@ -618,7 +617,7 @@ export default {
             value="union"
             :disabled="progressBarGridActive"
           />
-          <label for="union" class="radio-interval-margin">Объединение шаблонов</label>
+          <label for="union" class="radio-grid-interval-margin">Объединение шаблонов</label>
         </div>
       </div>
       <hr />
@@ -637,15 +636,15 @@ export default {
       </div>
       <hr />
       <div class="row">
-        <div class="col">
+        <div class="col-3">
           <label for="calendarDateBeginGridReport">Введите дату начала</label>
         </div>
-        <div class="col">
+        <div class="col-3">
           <label for="calendarDateEndGridReport">Введите дату конца</label>
         </div>
       </div>
       <div class="row">
-        <div class="col components-margin-bottom">
+        <div class="col-3 components-grid-margin-bottom">
           <Calendar
             id="calendarDateBeginGridReport"
             v-model="dateTimeBegin"
@@ -663,7 +662,7 @@ export default {
           >
           </Calendar>
         </div>
-        <div class="col components-margin-bottom">
+        <div class="col-3 components-grid-margin-bottom">
           <Calendar
             id="calendarDateEndGridReport"
             v-model="dateTimeEnd"
@@ -688,7 +687,7 @@ export default {
         </div>
       </div>
       <div class="row align-items-center">
-        <div class="col components-margin-bottom">
+        <div class="col-md-auto components-grid-margin-bottom">
           <InputNumber
             v-model="interval"
             id="intervalGridReport"
@@ -703,7 +702,7 @@ export default {
           >
           </InputNumber>
         </div>
-        <div class="col components-margin-bottom">
+        <div class="col-md-auto components-grid-margin-bottom">
           <RadioButton
             v-model="intervalRadio"
             inputId="day"
@@ -711,9 +710,9 @@ export default {
             value="day"
             :disabled="progressBarGridActive"
           />
-          <label for="day" class="radio-interval-margin">День</label>
+          <label for="day" class="radio-grid-interval-margin">День</label>
         </div>
-        <div class="col components-margin-bottom">
+        <div class="col-md-auto components-grid-margin-bottom">
           <RadioButton
             v-model="intervalRadio"
             inputId="hour"
@@ -721,9 +720,9 @@ export default {
             value="hour"
             :disabled="progressBarGridActive"
           />
-          <label for="hour" class="radio-interval-margin">Час</label>
+          <label for="hour" class="radio-grid-interval-margin">Час</label>
         </div>
-        <div class="col components-margin-bottom">
+        <div class="col-md-auto components-grid-margin-bottom">
           <RadioButton
             v-model="intervalRadio"
             inputId="minute"
@@ -731,9 +730,9 @@ export default {
             value="minute"
             :disabled="progressBarGridActive"
           />
-          <label for="minute" class="radio-interval-margin">Минута</label>
+          <label for="minute" class="radio-grid-interval-margin">Минута</label>
         </div>
-        <div class="col components-margin-bottom">
+        <div class="col-md-auto components-grid-margin-bottom">
           <RadioButton
             v-model="intervalRadio"
             inputId="second"
@@ -741,11 +740,12 @@ export default {
             value="second"
             :disabled="progressBarGridActive"
           />
-          <label for="second" class="radio-interval-margin">Секунда</label>
+          <label for="second" class="radio-grid-interval-margin">Секунда</label>
         </div>
+        <div class="col-4"></div>
       </div>
       <div class="row">
-        <div class="col components-margin-bottom">
+        <div class="col components-grid-margin-bottom">
           <Button @click="onRequestButtonClick" :disabled="isLoadingSensorsAndTemplate"
             >Запрос</Button
           >
@@ -825,7 +825,7 @@ export default {
         </div>
       </div>
       <div class="row">
-        <div class="components-margin-bottom">
+        <div class="components-grid-margin-bottom">
           <div class="card" v-if="dataTableRequested" id="code-table">
             <DataTable
               :value="dataCodeTable"
@@ -877,19 +877,6 @@ export default {
               class="grid-table"
               @sort="onSort($event)"
             >
-              <!--            <DataTable-->
-              <!--              v-model:filters="filters"-->
-              <!--              :value="dataTable"-->
-              <!--              :scrollable="true"-->
-              <!--              scrollHeight="1000px"-->
-              <!--              :columnResizeMode="fit"-->
-              <!--              :showGridlines="true"-->
-              <!--              :virtualScrollerOptions="{ itemSize: 50 }"-->
-              <!--              tableStyle="min-width: 50rem"-->
-              <!--              dataKey="Метка времени"-->
-              <!--              filterDisplay="row"-->
-              <!--              class="grid-table"-->
-              <!--            >-->
               <Column
                 v-for="col of columnsTable"
                 :key="col.field"
@@ -937,10 +924,10 @@ export default {
 </template>
 
 <style>
-.components-margin-bottom {
+.components-grid-margin-bottom {
   margin-bottom: 5px;
 }
-.radio-interval-margin {
+.radio-grid-interval-margin {
   margin-left: 5px;
 }
 .grid-table td {

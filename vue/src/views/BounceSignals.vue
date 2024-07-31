@@ -371,7 +371,7 @@ export default {
     <h1 align="center">Дребезг сигналов</h1>
     <div class="container">
       <div class="row">
-        <div class="col components-margin-bottom">
+        <div class="col components-bounce-margin-bottom">
           <label for="typesOfSensorsDataBounceReport">Выберите тип данных тегов</label>
           <Multiselect
             id="typesOfSensorsDataBounceReport"
@@ -390,8 +390,8 @@ export default {
         </div>
       </div>
       <div class="row align-items-center">
-        <div class="col-3 components-margin-bottom">Применять фильтр как:</div>
-        <div class="col-9 components-margin-bottom">
+        <div class="col-3 components-bounce-margin-bottom">Применять фильтр как:</div>
+        <div class="col-9 components-bounce-margin-bottom">
           <RadioButton
             v-model="selectionTagRadio"
             inputId="sequential"
@@ -399,12 +399,12 @@ export default {
             value="sequential"
             :disabled="progressBarBounceSignalsActive"
           />
-          <label for="sequential" class="radio-interval-margin">Последовательные шаблоны</label>
+          <label for="sequential" class="radio-bounce-interval-margin">Последовательные шаблоны</label>
         </div>
       </div>
       <div class="row align-items-center">
-        <div class="col-3 components-margin-bottom"></div>
-        <div class="col-9 components-margin-bottom">
+        <div class="col-3 components-bounce-margin-bottom"></div>
+        <div class="col-9 components-bounce-margin-bottom">
           <RadioButton
             v-model="selectionTagRadio"
             inputId="union"
@@ -412,7 +412,7 @@ export default {
             value="union"
             :disabled="progressBarBounceSignalsActive"
           />
-          <label for="union" class="radio-interval-margin">Объединение шаблонов</label>
+          <label for="union" class="radio-bounce-interval-margin">Объединение шаблонов</label>
         </div>
       </div>
       <hr />
@@ -436,7 +436,7 @@ export default {
         </div>
       </div>
       <div class="row align-items-center">
-        <div class="col-4 components-margin-bottom">
+        <div class="col-md-auto components-bounce-margin-bottom">
           <Calendar
             id="calendar-date"
             v-model="dateTime"
@@ -454,7 +454,7 @@ export default {
           >
           </Calendar>
         </div>
-        <div class="col-md-auto components-margin-bottom">
+        <div class="col-md-auto components-bounce-margin-bottom">
           <RadioButton
             v-model="intervalRadio"
             inputId="day"
@@ -462,9 +462,9 @@ export default {
             value="day"
             :disabled="progressBarBounceSignalsActive"
           />
-          <label for="day" class="radio-interval-margin">День</label>
+          <label for="day" class="radio-bounce-interval-margin">День</label>
         </div>
-        <div class="col-md-auto components-margin-bottom">
+        <div class="col-md-auto components-bounce-margin-bottom">
           <RadioButton
             v-model="intervalRadio"
             inputId="hour"
@@ -472,9 +472,9 @@ export default {
             value="hour"
             :disabled="progressBarBounceSignalsActive"
           />
-          <label for="hour" class="radio-interval-margin">Час</label>
+          <label for="hour" class="radio-bounce-interval-margin">Час</label>
         </div>
-        <div class="col-md-auto components-margin-bottom">
+        <div class="col-md-auto components-bounce-margin-bottom">
           <RadioButton
             v-model="intervalRadio"
             inputId="minute"
@@ -482,9 +482,9 @@ export default {
             value="minute"
             :disabled="progressBarBounceSignalsActive"
           />
-          <label for="minute" class="radio-interval-margin">Минута</label>
+          <label for="minute" class="radio-bounce-interval-margin">Минута</label>
         </div>
-        <div class="col-md-auto components-margin-bottom">
+        <div class="col-md-auto components-bounce-margin-bottom">
           <RadioButton
             v-model="intervalRadio"
             inputId="second"
@@ -492,9 +492,9 @@ export default {
             value="second"
             :disabled="progressBarBounceSignalsActive"
           />
-          <label for="second" class="radio-interval-margin">Секунда</label>
+          <label for="second" class="radio-bounce-interval-margin">Секунда</label>
         </div>
-        <div class="col-md-auto components-margin-bottom">
+        <div class="col-md-auto components-bounce-margin-bottom">
           <Checkbox
             id="current-date-checked"
             v-model="currentDateChecked"
@@ -502,21 +502,22 @@ export default {
             @change="onChangeCheckbox"
             :disabled="progressBarBounceSignalsActive"
           ></Checkbox>
-          <label for="current-date-checked" class="checkbox-margin"
+          <label for="current-date-checked" class="checkbox-bounce-margin"
             >Использовать текущее время</label
           >
         </div>
+        <div class="col-4"></div>
       </div>
       <div class="row">
-        <div class="col">
+        <div class="col-3">
           <label for="interval">Интервал</label>
         </div>
-        <div class="col">
+        <div class="col-3">
           <label for="show-sensors">Количество показываемых датчиков</label>
         </div>
       </div>
       <div class="row">
-        <div class="col components-margin-bottom">
+        <div class="col-3 components-bounce-margin-bottom">
           <InputNumber
             v-model="interval"
             id="interval"
@@ -532,7 +533,7 @@ export default {
           >
           </InputNumber>
         </div>
-        <div class="col components-margin-bottom">
+        <div class="col-3 components-bounce-margin-bottom">
           <InputNumber
             v-model="countShowSensors"
             id="show-sensors"
@@ -550,7 +551,7 @@ export default {
         </div>
       </div>
       <div class="row">
-        <div class="col components-margin-bottom">
+        <div class="col components-bounce-margin-bottom">
           <Button @click="onRequestButtonClick" :disabled="isLoadingSensorsAndTemplate"
             >Запрос</Button
           >
@@ -631,7 +632,7 @@ export default {
           >
         </div>
       </div>
-      <div class="row components-margin-bottom">
+      <div class="row components-bounce-margin-bottom">
         <div class="card" v-if="dataTableRequested">
           <DataTable
             v-model:filters="filters"
@@ -673,13 +674,13 @@ export default {
 </template>
 
 <style>
-.components-margin-bottom {
+.components-bounce-margin-bottom {
   margin-bottom: 5px;
 }
-.checkbox-margin {
+.checkbox-bounce-margin {
   margin-left: 5px;
 }
-.radio-interval-margin {
+.radio-bounce-interval-margin {
   margin-left: 5px;
 }
 </style>

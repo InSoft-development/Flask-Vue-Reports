@@ -85,7 +85,12 @@ export default {
     const disabledSensorsAndTemplate = ref(!chosenTypesOfSensorsData.length)
     const isLoadingSensorsAndTemplate = ref(false)
 
-    const qualitiesName = ref(applicationStore.qualitiesName)
+    const qualitiesName = ref([
+        {
+         label: 'Выбрать все коды качества сигнала',
+         options: applicationStore.qualitiesName
+        }
+      ])
     const quality = ref(applicationStore.defaultFields.quality)
     let chosenQuality = applicationStore.defaultFields.quality
 
@@ -425,7 +430,7 @@ export default {
     <h1 align="center">Срезы сигналов</h1>
     <div class="container">
       <div class="row">
-        <div class="col components-margin-bottom">
+        <div class="col components-signals-margin-bottom">
           <label for="typesOfSensorsDataSignalsReport">Выберите тип данных тегов</label>
           <Multiselect
             id="typesOfSensorsDataSignalsReport"
@@ -444,8 +449,8 @@ export default {
         </div>
       </div>
       <div class="row align-items-center">
-        <div class="col-3 components-margin-bottom">Применять фильтр как:</div>
-        <div class="col-9 components-margin-bottom">
+        <div class="col-3 components-signals-margin-bottom">Применять фильтр как:</div>
+        <div class="col-9 components-signals-margin-bottom">
           <RadioButton
             v-model="selectionTagRadio"
             inputId="sequential"
@@ -453,12 +458,12 @@ export default {
             value="sequential"
             :disabled="progressBarSignalsActive"
           />
-          <label for="sequential" class="radio-interval-margin">Последовательные шаблоны</label>
+          <label for="sequential" class="radio-signals-interval-margin">Последовательные шаблоны</label>
         </div>
       </div>
       <div class="row align-items-center">
-        <div class="col-3 components-margin-bottom"></div>
-        <div class="col-9 components-margin-bottom">
+        <div class="col-3 components-signals-margin-bottom"></div>
+        <div class="col-9 components-signals-margin-bottom">
           <RadioButton
             v-model="selectionTagRadio"
             inputId="union"
@@ -466,12 +471,12 @@ export default {
             value="union"
             :disabled="progressBarSignalsActive"
           />
-          <label for="union" class="radio-interval-margin">Объединение шаблонов</label>
+          <label for="union" class="radio-signals-interval-margin">Объединение шаблонов</label>
         </div>
       </div>
       <hr />
       <div
-        class="row align-items-center components-margin-bottom"
+        class="row align-items-center components-signals-margin-bottom"
         v-for="template in templatesArray"
         :key="template"
       >
@@ -489,7 +494,7 @@ export default {
       </div>
       <hr />
       <div class="row">
-        <div class="col components-margin-bottom">
+        <div class="col components-signals-margin-bottom">
           <label for="qualitySignalsReport">Код качества сигнала</label>
           <Multiselect
             id="qualitySignalsReport"
@@ -498,6 +503,7 @@ export default {
             :close-on-select="false"
             :searchable="true"
             :create-option="false"
+            :groups="true"
             :options="qualitiesName"
             placeholder="Выберите код качества сигнала"
             :limit="-1"
@@ -513,7 +519,7 @@ export default {
         </div>
       </div>
       <div class="row align-items-center">
-        <div class="col components-margin-bottom">
+        <div class="col-md-auto components-signals-margin-bottom">
           <InputNumber
             v-model="intervalDeepOfSearch"
             id="intervalDeepOfSearchSignalReport"
@@ -528,7 +534,7 @@ export default {
           >
           </InputNumber>
         </div>
-        <div class="col components-margin-bottom">
+        <div class="col-md-auto components-signals-margin-bottom">
           <RadioButton
             v-model="intervalDeepOfSearchRadio"
             inputId="day"
@@ -536,9 +542,9 @@ export default {
             value="day"
             :disabled="progressBarSignalsActive || intervalOrDateChecked"
           />
-          <label for="day" class="radio-interval-margin">День</label>
+          <label for="day" class="radio-signals-interval-margin">День</label>
         </div>
-        <div class="col components-margin-bottom">
+        <div class="col-md-auto components-signals-margin-bottom">
           <RadioButton
             v-model="intervalDeepOfSearchRadio"
             inputId="hour"
@@ -546,9 +552,9 @@ export default {
             value="hour"
             :disabled="progressBarSignalsActive || intervalOrDateChecked"
           />
-          <label for="hour" class="radio-interval-margin">Час</label>
+          <label for="hour" class="radio-signals-interval-margin">Час</label>
         </div>
-        <div class="col components-margin-bottom">
+        <div class="col-md-auto components-signals-margin-bottom">
           <RadioButton
             v-model="intervalDeepOfSearchRadio"
             inputId="minute"
@@ -556,9 +562,9 @@ export default {
             value="minute"
             :disabled="progressBarSignalsActive || intervalOrDateChecked"
           />
-          <label for="minute" class="radio-interval-margin">Минута</label>
+          <label for="minute" class="radio-signals-interval-margin">Минута</label>
         </div>
-        <div class="col components-margin-bottom">
+        <div class="col-md-auto components-signals-margin-bottom">
           <RadioButton
             v-model="intervalDeepOfSearchRadio"
             inputId="second"
@@ -566,8 +572,9 @@ export default {
             value="second"
             :disabled="progressBarSignalsActive || intervalOrDateChecked"
           />
-          <label for="second" class="radio-interval-margin">Секунда</label>
+          <label for="second" class="radio-signals-interval-margin">Секунда</label>
         </div>
+        <div class="col-4"></div>
       </div>
       <div class="row">
         <div class="col">
@@ -577,7 +584,7 @@ export default {
             :binary="true"
             :disabled="progressBarSignalsActive"
           ></Checkbox>
-          <label for="intervalOrDateCheckedSignalReport" class="checkbox-margin"
+          <label for="intervalOrDateCheckedSignalReport" class="checkbox-signals-margin"
             >Задать глубину поиска в архивах в виде даты</label
           >
         </div>
@@ -635,7 +642,22 @@ export default {
             </div>
           </div>
         </div>
-        <div class="col">
+      </div>
+      <div class="row">
+        <div class="col-12">
+          <Checkbox
+            id="lastValueCheckedSignalReport"
+            v-model="lastValueChecked"
+            :binary="true"
+            :disabled="progressBarSignalsActive"
+          ></Checkbox>
+          <label for="lastValueCheckedSignalReport" class="checkbox-signals-margin"
+            >Искать последние по времени значения</label
+          >
+        </div>
+      </div>
+      <div class="row">
+        <div class="col components-signals-margin-bottom">
           <Button @click="onRequestButtonClick" :disabled="isLoadingSensorsAndTemplate"
             >Запрос</Button
           >
@@ -691,19 +713,6 @@ export default {
             >Загрузить CSV</a
           >
           <!--          <Button @click="onButtonDownloadCsvClick">Загрузить CSV</Button>-->
-        </div>
-      </div>
-      <div class="row">
-        <div class="col-12">
-          <Checkbox
-            id="lastValueCheckedSignalReport"
-            v-model="lastValueChecked"
-            :binary="true"
-            :disabled="progressBarSignalsActive"
-          ></Checkbox>
-          <label for="lastValueCheckedSignalReport" class="checkbox-margin"
-            >Искать последние по времени значения</label
-          >
         </div>
       </div>
       <div class="row" v-if="dataTableStartRequested">
@@ -828,17 +837,16 @@ export default {
 </template>
 
 <style>
-.components-margin-bottom {
+.components-signals-margin-bottom {
   margin-bottom: 5px;
 }
-.checkbox-margin {
+.checkbox-signals-margin {
   margin-left: 5px;
 }
-.radio-interval-margin {
+.radio-signals-interval-margin {
   margin-left: 5px;
 }
 /*td{*/
 /*  font-size: 8px;*/
 /*}*/
 </style>
-<!--<style src="@vueform/multiselect/themes/default.css"></style>-->

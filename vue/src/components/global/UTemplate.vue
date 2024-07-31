@@ -123,6 +123,7 @@ export default {
       icon="pi pi-search"
       iconPos="right"
       :disabled="currentFlag || localComponentTagsLoadingFlag"
+      style="width: 90%"
     />
     <Dialog
       v-model:visible="dialogSearchActive"
@@ -188,14 +189,14 @@ export default {
     </Dialog>
   </div>
   <div class="col-1" v-if="countOfTemplatesLength === 1"></div>
-  <div class="col-1" v-else>
+  <div class="col-1 text-end" v-else>
     <Button
       @click="onRemoveButtonClick"
       icon="pi pi-minus"
       :disabled="currentFlag || localComponentTagsLoadingFlag"
     />
   </div>
-  <div class="col-1">
+  <div class="col-1 text-end">
     <Button
       @click="onAddButtonClick"
       icon="pi pi-plus"

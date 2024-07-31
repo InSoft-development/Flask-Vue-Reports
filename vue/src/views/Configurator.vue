@@ -256,13 +256,10 @@ export default {
     }
 
     function changeConfig($event) {
-      console.log('ChangeConfig')
-      console.log(portOPC.value)
       // в либе PrimeVue не работает v-model при вводе через клавиатуру
       // приходится выполнять хак
       try {
         const numberTarget = $event.originalEvent.target
-        console.log($event.originalEvent.target)
         numberTarget.blur()
         numberTarget.focus()
       } catch (e) {
@@ -350,7 +347,7 @@ export default {
             required
             :disabled="statusUpdateButtonActive"
             @input="changeConfig"
-            style="width: 100%"
+            style="width: 90%"
           >
           </InputText>
           <label for="ip-opc-server-address">IP адрес сервера OPC UA</label>
@@ -370,20 +367,20 @@ export default {
             :allow-empty="true"
             :disabled="statusUpdateButtonActive"
             @input="changeConfig"
-            style="width: 100%"
+            style="width: 90%"
           >
           </InputNumber>
           <label for="port-opc-server-address">Порт сервера OPC UA</label>
         </FloatLabel>
       </div>
-      <div class="col">
+      <div class="col text-end">
         <Button
           v-if="statusUpdateButtonActive && runUpdateFlag"
           label="Отмена"
           icon="pi pi-times"
           @click="onButtonCancelUpdateClick"
           severity="danger"
-          style="width: 100%; text-align: center"
+          style="width: 42%; text-align: center"
         />
         <ConfirmDialog></ConfirmDialog>
         <Button
@@ -392,7 +389,7 @@ export default {
           icon="pi pi-check"
           :disabled="statusUpdateButtonActive"
           @click="confirmUpdate"
-          style="width: 100%; text-align: center"
+          style="width: 42%; text-align: center"
         />
       </div>
     </div>
@@ -402,8 +399,8 @@ export default {
       </div>
     </div>
     <div class="row align-items-center">
-      <div class="col-4">Режим фильтрации обновления тегов:</div>
-      <div class="col-3">
+      <div class="col-3">Режим фильтрации обновления тегов:</div>
+      <div class="col-2">
         <RadioButton
           v-model="defaultModeOfFilterRadio"
           inputId="modeFilterHistorianDefault"
@@ -413,7 +410,7 @@ export default {
         />
         <label for="modeFilterHistorianDefault" class="radio-interval-margin">Historian</label>
       </div>
-      <div class="col-5">
+      <div class="col-7">
         <label for="default-root-directory">Корневая папка</label><br />
         <InputText
           v-model="defaultRootDirectory"
@@ -426,14 +423,15 @@ export default {
       </div>
     </div>
     <div class="row align-items-center">
-      <div class="col-4">
+      <div class="col-3">
         <Button
           @click="changeUpdate"
           :disabled="statusUpdateButtonActive || defaultModeOfFilterRadio === 'historian'"
-          >Применить список исключений к уже обновленному файлу тегов</Button
+          style="width: 90%"
+          >Применить список исключений к файлу тегов</Button
         >
       </div>
-      <div class="col-3">
+      <div class="col-2">
         <RadioButton
           v-model="defaultModeOfFilterRadio"
           inputId="modeFilterExceptionDefault"
@@ -445,7 +443,7 @@ export default {
           >Список исключений</label
         >
       </div>
-      <div class="col-5">
+      <div class="col-7">
         <label for="default-exception-directories"
           >Список исключений (перечислите через запятую регулярные выражения)</label
         ><br />
@@ -511,9 +509,9 @@ export default {
         ></Multiselect>
       </div>
     </div>
-    <div class="row align-items-center">
-      <div class="col-4">Применять фильтр по умолчанию как:</div>
-      <div class="col-4">
+    <div class="row g-0 align-items-center">
+      <div class="col-3">Применять фильтр по умолчанию как:</div>
+      <div class="col-3">
         <RadioButton
           v-model="defaultSelectionTagRadio"
           id="sequentialDefault"
@@ -526,7 +524,7 @@ export default {
           >Последовательные шаблоны</label
         >
       </div>
-      <div class="col-4">
+      <div class="col-3">
         <RadioButton
           v-model="defaultSelectionTagRadio"
           id="unionDefault"
@@ -597,7 +595,7 @@ export default {
           </div>
           <div class="col">
             <label for="calendarDateDeepOfSearchSignals"
-              >Дата глубины поиска в архивах по умолчанию</label
+              >Дата глубины поиска в архивах</label
             ><br />
             <Calendar
               id="calendarDateDeepOfSearchSignals"
@@ -682,7 +680,7 @@ export default {
       </div>
     </div>
     <div class="row">
-      <div class="col">
+      <div class="col-3">
         <label for="intervalDefaultGrid">Интервал по умолчанию: </label><br />
         <InputNumber
           v-model="defaultInterval"
@@ -695,10 +693,11 @@ export default {
           :step="1"
           :allow-empty="false"
           :disabled="statusUpdateButtonActive"
+          style="width: 100%"
         >
         </InputNumber>
       </div>
-      <div class="col">
+      <div class="col-9">
         <label for="show-default-sensors">Показываемые датчики по умолчанию</label><br />
         <InputNumber
           v-model="defaultCountShowSensors"
@@ -711,6 +710,7 @@ export default {
           :step="1"
           :allow-empty="false"
           :disabled="statusUpdateButtonActive"
+          style="width: 32.1%"
         >
         </InputNumber>
       </div>
@@ -764,8 +764,8 @@ export default {
   margin-left: 5px;
 }
 .radio-interval-margin {
-  margin-left: 10px;
-  margin-right: 10px;
+  margin-left: 5px;
+  margin-right: 5px;
 }
 .components-margin-bottom {
   margin-bottom: 10px;

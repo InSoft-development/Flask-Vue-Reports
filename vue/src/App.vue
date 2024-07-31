@@ -64,7 +64,7 @@ export default {
 </script>
 
 <template>
-  <sidebar-menu v-model:collapsed="collapsed" :menu="sidebarMenu"> </sidebar-menu>
+  <sidebar-menu v-model:collapsed="collapsed" :menu="sidebarMenu" :width="'250px'"> </sidebar-menu>
   <div id="content" :class="[{ collapsed: collapsed }]">
     <div class="content">
       <div class="container" v-if="!checkFileActive && routePath !== '/configurator'">
@@ -80,7 +80,7 @@ export default {
 
 <style>
 #content {
-  padding-left: 290px;
+  padding-left: 250px;
   transition: 0.3s ease;
 }
 #content.collapsed {
@@ -99,10 +99,17 @@ export default {
 }
 
 .content {
-  padding: 50px;
+  padding: 50px 0 50px 0;
 }
 
 .container {
   max-width: 900px;
 }
+.p-radiobutton {
+   transform: scale(0.8);
+}
+.p-checkbox {
+  transform: scale(0.8);
+}
+
 </style>
