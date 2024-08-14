@@ -796,7 +796,7 @@ export default {
           <!--          <Button @click="onButtonDownloadPdfClick">Загрузить отчет</Button>-->
         </div>
         <div class="col align-self-center" v-if="dataTableRequested">
-          <a href="grid.csv" download="grid.csv" type="application/octet-stream">Загрузить CSV</a>
+          <a @click="onButtonDownloadCsvClick" href="javascript:;" type="application/octet-stream">Загрузить CSV</a>
           <!--          <Button @click="onButtonDownloadCsvClick">Загрузить CSV</Button>-->
         </div>
       </div>
