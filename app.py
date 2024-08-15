@@ -1,7 +1,7 @@
 import gevent.monkey
 gevent.monkey.patch_all()
 
-from flask import Flask, request
+from flask import Flask, request, send_from_directory
 from flask_cors import CORS
 from flask_socketio import SocketIO, send, emit
 
@@ -67,9 +67,42 @@ bounce_greenlet = None
 def hello():
     """
     Функция для проверки работы веб-сервера Flask
-    :return: Возвращает заголовк при запросе URL на порт Flask
+    :return: Возвращает заголовок при запросе URL на порт Flask
     """
     return "<h1> HELLO WORLD </h1>"
+
+
+@app.route('/bootstrap/dist/css/bootstrap.min.css')
+def get_bootstrap_css():
+    """
+    Функция запроса файла bootstrap.css
+    :return: Возвращает файл bootstrap.css в header html
+    """
+    logger.info(f"get_bootstrap_css()")
+    logger.info(f"get style bootstrap/dist/css/bootstrap.css")
+    return send_from_directory('static/bootstrap/dist/css/', 'bootstrap.min.css')
+
+
+@app.route('/bootstrap/dist/js/bootstrap.bundle.min.js')
+def get_bootstrap_js():
+    """
+    Функция запроса скрипта bootstrap.bundle.min.js
+    :return: Возвращает скрипт bootstrap.bundle.min.js в html
+    """
+    logger.info(f"get_bootstrap_js()")
+    logger.info(f"get script /bootstrap/dist/js/bootstrap.bundle.min.js")
+    return send_from_directory('static/bootstrap/dist/js/', 'bootstrap.bundle.min.js')
+
+
+@app.route('/plotly.js-dist-min/plotly.min.js')
+def get_plotly_js():
+    """
+    Функция запроса скрипта plotly.min.js
+    :return: Возвращает скрипт plotly.min.js в html
+    """
+    logger.info(f"get_plotly_js()")
+    logger.info(f"get script /plotly.js-dist-min/plotly.min.js")
+    return send_from_directory('static/plotly.js-dist-min/', 'plotly.min.js')
 
 
 @socketio.on("connect")
