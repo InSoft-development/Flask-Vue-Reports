@@ -1559,6 +1559,20 @@ if __name__ == '__main__':
 
     logger.info(f"template {constants.JINJA_TEMPLATE_SOURCE_HEADER} has been modified")
 
+    # Патч обезьяны для запуска сокета с клиента дистрибутивной версии веб-приложения
+    asset = None
+    with open(constants.WEB_DIR_ASSETS_INDEX_JS, 'r') as fp:
+        asset = fp.read()
+        replacement_string = asset[asset.find("const cS=\"http://") + len("const cS=\"http://"):
+                                   asset.find("\",Ye=Os(cS)")]
+        logger.info(replacement_string)
+        asset = asset.replace(replacement_string, f'{args.host}:{args.port}')
+        # fp.write(asset)
+    with open(constants.WEB_DIR_ASSETS_INDEX_JS, 'w') as fp:
+        fp.write(str(asset))
+        # const cS="http://10.23.23.31:8004",Ye=Os(cS)
+    logger.info(f"asset {constants.WEB_DIR_ASSETS_INDEX_JS} has been modified by monkey path")
+
     REPORT_DF = None
     REPORT_DF_STATUS = None
 
