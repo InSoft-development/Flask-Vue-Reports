@@ -1,3 +1,4 @@
+# Патч обезьяны для функционирования импортируемых модулей python асинхронно
 import gevent.monkey
 gevent.monkey.patch_all()
 
@@ -5,14 +6,11 @@ from flask import Flask, request, send_from_directory
 from flask_cors import CORS
 from flask_socketio import SocketIO, send, emit
 
-# Патч обезьяны для функционирования импортируемых модулей python асинхронно
-
 import os
 import signal
-import platform
 import argparse
+from bs4 import BeautifulSoup as bs
 
-import sys
 import time
 
 import shutil
@@ -20,7 +18,6 @@ import shutil
 import sqlite3
 from gevent import subprocess, spawn
 from gevent.subprocess import check_output
-import shlex
 import itertools
 
 import pandas as pd
@@ -35,8 +32,6 @@ from utils.correct_start import check_correct_application_structure
 import utils.constants_and_paths as constants
 
 from jinja.pylib.get_template import render_slice, render_grid, render_bounce
-
-from io import StringIO
 
 VERSION = '1.0.0'
 
@@ -1544,6 +1539,26 @@ if __name__ == '__main__':
     logger.info(f"dataframe {constants.DATA_KKS_ALL} has been loaded")
     logger.info(f"dataframe {constants.DATA_KKS_ALL_BACK} has been loaded")
 
+    # Заполнение шаблонов под указанный в параметрах ip адрес и порт
+    header = None
+    with open(constants.JINJA_TEMPLATE_SOURCE_HEADER, 'r') as fp:
+        header = bs(fp.read(), 'html.parser')
+        for link in header.find_all('link', href=True):
+            href = link['href']
+            replacement_string = href[href.find('http://')+len('http://'):href.find('/bootstrap')]
+            link['href'] = href.replace(replacement_string, f'{args.host}:{args.port}')
+
+        for script in header.find_all('script', {"src":True}):
+            src = script['src']
+            replacement_string = src[src.find('http://') + len('http://'):src.find('/bootstrap')] if 'bootstrap' in src \
+                else src[src.find('http://') + len('http://'):src.find('/plotly.js-dist-min')]
+            script['src'] = src.replace(replacement_string, f'{args.host}:{args.port}')
+
+    with open(constants.JINJA_TEMPLATE_SOURCE_HEADER, 'w') as fp:
+        fp.write(str(header))
+
+    logger.info(f"template {constants.JINJA_TEMPLATE_SOURCE_HEADER} has been modified")
+
     REPORT_DF = None
     REPORT_DF_STATUS = None
 
@@ -1557,5 +1572,5 @@ if __name__ == '__main__':
         "noFilter": no_filter
     }
 
+    logger.info(f"starting...")
     socketio.run(app, host=args.host, port=args.port)
-
