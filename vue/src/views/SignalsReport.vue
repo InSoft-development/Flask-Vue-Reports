@@ -282,7 +282,7 @@ export default {
       const link = document.createElement('a')
       const pathSignalsCsv = 'signals_slice.csv'
       link.setAttribute('download', pathSignalsCsv)
-      link.setAttribute('type', 'application/octet-stream')
+      link.setAttribute('type', 'text/csv')
       link.setAttribute('href', 'signals_slice.csv')
       document.body.appendChild(link)
       link.click()
@@ -304,7 +304,7 @@ export default {
       const link = document.createElement('a')
       const pathTagsReport = 'tags.csv'
       link.setAttribute('download', pathTagsReport)
-      link.setAttribute('type', 'application/octet-stream')
+      link.setAttribute('type', 'text/csv')
       link.setAttribute('href', 'tags.csv')
       document.body.appendChild(link)
       link.click()
@@ -711,9 +711,7 @@ export default {
           <!--          <Button @click="onButtonDownloadPdfClick">Загрузить отчет</Button>-->
         </div>
         <div class="col align-self-center" v-if="dataTableRequested">
-          <a href="signals_slice.csv" download="signals_slice.csv" type="application/octet-stream"
-            >Загрузить CSV</a
-          >
+          <a href="signals_slice.csv" download="signals_slice.csv" type="text/csv">Загрузить CSV</a>
           <!--          <Button @click="onButtonDownloadCsvClick">Загрузить CSV</Button>-->
         </div>
       </div>

@@ -37,7 +37,7 @@ WEB_DIR_REPORT_GRID = f'{WEB_DIR_REPORT}grid.pdf'
 WEB_DIR_REPORT_GRID_ZIP = f'{WEB_DIR_REPORT}grid.zip'
 WEB_DIR_REPORT_BOUNCE = f'{WEB_DIR_REPORT}bounce.pdf'
 WEB_DIR_ASSETS = f'{WEB_DIR}assets{os.sep}'
-WEB_DIR_ASSETS_INDEX_JS = f'{WEB_DIR_ASSETS}index-Ja3nQXQ1.js'
+WEB_DIR_ASSETS_INDEX_JS = f'{WEB_DIR_ASSETS}index-DOhmVhGx.js'
 
 CLIENT_DIR = f'client{os.sep}'
 CLIENT_BINARY = f'{CLIENT_DIR}client_lesson02.so'

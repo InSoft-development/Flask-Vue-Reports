@@ -243,7 +243,7 @@ export default {
       const link = document.createElement('a')
       const pathBounceCsv = 'bounce.csv'
       link.setAttribute('download', pathBounceCsv)
-      link.setAttribute('type', 'application/octet-stream')
+      link.setAttribute('type', 'text/csv')
       link.setAttribute('href', 'bounce.csv')
       document.body.appendChild(link)
       link.click()
@@ -265,7 +265,7 @@ export default {
       const link = document.createElement('a')
       const pathTagsReport = 'tags.csv'
       link.setAttribute('download', pathTagsReport)
-      link.setAttribute('type', 'application/octet-stream')
+      link.setAttribute('type', 'text/csv')
       link.setAttribute('href', 'tags.csv')
       document.body.appendChild(link)
       link.click()
@@ -602,9 +602,7 @@ export default {
           <!--          <Button @click="onButtonDownloadPdfClick">Загрузить отчет</Button>-->
         </div>
         <div class="col align-self-center" v-if="dataTableRequested">
-          <a href="bounce.csv" download="bounce.csv" type="application/octet-stream"
-            >Загрузить отчет</a
-          >
+          <a href="bounce.csv" download="bounce.csv" type="text/csv">Загрузить CSV</a>
           <!--          <Button @click="onButtonDownloadCsvClick">Загрузить CSV</Button>-->
         </div>
       </div>

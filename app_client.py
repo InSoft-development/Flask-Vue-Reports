@@ -22,6 +22,31 @@ def catch_all(path):
     return app.send_static_file("index.html")
 
 
+@app.route("/tags.csv")
+def get_tags_csv():
+    return send_file("web/tags.csv")
+
+
+@app.route("/signals_slice.csv")
+def get_signals_slice_csv():
+    return send_file("web/signals_slice.csv")
+
+
+@app.route("/code.csv")
+def get_code_csv():
+    return send_file("web/code.csv")
+
+
+@app.route("/grid.csv")
+def get_grid_csv():
+    return send_file("web/grid.csv")
+
+
+@app.route("/bounce.csv")
+def get_bounce_csv():
+    return send_file("web/bounce.csv")
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="start flask + vue 3 web-application")
     parser.add_argument("-ip", "--host", type=str, help="specify IPv4 address of host", default='localhost')

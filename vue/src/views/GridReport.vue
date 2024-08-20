@@ -360,7 +360,7 @@ export default {
       const link = document.createElement('a')
       const pathCodeCsv = 'code.csv'
       link.setAttribute('download', pathCodeCsv)
-      link.setAttribute('type', 'application/octet-stream')
+      link.setAttribute('type', 'text/csv')
       link.setAttribute('href', 'code.csv')
       document.body.appendChild(link)
       link.click()
@@ -368,7 +368,7 @@ export default {
 
       const pathGridCsv = 'grid.csv'
       link.setAttribute('download', pathGridCsv)
-      link.setAttribute('type', 'application/octet-stream')
+      link.setAttribute('type', 'text/csv')
       link.setAttribute('href', 'grid.csv')
       document.body.appendChild(link)
       link.click()
@@ -390,7 +390,7 @@ export default {
       const link = document.createElement('a')
       const pathTagsReport = 'tags.csv'
       link.setAttribute('download', pathTagsReport)
-      link.setAttribute('type', 'application/octet-stream')
+      link.setAttribute('type', 'text/csv')
       link.setAttribute('href', 'tags.csv')
       document.body.appendChild(link)
       link.click()
@@ -796,7 +796,7 @@ export default {
           <!--          <Button @click="onButtonDownloadPdfClick">Загрузить отчет</Button>-->
         </div>
         <div class="col align-self-center" v-if="dataTableRequested">
-          <a @click="onButtonDownloadCsvClick" href="javascript:;" type="application/octet-stream">Загрузить CSV</a>
+          <a @click="onButtonDownloadCsvClick" href="javascript:;" type="text/csv">Загрузить CSV</a>
           <!--          <Button @click="onButtonDownloadCsvClick">Загрузить CSV</Button>-->
         </div>
       </div>
