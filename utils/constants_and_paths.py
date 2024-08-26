@@ -50,6 +50,8 @@ CLIENT_SLICES = f'{CLIENT_DIR}slices.csv'
 CLIENT_SLICES_STATUS = f'{CLIENT_DIR}slices_status.csv'
 CLIENT_SLICER_SCRIPT = f'{CLIENT_DIR}slicer_for_streamlit.py'
 CLIENT_SERVER_CONF = f'{CLIENT_DIR}server.conf'
+CLIENT_CLICKHOUSE_SERVER_CONF = f'{CLIENT_DIR}serverCH.conf'
+CLIENT_CHOOSEN_MODE = f'{CLIENT_DIR}mode.conf'
 
 JINJA = f'jinja{os.sep}'
 JINJA_TEMPLATE = f'{JINJA}template{os.sep}'

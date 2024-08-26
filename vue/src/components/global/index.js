@@ -14,6 +14,7 @@ import Dialog from 'primevue/dialog'
 import Textarea from 'primevue/textarea'
 import Skeleton from 'primevue/skeleton'
 import ConfirmDialog from 'primevue/confirmdialog'
+import Password from 'primevue/password';
 
 const components = [
   {
@@ -75,6 +76,10 @@ const components = [
   {
     name: 'ConfirmDialog',
     component: ConfirmDialog
+  },
+  {
+    name: 'Password',
+    component: Password
   }
 ]
 

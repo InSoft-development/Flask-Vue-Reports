@@ -1,10 +1,29 @@
 import { socket } from '../socket'
 
+/***
+ * Процедура проверки файла CSV kks_all.csv
+ * @param checkFileActive
+ * @returns {Promise<void>}
+ */
 export async function getFileChecked(checkFileActive) {
   await new Promise((resolve) => {
     socket.emit('get_file_checked', (checkFile) => {
       checkFileActive.value = checkFile
       resolve(checkFile)
+    })
+  })
+}
+
+/***
+ * Процедура получения выбранного режима клиента
+ * @param modeClientRadio
+ * @returns {Promise<void>}
+ */
+export async function getClientMode(modeClientRadio) {
+  await new Promise((resolve) => {
+    socket.emit('get_client_mode', (clientMode) => {
+      modeClientRadio.value = clientMode
+      resolve(clientMode)
     })
   })
 }
@@ -31,12 +50,16 @@ export async function getServerConfig(configServer, checkFileActive) {
  * @param portOPC
  * @returns {Promise<void>}
  */
-export async function getIpAndPortConfig(ipOPC, portOPC) {
+export async function getIpAndPortConfig(ipOPC, portOPC, ipCH, portCH, usernameCH, passwordCH) {
   await new Promise((resolve) => {
-    socket.emit('get_ip_port_config', (ip, port) => {
-      ipOPC.value = ip
-      portOPC.value = port
-      resolve([ip, port])
+    socket.emit('get_ip_port_config', (ipConfOPC, portConfOPC, ipConfCH, portConfCH, username, password) => {
+      ipOPC.value = ipConfOPC
+      portOPC.value = portConfOPC
+      ipCH.value = ipConfCH
+      portCH.value = portConfCH
+      usernameCH.value = username,
+      passwordCH.value = password
+      resolve([ipConfOPC, portConfOPC, ipConfCH, portConfCH, username, password])
     })
   })
 }

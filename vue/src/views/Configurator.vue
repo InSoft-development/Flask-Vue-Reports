@@ -5,13 +5,16 @@ import { useConfirm } from 'primevue/useconfirm'
 import Multiselect from '@vueform/multiselect'
 
 import {
+  getClientMode,
   getServerConfig,
   getLastUpdateFileKKS,
   runUpdate,
   changeUpdateFile,
   cancelUpdate,
   getIpAndPortConfig,
+  changeClientMode,
   changeOpcServerConfig,
+  changeCHServerConfig,
   getTypesOfSensors
 } from '../stores'
 
@@ -26,8 +29,22 @@ export default {
 
     const lastUpdateFileKKS = ref('')
     const configServer = ref('')
+
+    const modeClientRadio = ref('')
+    const changeModeClient = async () => {
+      await changeClientMode(modeClientRadio.value)
+      await getClientMode(modeClientRadio)
+      await getServerConfig(configServer, checkFileActive)
+      statusUpdateTextArea.value = configServer.value
+    }
+
     const ipOPC = ref('')
     const portOPC = ref(0)
+
+    const ipCH = ref('')
+    const portCH = ref(0)
+    const usernameCH = ref('')
+    const passwordCH = ref('')
 
     const defaultModeOfFilterRadio = ref('')
     const defaultRootDirectory = ref('')
@@ -163,9 +180,10 @@ export default {
     onMounted(async () => {
       statusUpdateButtonActive.value = true
 
+      await getClientMode(modeClientRadio)
       await getServerConfig(configServer, checkFileActive)
       await getLastUpdateFileKKS(lastUpdateFileKKS)
-      await getIpAndPortConfig(ipOPC, portOPC)
+      await getIpAndPortConfig(ipOPC, portOPC, ipCH, portCH, usernameCH, passwordCH)
 
       statusUpdateTextArea.value = configServer.value
       if (!checkFileActive.value)
@@ -255,35 +273,75 @@ export default {
       if (statusUpdateButtonActive.value) cancelUpdate()
     }
 
-    function changeConfig($event) {
+    let inputTimeout = null
+    function changeConfigOPC($event) {
       // в либе PrimeVue не работает v-model при вводе через клавиатуру
       // приходится выполнять хак
-      try {
-        const numberTarget = $event.originalEvent.target
-        numberTarget.blur()
-        numberTarget.focus()
-      } catch (e) {
-        console.log(e)
+
+      if (inputTimeout){
+        clearTimeout(inputTimeout)
       }
-      if (ipOPC.value.length === 0 || !portOPC.value) {
-        alert('Заполните IP адрес и порт')
-        return
+
+      inputTimeout = setTimeout(function () {
+        try {
+          const numberTarget = $event.originalEvent.target
+          numberTarget.blur()
+          numberTarget.focus()
+        } catch (e) {
+          console.log(e)
+        }
+        if (ipOPC.value.length === 0 || !portOPC.value) {
+          alert('Заполните IP адрес и порт')
+          return
+        }
+        changeOpcServerConfig(ipOPC.value, portOPC.value)
+        getServerConfig(configServer, checkFileActive)
+        getIpAndPortConfig(ipOPC, portOPC, ipCH, portCH, usernameCH, passwordCH)
+      }, 500)
+    }
+
+    function changeConfigCH($event) {
+      // в либе PrimeVue не работает v-model при вводе через клавиатуру
+      // приходится выполнять хак
+      if (inputTimeout){
+        clearTimeout(inputTimeout)
       }
-      changeOpcServerConfig(ipOPC.value, portOPC.value)
-      getServerConfig(configServer, checkFileActive)
-      getIpAndPortConfig(ipOPC, portOPC)
+
+      inputTimeout = setTimeout(function () {
+        try {
+          const numberTarget = $event.originalEvent.target
+          numberTarget.blur()
+          numberTarget.focus()
+        } catch (e) {
+          console.log(e)
+        }
+        if (ipCH.value.length === 0 || !portCH.value) {
+          alert('Заполните IP адрес и порт')
+          return
+        }
+        changeCHServerConfig(ipCH.value, portCH.value, usernameCH.value, passwordCH.value)
+        getServerConfig(configServer, checkFileActive)
+        getIpAndPortConfig(ipOPC, portOPC, ipCH, portCH, usernameCH, passwordCH)
+      }, 500)
     }
 
     return {
       lastUpdateFileKKS,
       configServer,
+      modeClientRadio,
+      changeModeClient,
       ipOPC,
       portOPC,
+      ipCH,
+      portCH,
+      usernameCH,
+      passwordCH,
       defaultModeOfFilterRadio,
       defaultRootDirectory,
       defaultExceptionDirectories,
       defaultExceptionExpertTags,
-      changeConfig,
+      changeConfigOPC,
+      changeConfigCH,
       statusUpdateTextArea,
       statusUpdateButtonActive,
       runUpdateFlag,
@@ -332,12 +390,39 @@ export default {
     </div>
     <hr />
     <div class="row">
+      <div class="col-md-auto">
+        <h4>Выбор клиента для получения данных: </h4>
+      </div>
+      <div class="col-md-auto">
+        <RadioButton
+          v-model="modeClientRadio"
+          inputId="modeClientOPCDefault"
+          name="modeClientOPCDefault"
+          value="OPC"
+          :disabled="statusUpdateButtonActive"
+          @change="changeModeClient"
+        />
+        <label for="modeClientOPCDefault" class="radio-interval-margin">OPC UA</label>
+      </div>
+      <div class="col-md-auto">
+        <RadioButton
+          v-model="modeClientRadio"
+          inputId="modeClientCHDefault"
+          name="modeClientCHDefault"
+          value="CH"
+          :disabled="statusUpdateButtonActive"
+          @change="changeModeClient"
+        />
+        <label for="modeClientCHDefault" class="radio-interval-margin">Clickhouse DB</label>
+      </div>
+    </div>
+    <div class="row">
       <div class="col">
         <h4>Изменить параметры конфигурации клиента</h4>
       </div>
     </div>
     <div class="row components-margin-bottom">
-      <div class="col">
+      <div class="col" v-if="modeClientRadio === 'OPC'">
         <FloatLabel>
           <InputText
             v-model="ipOPC"
@@ -346,14 +431,30 @@ export default {
             pattern="(\b25[0-5]|\b2[0-4][0-9]|\b[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}"
             required
             :disabled="statusUpdateButtonActive"
-            @input="changeConfig"
+            @input="changeConfigOPC"
             style="width: 90%"
           >
           </InputText>
           <label for="ip-opc-server-address">IP адрес сервера OPC UA</label>
         </FloatLabel>
       </div>
-      <div class="col">
+      <div class="col-2" v-if="modeClientRadio === 'CH'">
+        <FloatLabel>
+          <InputText
+            v-model="ipCH"
+            type="text"
+            id="ip-ch-server-address"
+            pattern="(\b25[0-5]|\b2[0-4][0-9]|\b[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}"
+            required
+            :disabled="statusUpdateButtonActive"
+            @input="changeConfigCH"
+            style="width: 100%"
+          >
+          </InputText>
+          <label for="ip-ch-server-address">IP адрес БД Clickhouse</label>
+        </FloatLabel>
+      </div>
+      <div class="col" v-if="modeClientRadio === 'OPC'">
         <FloatLabel>
           <InputNumber
             v-model:="portOPC"
@@ -366,11 +467,71 @@ export default {
             :step="1"
             :allow-empty="true"
             :disabled="statusUpdateButtonActive"
-            @input="changeConfig"
+            @input="changeConfigOPC"
             style="width: 90%"
           >
           </InputNumber>
           <label for="port-opc-server-address">Порт сервера OPC UA</label>
+        </FloatLabel>
+      </div>
+      <div class="col-2" v-if="modeClientRadio === 'CH'">
+        <FloatLabel>
+          <InputNumber
+            v-model:="portCH"
+            id="port-ch-server-address"
+            input-id="port"
+            :useGrouping="false"
+            mode="decimal"
+            show-buttons
+            :min="0"
+            :step="1"
+            :allow-empty="true"
+            :disabled="statusUpdateButtonActive"
+            @input="changeConfigCH"
+            inputStyle="width: 100%"
+          >
+          </InputNumber>
+          <label for="port-ch-server-address">Порт</label>
+        </FloatLabel>
+      </div>
+      <div class="col-2" v-if="modeClientRadio === 'CH'">
+        <FloatLabel>
+          <InputText
+            v-model="usernameCH"
+            type="text"
+            id="ch-username"
+            required
+            :disabled="statusUpdateButtonActive"
+            @input="changeConfigCH"
+            style="width: 100%"
+          >
+          </InputText>
+          <label for="ch-username">Имя пользователя</label>
+        </FloatLabel>
+      </div>
+      <div class="col-2" v-if="modeClientRadio === 'CH'">
+        <FloatLabel>
+<!--          <InputText-->
+<!--            v-model="passwordCH"-->
+<!--            type="text"-->
+<!--            id="ch-password"-->
+<!--            required-->
+<!--            :disabled="statusUpdateButtonActive"-->
+<!--            @input="changeConfigCH"-->
+<!--            style="width: 100%"-->
+<!--          >-->
+<!--          </InputText>-->
+          <Password
+            v-model="passwordCH"
+            :toggleMask="true"
+            :feedback="false"
+            id="ch-password"
+            required
+            :disabled="statusUpdateButtonActive"
+            @input="changeConfigCH"
+          >
+          </Password>
+          <label for="ch-password">Пароль</label>
         </FloatLabel>
       </div>
       <div class="col text-end">

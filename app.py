@@ -132,6 +132,32 @@ def get_file_checked():
     return os.path.isfile(constants.DATA_KKS_ALL)
 
 
+@socketio.on("get_client_mode")
+def get_client_mode():
+    """
+    Функция возвращает выбранный режим работы клиента
+    :return: строка ('OPC'/'CH') наименования выбранного режима клиента
+    """
+    logger.info(f"get_client_mode()")
+    with open(constants.CLIENT_CHOOSEN_MODE, "r") as readfile:
+        client_mode = readfile.readline()
+        logger.info(client_mode)
+
+    return client_mode
+
+
+@socketio.on("change_client_mode")
+def change_client_mode(client_mode):
+    """
+    Процедура записывает в файл выбранный режим работы клиента
+    :param client_mode: строка ('OPC'/'CH') наименования выбранного режима клиента
+    :return:
+    """
+    logger.info(f"change_client_mode()")
+    with open(constants.CLIENT_CHOOSEN_MODE, "w") as writefile:
+        writefile.write(client_mode)
+
+
 @socketio.on("get_server_config")
 def get_server_config():
     """
@@ -139,11 +165,27 @@ def get_server_config():
     :return: строка конфигурации клиента OPC UA, True/False результат проверки существования файла тегов kks_all.csv
     """
     logger.info(f"get_server_config()")
-    with open(constants.CLIENT_SERVER_CONF, "r") as readfile:
-        server_config = readfile.readline()
-        logger.info(server_config)
 
-    return f'Текущая конфигурация клиента OPC UA: {server_config}', os.path.isfile(constants.DATA_KKS_ALL)
+    with open(constants.CLIENT_CHOOSEN_MODE, "r") as readfile:
+        client_mode = readfile.readline()
+
+    if client_mode == 'OPC':
+        with open(constants.CLIENT_SERVER_CONF, "r") as readfile:
+            server_config = readfile.readline()
+            logger.info(server_config)
+
+        return f'Текущая конфигурация клиента OPC UA: {server_config}', os.path.isfile(constants.DATA_KKS_ALL)
+
+    if client_mode == 'CH':
+        with open(constants.CLIENT_CLICKHOUSE_SERVER_CONF, "r") as readfile:
+            server_config = readfile.readline().split(',')
+            host = server_config[0]
+            username = server_config[1]
+            logger.info(f'{host}, {username}')
+
+        return f'Текущая конфигурация клиента CH: {host}, {username}', os.path.isfile(constants.DATA_KKS_ALL)
+
+    return f'Конфигурация клиента не обнаружена!!!, {os.path.isfile(constants.DATA_KKS_ALL)}'
 
 
 @socketio.on("get_last_update_file_kks")
@@ -171,7 +213,17 @@ def get_ip_port_config():
         logger.info(server_config)
 
     ip, port = server_config.split(':')
-    return ip, port
+
+    with open(constants.CLIENT_CLICKHOUSE_SERVER_CONF, "r") as readfile:
+        server_ch = readfile.readline().split(',')
+        logger.info(server_ch)
+
+    ip_ch, port_ch = server_ch[0].split(':')
+
+    username = server_ch[1]
+    password = server_ch[2]
+
+    return ip, port, ip_ch, port_ch, username, password
 
 
 @socketio.on("get_default_fields")
@@ -201,7 +253,7 @@ def change_opc_server_config(ip, port):
     """
     Процедура заменяет строку конфигурации клиента OPC UA
     :param ip: ip-адресс
-    :param port: порта
+    :param port: порт
     """
     logger.info(f"change_opc_server_config({ip}, {port})")
 
@@ -211,6 +263,29 @@ def change_opc_server_config(ip, port):
     with open(constants.CLIENT_SERVER_CONF, "r") as readfile:
         socketio.emit("setUpdateStatus", {"statusString": f"Конфигурация клиента OPC UA обновлена на: "
                                                           f"{readfile.read()}\n", "serviceFlag": False}, to=request.sid)
+
+
+@socketio.on("change_ch_server_config")
+def change_ch_server_config(ip, port, username, password):
+    """
+    Процедура заменяет строку конфигурации клиента БД CH
+    :param ip: ip-адресс
+    :param port: порт
+    :param username: имя пользователя
+    :param password: пароль
+    """
+    logger.info(f"change_ch_server_config({ip}, {port}, {username}, {password})")
+
+    with open(constants.CLIENT_CLICKHOUSE_SERVER_CONF, "w") as writefile:
+        writefile.write(f"{ip}:{port},{username},{password}")
+
+    with open(constants.CLIENT_CLICKHOUSE_SERVER_CONF, "r") as readfile:
+        server_ch = readfile.readline().split(',')
+        host = server_ch[0]
+        active_user = server_ch[1]
+        socketio.emit("setUpdateStatus", {"statusString": f"Конфигурация клиента Clickhouse обновлена на: "
+                                                          f"{host}, пользователь: {active_user}\n",
+                                          "serviceFlag": False}, to=request.sid)
 
 
 @socketio.on("change_default_fields")

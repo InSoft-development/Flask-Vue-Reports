@@ -92,6 +92,27 @@ export async function cancelBounce() {
 }
 
 /***
+ * Процедура изменения выбранного клиента
+ * @param modeClientRadio
+ * @returns {Promise<void>}
+ */
+export async function changeClientMode(modeClientRadio) {
+  await new Promise((resolve) => {
+    socket.emit('change_client_mode', modeClientRadio, () => {
+      resolve()
+    })
+  })
+}
+
+export async function changeCHServerConfig(ipCH, portCH, username, password) {
+  await new Promise((resolve) => {
+    socket.emit('change_ch_server_config', ipCH, portCH, username, password, () => {
+      resolve()
+    })
+  })
+}
+
+/***
  * Процедура изменения конфигурации клиента OPC UA
  * @param ipOPC
  * @param portOPC
