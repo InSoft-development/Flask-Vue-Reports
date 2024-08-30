@@ -1,6 +1,6 @@
 <script>
 import { useRoute } from 'vue-router'
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 
 import Multiselect from '@vueform/multiselect'
 
@@ -40,14 +40,28 @@ export default {
 
     const collapsed = ref(false)
     const checkFileActive = ref(false)
+    const modeClient = ref('')
+    const modeClientCHActive = ref(false)
 
     const route = useRoute()
     const routePath = computed(() => route.path)
 
-    onMounted(async () => {
-      await getFileChecked(checkFileActive)
-      if (!checkFileActive.value)
+    watch(route, async () => {
+      if (routePath.value === '/configurator')
+        return 
+      await getFileChecked(checkFileActive, modeClient, modeClientCHActive)
+      if (!checkFileActive.value && modeClient.value === 'OPC')
         alert('Не найден файл kks_all.csv.\nСконфигурируйте клиент OPC UA и обновите файл тегов')
+      if (!modeClientCHActive.value && modeClient.value === 'CH')
+        alert('Ошибка конфигурации клиента Clickhouse.\nСконфигурируйте клиент Clickhouse')
+    })
+
+    onMounted(async () => {
+      // await getFileChecked(checkFileActive, modeClient, modeClientCHActive)
+      // if (!checkFileActive.value && modeClient.value === 'OPC')
+      //   alert('Не найден файл kks_all.csv.\nСконфигурируйте клиент OPC UA и обновите файл тегов')
+      // if (!modeClientCHActive.value && modeClient.value === 'CH')
+      //   alert('Ошибка конфигурации клиента Clickhouse.\nСконфигурируйте клиент Clickhouse')
       window.addEventListener('beforeunload', async (event) => {
         await cancelUpdate()
       })
@@ -57,6 +71,8 @@ export default {
       sidebarMenu,
       collapsed,
       checkFileActive,
+      modeClient,
+      modeClientCHActive,
       routePath
     }
   }
@@ -67,11 +83,15 @@ export default {
   <sidebar-menu v-model:collapsed="collapsed" :menu="sidebarMenu" :width="'250px'"> </sidebar-menu>
   <div id="content" :class="[{ collapsed: collapsed }]">
     <div class="content">
-      <div class="container" v-if="!checkFileActive && routePath !== '/configurator'">
+      <div class="container" v-if="!checkFileActive && modeClient === 'OPC' && routePath !== '/configurator'">
         <h1>Не найден файл kks_all.csv.</h1>
         <h1>Сконфигурируйте клиент OPC UA и обновите файл тегов на странице "Конфигуратор".</h1>
       </div>
-      <div class="container" v-if="checkFileActive || routePath === '/configurator'">
+      <div class="container" v-if="!modeClientCHActive && modeClient === 'CH' && routePath !== '/configurator'">
+        <h1>Ошибка конфигурации клиента Clickhouse.</h1>
+        <h1>Сконфигурируйте клиент Clickhouse</h1>
+      </div>
+      <div class="container" v-if="(checkFileActive && modeClient === 'OPC') || (modeClientCHActive && modeClient === 'CH') || routePath === '/configurator'">
         <RouterView :collapsed-sidebar="collapsed" />
       </div>
     </div>

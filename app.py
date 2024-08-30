@@ -16,6 +16,9 @@ import time
 import shutil
 
 import sqlite3
+import clickhouse_connect
+from clickhouse_connect.driver import exceptions as clickhouse_exceptions
+
 from gevent import subprocess, spawn
 from gevent.subprocess import check_output
 import itertools
@@ -30,6 +33,7 @@ from dateutil.parser import parse
 
 from utils.correct_start import check_correct_application_structure
 import utils.constants_and_paths as constants
+import utils.routine_operations as operations
 
 from jinja.pylib.get_template import render_slice, render_grid, render_bounce
 
@@ -125,11 +129,22 @@ def disconnect():
 @socketio.on("get_file_checked")
 def get_file_checked():
     """
-    Функция возвращает результат проверки существования файла тегов kks_all.csv
+    Функция возвращает результат проверки существования файла тегов kks_all.csv или верность настройки клиента Clickhouse
     :return: True/False результат проверки существования файла тегов kks_all.csv
     """
     logger.info(f"get_file_checked()")
-    return os.path.isfile(constants.DATA_KKS_ALL)
+    client_status = False
+    ip, port, username, password = operations.read_clickhouse_server_conf()
+    try:
+        client = operations.create_client(ip, port, username, password)
+        logger.info("Clickhouse connected")
+        client_status = True
+        client.close()
+        logger.info("Clickhouse disconnected")
+    except clickhouse_exceptions.Error as error:
+        logger.error(error)
+
+    return os.path.isfile(constants.DATA_KKS_ALL), CLIENT_MODE, client_status
 
 
 @socketio.on("get_client_mode")
@@ -139,11 +154,12 @@ def get_client_mode():
     :return: строка ('OPC'/'CH') наименования выбранного режима клиента
     """
     logger.info(f"get_client_mode()")
+    global CLIENT_MODE
     with open(constants.CLIENT_CHOOSEN_MODE, "r") as readfile:
-        client_mode = readfile.readline()
-        logger.info(client_mode)
+        CLIENT_MODE = readfile.readline()
+        logger.info(CLIENT_MODE)
 
-    return client_mode
+    return CLIENT_MODE
 
 
 @socketio.on("change_client_mode")
@@ -165,40 +181,79 @@ def get_server_config():
     :return: строка конфигурации клиента OPC UA, True/False результат проверки существования файла тегов kks_all.csv
     """
     logger.info(f"get_server_config()")
+    global CLIENT_MODE
+    sid = request.sid
 
-    with open(constants.CLIENT_CHOOSEN_MODE, "r") as readfile:
-        client_mode = readfile.readline()
-
-    if client_mode == 'OPC':
+    if CLIENT_MODE == 'OPC':
         with open(constants.CLIENT_SERVER_CONF, "r") as readfile:
             server_config = readfile.readline()
             logger.info(server_config)
 
         return f'Текущая конфигурация клиента OPC UA: {server_config}', os.path.isfile(constants.DATA_KKS_ALL)
 
-    if client_mode == 'CH':
-        with open(constants.CLIENT_CLICKHOUSE_SERVER_CONF, "r") as readfile:
-            server_config = readfile.readline().split(',')
-            host = server_config[0]
-            username = server_config[1]
-            logger.info(f'{host}, {username}')
+    if CLIENT_MODE == 'CH':
+        ip, port, username, password = operations.read_clickhouse_server_conf()
+        host = f"{ip}:{port}"
 
-        return f'Текущая конфигурация клиента CH: {host}, {username}', os.path.isfile(constants.DATA_KKS_ALL)
+        client = operations.get_client(sid, socketio, ip, port, username, password)
+        try:
+            check = client.command("CHECK TABLE archive.static_data")
+            client.close()
+            logger.info("Clickhouse disconnected")
+            return f'Текущая конфигурация клиента CH: {host}, {username}', check
+        except AttributeError as attr_error:
+            logger.info(attr_error)
+            return client, os.path.isfile(constants.DATA_KKS_ALL)
+        except clickhouse_exceptions.Error as error:
+            logger.error(error)
+            socketio.emit("setUpdateStatus",
+                          {"statusString": f"{error}\n", "serviceFlag": False},
+                          to=sid)
 
-    return f'Конфигурация клиента не обнаружена!!!, {os.path.isfile(constants.DATA_KKS_ALL)}'
+    return f'Конфигурация клиента не обнаружена!!!', os.path.isfile(constants.DATA_KKS_ALL)
 
 
 @socketio.on("get_last_update_file_kks")
 def get_last_update_file_kks():
     """
-    Функция возвращает дату последнего обновления файла тегов kks_all.csv
-    :return: строка даты последнего обновления файла тегов kks_all.csv
+    Функция возвращает дату последнего обновления файла тегов kks_all.csv или таблицы clickhouse
+    :return: строка даты последнего обновления файла тегов kks_all.csv или таблицы clickhouse
     """
     logger.info(f"get_last_update_file_kks()")
-    if not os.path.isfile(constants.DATA_KKS_ALL):
-        return f"Файл {constants.DATA_KKS_ALL} не найден"
-    logger.info(str(datetime.datetime.fromtimestamp(os.path.getmtime(constants.DATA_KKS_ALL)).strftime('%Y-%m-%d %H:%M:%S')))
-    return str(datetime.datetime.fromtimestamp(os.path.getmtime(constants.DATA_KKS_ALL)).strftime('%Y-%m-%d %H:%M:%S'))
+
+    global CLIENT_MODE
+    sid = request.sid
+
+    if CLIENT_MODE == 'OPC':
+        current_path = constants.DATA_KKS_ALL
+
+        if not os.path.isfile(current_path):
+            return f"Файл {current_path} не найден"
+        logger.info(str(datetime.datetime.fromtimestamp(os.path.getmtime(current_path)).strftime('%Y-%m-%d %H:%M:%S')))
+        return str(datetime.datetime.fromtimestamp(os.path.getmtime(current_path)).strftime('%Y-%m-%d %H:%M:%S'))
+
+    if CLIENT_MODE == 'CH':
+        ip, port, username, password = operations.read_clickhouse_server_conf()
+
+        client = operations.get_client(sid, socketio, ip, port, username, password)
+        try:
+            logger.info("Clickhouse connected")
+            modify_time = client.command("SELECT table, metadata_modification_time FROM system.tables "
+                                         "WHERE table = 'static_data'")
+            logger.info(modify_time[1])
+            client.close()
+            logger.info("Clickhouse disconnected")
+            return modify_time[1]
+        except AttributeError as attr_error:
+            logger.info(attr_error)
+            return client
+        except clickhouse_exceptions.Error as error:
+            logger.error(error)
+            socketio.emit("setUpdateStatus",
+                          {"statusString": f"{error}\n", "serviceFlag": False},
+                          to=sid)
+
+    return 'Ошибка конфигурации клиента'
 
 
 @socketio.on("get_ip_port_config")
@@ -213,16 +268,7 @@ def get_ip_port_config():
         logger.info(server_config)
 
     ip, port = server_config.split(':')
-
-    with open(constants.CLIENT_CLICKHOUSE_SERVER_CONF, "r") as readfile:
-        server_ch = readfile.readline().split(',')
-        logger.info(server_ch)
-
-    ip_ch, port_ch = server_ch[0].split(':')
-
-    username = server_ch[1]
-    password = server_ch[2]
-
+    ip_ch, port_ch, username, password = operations.read_clickhouse_server_conf()
     return ip, port, ip_ch, port_ch, username, password
 
 
@@ -245,7 +291,7 @@ def get_default_fields():
         with f:
             default_fields = json.load(f)
 
-    return default_fields
+    return default_fields[CLIENT_MODE]
 
 
 @socketio.on("change_opc_server_config")
@@ -279,13 +325,11 @@ def change_ch_server_config(ip, port, username, password):
     with open(constants.CLIENT_CLICKHOUSE_SERVER_CONF, "w") as writefile:
         writefile.write(f"{ip}:{port},{username},{password}")
 
-    with open(constants.CLIENT_CLICKHOUSE_SERVER_CONF, "r") as readfile:
-        server_ch = readfile.readline().split(',')
-        host = server_ch[0]
-        active_user = server_ch[1]
-        socketio.emit("setUpdateStatus", {"statusString": f"Конфигурация клиента Clickhouse обновлена на: "
-                                                          f"{host}, пользователь: {active_user}\n",
-                                          "serviceFlag": False}, to=request.sid)
+    ip_ch, port_ch, active_user, password_ch = operations.read_clickhouse_server_conf()
+    host = f"{ip_ch}:{port_ch}"
+    socketio.emit("setUpdateStatus", {"statusString": f"Конфигурация клиента Clickhouse обновлена на: "
+                                                      f"{host}, пользователь: {active_user}\n",
+                                      "serviceFlag": False}, to=request.sid)
 
 
 @socketio.on("change_default_fields")
@@ -297,8 +341,13 @@ def change_default_fields(default_fields):
     """
     logger.info(f"change_default_fields({default_fields})")
 
+    with open(constants.DATA_DEFAULT_FIELDS_CONFIG, "r") as readfile:
+        default_data = json.load(readfile)
+
+    default_data[CLIENT_MODE] = default_fields
+
     with open(constants.DATA_DEFAULT_FIELDS_CONFIG, "w") as f:
-        json.dump(default_fields, f, indent=4)
+        json.dump(default_data, f, indent=4)
 
     logger.info(f"Файл {constants.DATA_DEFAULT_FIELDS_CONFIG} был успешно сохранен")
 
@@ -310,8 +359,26 @@ def get_types_of_sensors():
     :return: массив строк типовы данных
     """
     logger.info(f"get_types_of_sensors()")
-    logger.info(KKS_ALL[1].dropna().unique().tolist())
-    return KKS_ALL[1].dropna().unique().tolist()
+
+    if CLIENT_MODE == 'OPC':
+        logger.info(KKS_ALL[1].dropna().unique().tolist())
+        return KKS_ALL[1].dropna().unique().tolist()
+
+    if CLIENT_MODE == 'CH':
+        ip, port, username, password = operations.read_clickhouse_server_conf()
+        try:
+            client = operations.create_client(ip, port, username, password)
+            logger.info("Clickhouse connected")
+            types = client.query_df("SELECT DISTINCT data_type_name FROM archive.v_static_data")
+            logger.info(types)
+            client.close()
+            logger.info("Clickhouse disconnected")
+            return types['data_type_name'].tolist()
+        except clickhouse_exceptions.Error as error:
+            logger.error(error)
+            return ['Ошибка конфигурации клиента']
+    return ['Ошибка конфигурации клиента']
+
 
 
 @socketio.on("get_kks_tag_exist")
@@ -563,10 +630,39 @@ def update_kks_all(mode, root_directory, exception_directories, exception_expert
                       to=sid)
         return f"Обновление тегов закончено\n"
 
+    def update_from_ch_kks_all_spawn():
+        """
+        Процедура запуска обновления файла тегов kks_all.csv
+        """
+        logger.info(f"update_from_ch_kks_all_spawn()")
+
+        logger.info(sid)
+        global sid_proc
+        sid_proc = sid
+
+        ip, port, username, password = operations.read_clickhouse_server_conf()
+
+        socketio.emit("setUpdateStatus",
+                      {"statusString": f"соединение с Clickhouse...\n", "serviceFlag": True},
+                      to=sid)
+        client = operations.get_client(sid, socketio, ip, port, username, password)
+        try:
+            logger.info("Clickhouse connected")
+            socketio.emit("setUpdateStatus", {"statusString": f"Соединение с Clickhouse успешно установлено\n", "serviceFlag": True},
+                          to=sid)
+            client.close()
+            logger.info("Clickhouse disconnected")
+        except AttributeError as attr_error:
+            logger.info(attr_error)
+            return client
+
+        return f"Обновление тегов закончено\n"
+
     sid = request.sid
     # Запуск гринлета обновления тегов
     global update_greenlet
     global sid_proc
+    global CLIENT_MODE
     # Если обновление уже идет, выводим в веб-приложении
     if update_greenlet:
         logger.warning(f"update_greenlet is running")
@@ -575,8 +671,13 @@ def update_kks_all(mode, root_directory, exception_directories, exception_expert
                       to=sid)
         return
 
-    # Запуск процесса обновления тегов через gevent
-    update_greenlet = spawn(update_kks_all_spawn, mode, root_directory, exception_directories, exception_expert)
+    # Запуск процесса обновления тегов через gevent в зависимости от режима
+    if CLIENT_MODE == 'OPC':
+        update_greenlet = spawn(update_kks_all_spawn, mode, root_directory, exception_directories, exception_expert)
+
+    if CLIENT_MODE == 'CH':
+        update_greenlet = spawn(update_from_ch_kks_all_spawn)
+
     gevent.joinall([update_greenlet])
 
     sid_proc = None
@@ -620,7 +721,7 @@ def update_cancel():
 @socketio.on("change_update_kks_all")
 def change_update_kks_all(root_directory, exception_directories, exception_expert):
     """
-    Процедура отмены процесса обновления и уничтожения гринлета gevent
+    Процедура применения списка исключений к уже обновленному файлу тегов
     :param root_directory: корневая папка
     :param exception_directories: список исключений
     :param exception_expert: флаг, исключения тегов, помеченных экспертом
@@ -685,8 +786,9 @@ def change_update_kks_all(root_directory, exception_directories, exception_exper
                       to=sid)
         return
 
-    # Запуск процесса изменения обновленного файла тегов на основе списка исключений через gevent
-    change_update_greenlet = spawn(change_update_kks_all_spawn, root_directory, exception_directories, exception_expert)
+    # Запуск изменения обновленного файла тегов на основе списка исключений через gevent
+    change_update_greenlet = spawn(change_update_kks_all_spawn, root_directory, exception_directories,
+                                       exception_expert)
     gevent.joinall([change_update_greenlet])
 
     sid_proc = None
@@ -1602,17 +1704,19 @@ if __name__ == '__main__':
 
     check_correct_application_structure()
 
-    # Пытаемся загрузить kks_all.csv и kks_all_back.csv если они существуют
+    # Пытаемся загрузить kks_all.csv и kks_all_back.csv если они существуют в зависимости от режима
+    with open(constants.CLIENT_CHOOSEN_MODE, "r") as mode_file:
+        CLIENT_MODE = mode_file.readline()
+
     try:
         KKS_ALL = pd.read_csv(constants.DATA_KKS_ALL, header=None, sep=';')
         KKS_ALL_BACK = pd.read_csv(constants.DATA_KKS_ALL_BACK, header=None, sep=';')
+        logger.info(f"dataframe {constants.DATA_KKS_ALL} has been loaded")
+        logger.info(f"dataframe {constants.DATA_KKS_ALL_BACK} has been loaded")
     except FileNotFoundError as e:
         logger.info(e)
         KKS_ALL = pd.DataFrame()
         KKS_ALL_BACK = pd.DataFrame()
-
-    logger.info(f"dataframe {constants.DATA_KKS_ALL} has been loaded")
-    logger.info(f"dataframe {constants.DATA_KKS_ALL_BACK} has been loaded")
 
     # Заполнение шаблонов под указанный в параметрах ip адрес и порт
     header = None
@@ -1647,6 +1751,13 @@ if __name__ == '__main__':
         fp.write(str(asset))
         # const cS="http://10.23.23.31:8004",Ye=Os(cS)
     logger.info(f"asset {constants.WEB_DIR_ASSETS_INDEX_JS} has been modified by monkey path")
+
+    # Проверяем наличие файла с параметрами
+    try:
+        f = open(constants.DATA_DEFAULT_FIELDS_CONFIG)
+    except FileNotFoundError:
+        default_data = {'OPC': None, 'CH': None}
+        json.dump(default_data, constants.DATA_DEFAULT_FIELDS_CONFIG, indent=4)
 
     REPORT_DF = None
     REPORT_DF_STATUS = None

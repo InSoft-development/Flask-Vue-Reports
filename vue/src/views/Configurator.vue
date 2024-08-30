@@ -35,6 +35,10 @@ export default {
       await changeClientMode(modeClientRadio.value)
       await getClientMode(modeClientRadio)
       await getServerConfig(configServer, checkFileActive)
+      await getLastUpdateFileKKS(lastUpdateFileKKS)
+      await getTypesOfSensors(defaultTypesOfSensorsDataOptions)
+      await applicationStore.getFields()
+      fillDefaultField()
       statusUpdateTextArea.value = configServer.value
     }
 
@@ -60,20 +64,23 @@ export default {
 
     const confirm = useConfirm()
     const confirmUpdate = () => {
-      confirm.require({
-        message: 'Вы действительго хотите запустить обновление тегов KKS?',
-        header: 'Подтверждение обновления тегов',
-        icon: 'pi pi-exclamation-triangle',
-        rejectClass: 'p-button-secondary p-button-outlined',
-        rejectLabel: 'Отмена',
-        acceptLabel: 'Подтвердить',
-        accept: () => {
-          onButtonDialogUpdate()
-        },
-        reject: () => {
-          return
-        }
-      })
+      if (modeClientRadio.value === 'OPC'){
+        confirm.require({
+          message: 'Вы действительго хотите запустить обновление тегов KKS?',
+          header: 'Подтверждение обновления тегов',
+          icon: 'pi pi-exclamation-triangle',
+          rejectClass: 'p-button-secondary p-button-outlined',
+          rejectLabel: 'Отмена',
+          acceptLabel: 'Подтвердить',
+          accept: () => {
+            onButtonDialogUpdate()
+          },
+          reject: () => {
+            return
+          }
+        })
+      }
+      else onButtonDialogUpdate()
     }
 
     const changeUpdate = async () => {
@@ -177,22 +184,8 @@ export default {
       alert('Параметры по умолчанию сохранены')
     }
 
-    onMounted(async () => {
-      statusUpdateButtonActive.value = true
-
-      await getClientMode(modeClientRadio)
-      await getServerConfig(configServer, checkFileActive)
-      await getLastUpdateFileKKS(lastUpdateFileKKS)
-      await getIpAndPortConfig(ipOPC, portOPC, ipCH, portCH, usernameCH, passwordCH)
-
-      statusUpdateTextArea.value = configServer.value
-      if (!checkFileActive.value)
-        alert('Не найден файл kks_all.csv.\nСконфигурируйте клиент OPC UA и обновите файл тегов')
-      window.addEventListener('beforeunload', async (event) => {
-        await cancelUpdate()
-      })
-
-      await getTypesOfSensors(defaultTypesOfSensorsDataOptions)
+    const fillDefaultField = () => {
+      console.log(applicationStore.defaultFields)
       defaultTypesOfSensorsDataValue.value = applicationStore.defaultFields.typesOfSensors
       defaultChosenTypesOfSensorsData = applicationStore.defaultFields.typesOfSensors
 
@@ -221,7 +214,25 @@ export default {
       defaultExceptionDirectories.value =
         applicationStore.defaultFields.exceptionDirectories.join(', ')
       defaultExceptionExpertTags.value = applicationStore.defaultFields.exceptionExpertTags
+    }
 
+    onMounted(async () => {
+      statusUpdateButtonActive.value = true
+
+      await getClientMode(modeClientRadio)
+      await getServerConfig(configServer, checkFileActive)
+      await getLastUpdateFileKKS(lastUpdateFileKKS)
+      await getIpAndPortConfig(ipOPC, portOPC, ipCH, portCH, usernameCH, passwordCH)
+
+      statusUpdateTextArea.value = configServer.value
+      if (!checkFileActive.value)
+        alert('Не найден файл kks_all.csv.\nСконфигурируйте клиент OPC UA и обновите файл тегов')
+      window.addEventListener('beforeunload', async (event) => {
+        await cancelUpdate()
+      })
+
+      await getTypesOfSensors(defaultTypesOfSensorsDataOptions)
+      fillDefaultField()
       statusUpdateButtonActive.value = false
     })
 
@@ -383,9 +394,14 @@ export default {
         <h4>Сведения о конфигурации</h4>
       </div>
     </div>
-    <div class="row">
+    <div class="row" v-if="modeClientRadio === 'OPC'">
       <div class="col">
         Дата последнего обновления файла тегов KKS: <b>{{ lastUpdateFileKKS }}</b>
+      </div>
+    </div>
+    <div class="row" v-if="modeClientRadio === 'CH'">
+      <div class="col">
+        Дата последнего обновления таблицы тегов KKS: <b>{{ lastUpdateFileKKS }}</b>
       </div>
     </div>
     <hr />
@@ -545,8 +561,16 @@ export default {
         />
         <ConfirmDialog></ConfirmDialog>
         <Button
-          v-if="!statusUpdateButtonActive || !runUpdateFlag"
+          v-if="(!statusUpdateButtonActive || !runUpdateFlag) && modeClientRadio === 'OPC'"
           label="Обновить"
+          icon="pi pi-check"
+          :disabled="statusUpdateButtonActive"
+          @click="confirmUpdate"
+          style="width: 42%; text-align: center"
+        />
+        <Button
+          v-if="(!statusUpdateButtonActive || !runUpdateFlag) && modeClientRadio === 'CH'"
+          label="Тест"
           icon="pi pi-check"
           :disabled="statusUpdateButtonActive"
           @click="confirmUpdate"
@@ -554,12 +578,12 @@ export default {
         />
       </div>
     </div>
-    <div class="row components-margin-bottom">
+    <div class="row components-margin-bottom" v-if="modeClientRadio === 'OPC'">
       <div class="col">
         <h4>Отбор тегов</h4>
       </div>
     </div>
-    <div class="row align-items-center">
+    <div class="row align-items-center" v-if="modeClientRadio === 'OPC'">
       <div class="col-3">Режим фильтрации обновления тегов:</div>
       <div class="col-2">
         <RadioButton
@@ -583,7 +607,7 @@ export default {
         </InputText>
       </div>
     </div>
-    <div class="row align-items-center">
+    <div class="row align-items-center" v-if="modeClientRadio === 'OPC'">
       <div class="col-3">
         <Button
           @click="changeUpdate"

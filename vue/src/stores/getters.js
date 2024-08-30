@@ -5,11 +5,13 @@ import { socket } from '../socket'
  * @param checkFileActive
  * @returns {Promise<void>}
  */
-export async function getFileChecked(checkFileActive) {
+export async function getFileChecked(checkFileActive, modeClient, modeClientCHActive) {
   await new Promise((resolve) => {
-    socket.emit('get_file_checked', (checkFile) => {
+    socket.emit('get_file_checked', (checkFile, mode, modeClientCH) => {
       checkFileActive.value = checkFile
-      resolve(checkFile)
+      modeClient.value = mode
+      modeClientCHActive.value = modeClientCH
+      resolve(checkFile, modeClient, modeClientCH)
     })
   })
 }

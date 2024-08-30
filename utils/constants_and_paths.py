@@ -150,8 +150,3 @@ SEPARATED_COUNT = 5
 
 FIRST = 0
 LAST = 30
-
-# DOWNLOADED_STYLES_AND_JS_PATH = {
-#     f'vue{os.sep}node_modules{os.sep}bootstrap{os.sep}dist{os.sep}css{os.sep}bootstrap.css': 'bootstrap.css',
-#     f'vue{os.sep}node_modules{os.sep}bootstrap{os.sep}dist{os.sep}js{os.sep}bootstrap.bundle.js': 'bootstrap.bundle.js'
-# }
