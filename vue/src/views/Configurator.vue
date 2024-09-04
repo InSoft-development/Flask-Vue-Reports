@@ -64,7 +64,7 @@ export default {
 
     const confirm = useConfirm()
     const confirmUpdate = () => {
-      if (modeClientRadio.value === 'OPC'){
+      if (modeClientRadio.value === 'OPC') {
         confirm.require({
           message: 'Вы действительго хотите запустить обновление тегов KKS?',
           header: 'Подтверждение обновления тегов',
@@ -79,8 +79,7 @@ export default {
             return
           }
         })
-      }
-      else onButtonDialogUpdate()
+      } else onButtonDialogUpdate()
     }
 
     const changeUpdate = async () => {
@@ -289,7 +288,7 @@ export default {
       // в либе PrimeVue не работает v-model при вводе через клавиатуру
       // приходится выполнять хак
 
-      if (inputTimeout){
+      if (inputTimeout) {
         clearTimeout(inputTimeout)
       }
 
@@ -314,7 +313,7 @@ export default {
     function changeConfigCH($event) {
       // в либе PrimeVue не работает v-model при вводе через клавиатуру
       // приходится выполнять хак
-      if (inputTimeout){
+      if (inputTimeout) {
         clearTimeout(inputTimeout)
       }
 
@@ -407,7 +406,7 @@ export default {
     <hr />
     <div class="row">
       <div class="col-md-auto">
-        <h4>Выбор клиента для получения данных: </h4>
+        <h4>Выбор клиента для получения данных:</h4>
       </div>
       <div class="col-md-auto">
         <RadioButton
@@ -527,16 +526,16 @@ export default {
       </div>
       <div class="col-2" v-if="modeClientRadio === 'CH'">
         <FloatLabel>
-<!--          <InputText-->
-<!--            v-model="passwordCH"-->
-<!--            type="text"-->
-<!--            id="ch-password"-->
-<!--            required-->
-<!--            :disabled="statusUpdateButtonActive"-->
-<!--            @input="changeConfigCH"-->
-<!--            style="width: 100%"-->
-<!--          >-->
-<!--          </InputText>-->
+          <!--          <InputText-->
+          <!--            v-model="passwordCH"-->
+          <!--            type="text"-->
+          <!--            id="ch-password"-->
+          <!--            required-->
+          <!--            :disabled="statusUpdateButtonActive"-->
+          <!--            @input="changeConfigCH"-->
+          <!--            style="width: 100%"-->
+          <!--          >-->
+          <!--          </InputText>-->
           <Password
             v-model="passwordCH"
             :toggleMask="true"

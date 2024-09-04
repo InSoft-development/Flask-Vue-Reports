@@ -133,6 +133,9 @@ def get_file_checked():
     :return: True/False результат проверки существования файла тегов kks_all.csv
     """
     logger.info(f"get_file_checked()")
+
+    global CLIENT_MODE
+
     client_status = False
     ip, port, username, password = operations.read_clickhouse_server_conf()
     try:
@@ -280,6 +283,8 @@ def get_default_fields():
     """
     logger.info(f"get_default_fields()")
 
+    global CLIENT_MODE
+
     try:
         f = open(constants.DATA_DEFAULT_FIELDS_CONFIG, 'r', encoding='utf-8')
     except FileNotFoundError as file_not_found_error_exception:
@@ -341,6 +346,8 @@ def change_default_fields(default_fields):
     """
     logger.info(f"change_default_fields({default_fields})")
 
+    global CLIENT_MODE
+
     with open(constants.DATA_DEFAULT_FIELDS_CONFIG, "r") as readfile:
         default_data = json.load(readfile)
 
@@ -359,6 +366,8 @@ def get_types_of_sensors():
     :return: массив строк типовы данных
     """
     logger.info(f"get_types_of_sensors()")
+
+    global CLIENT_MODE
 
     if CLIENT_MODE == 'OPC':
         logger.info(KKS_ALL[1].dropna().unique().tolist())
@@ -380,30 +389,50 @@ def get_types_of_sensors():
     return ['Ошибка конфигурации клиента']
 
 
-
 @socketio.on("get_kks_tag_exist")
 def get_kks_tag_exist(kks_tag):
     """
-    Функция возвращает результат проверки наличия тега в файле тегов kks_all.csv
+    Функция возвращает результат проверки наличия тега в файле тегов kks_all.csv или в Clickhouse
     :param kks_tag: проверяемый тег kks
     :return: True - тег в файле тегов kks_all.csv; False - тега не найден в файле тегов kks_all.csv или это шаблон маски
     """
     logger.info(f"get_kks_tag_exist({kks_tag})")
-    return kks_tag in KKS_ALL[0].values
+
+    global CLIENT_MODE
+
+    if CLIENT_MODE == 'OPC':
+        return kks_tag in KKS_ALL[0].values
+    elif CLIENT_MODE == 'CH':
+        ip, port, username, password = operations.read_clickhouse_server_conf()
+        try:
+            client = operations.create_client(ip, port, username, password)
+            logger.info("Clickhouse connected")
+
+            exist = client.command(f"WITH '{kks_tag}' as i_kks SELECT "
+                                   f"EXISTS( SELECT 1 FROM archive.v_static_data "
+                                   f"WHERE item_name = i_kks)::bool as EXIST")
+
+            client.close()
+            logger.info("Clickhouse disconnected")
+
+            return exist
+        except clickhouse_exceptions.Error as error:
+            logger.error(error)
+    else:
+        return False
 
 
 @socketio.on("get_kks_by_masks")
 def get_kks_by_masks(types_list, mask_list):
     """
-    Функция возвращает массив kks датчиков из файла тегов kks_all.csv по маске шаблона при поиске kks
+    Функция возвращает массив kks датчиков из файла тегов kks_all.csv или из Clickhouse по маске шаблона при поиске kks
     :param types_list: массив выбранных пользователем типов данных
     :param mask_list: массив маск шаблонов поиска regex
     :return: массив строк kks датчиков (чтобы не перегружать форму 10000)
     """
     logger.info(f"get_kks_by_masks({types_list}, {mask_list})")
-    kks = KKS_ALL.copy(deep=True)
 
-    kks = kks[kks[1].isin(types_list)]
+    global CLIENT_MODE
 
     # Если маска пустая, то вовзвращаем пустой массив
     if not mask_list:
@@ -413,11 +442,35 @@ def get_kks_by_masks(types_list, mask_list):
     if mask_list[0] == '':
         return []
 
-    for mask in mask_list:
-        kks = kks[kks[0].str.contains(mask, regex=True)]
+    if CLIENT_MODE == 'OPC':
+        kks = KKS_ALL.copy(deep=True)
 
-    logger.info(len(kks[0].tolist()))
-    return kks[0].tolist()[:constants.COUNT_OF_RETURNED_KKS]
+        kks = kks[kks[1].isin(types_list)]
+
+        for mask in mask_list:
+            kks = kks[kks[0].str.contains(mask, regex=True)]
+
+        logger.info(len(kks[0].tolist()))
+        return kks[0].tolist()[:constants.COUNT_OF_RETURNED_KKS]
+
+    elif CLIENT_MODE == 'CH':
+        ip, port, username, password = operations.read_clickhouse_server_conf()
+        try:
+            client = operations.create_client(ip, port, username, password)
+            logger.info("Clickhouse connected")
+
+            kks = client.query_df(f"WITH {mask_list} AS arr_reg , {types_list} AS arr_type "
+                                  f"SELECT item_name  FROM archive.v_static_data "
+                                  f"WHERE data_type_name in arr_type AND "
+                                  f"length(multiMatchAllIndices(item_name, arr_reg)) = length(arr_reg)")
+
+            client.close()
+            logger.info("Clickhouse disconnected")
+
+            return kks['item_name'].tolist()
+        except clickhouse_exceptions.Error as error:
+            logger.error(error)
+    return []
 
 
 @socketio.on("get_kks")
@@ -432,55 +485,104 @@ def get_kks(types_list, mask_list, kks_list, selection_tag=None):
     :return: массив строк kks датчиков для выполнения запроса
     """
     logger.info(f"get_kks({types_list} ,{mask_list}, {kks_list}, {selection_tag})")
+
+    global CLIENT_MODE
+
     kks_requested_list = []
     kks_mask_list = []
 
     if selection_tag is None:
         selection_tag = "sequential"
 
-    # Отбор тегов kks по типу данных и маске
-    kks = KKS_ALL.copy(deep=True)
-    kks = kks[kks[1].isin(types_list)]
+    if CLIENT_MODE == 'OPC':
+        # Отбор тегов kks по типу данных и маске
+        kks = KKS_ALL.copy(deep=True)
+        kks = kks[kks[1].isin(types_list)]
 
-    list_kks = kks[0].tolist()
-    set_list_kks = list(set(kks[0].tolist()))
+        list_kks = kks[0].tolist()
+        set_list_kks = list(set(kks[0].tolist()))
 
-    # Проверка на дубликаты kks, образовывающиеся при поиске по маске и вручную указанным пользователем
+        # Проверка на дубликаты kks, образовывающиеся при поиске по маске и вручную указанным пользователем
 
-    try:
-        assert len(list_kks) == len(set_list_kks)
-    except AssertionError:
-        logger.warning("В найденных тегах есть дубликаты")
+        try:
+            assert len(list_kks) == len(set_list_kks)
+        except AssertionError:
+            logger.warning("В найденных тегах есть дубликаты")
 
-    # Отбор тегов по указанным маскам (полследовательный или с объединением найденных тегов)
-    try:
-        if mask_list:
+        # Отбор тегов по указанным маскам (полследовательный или с объединением найденных тегов)
+        try:
+            if mask_list:
+                if selection_tag == "sequential":
+                    for mask in mask_list:
+                        kks = kks[kks[0].str.contains(mask, regex=True)]
+                    kks_mask_list = kks[0].tolist()
+
+                if selection_tag == "union":
+                    kks_mask_set = set()
+                    for mask in mask_list:
+                        template_kks_set = set(kks[kks[0].str.contains(mask, regex=True)][0].tolist())
+                        kks_mask_set = kks_mask_set.union(template_kks_set)
+                    kks_mask_list = list(kks_mask_set)
+        except re.error as regular_expression_except:
+            logger.info(mask)
+            logger.error(f"Неверный синтаксис регулярного выражения {regular_expression_except} в {mask}")
+            return ['', mask]
+
+        # Отбор тегов,указанных вручную с их объединением
+        if kks_list:
+            kks_requested_list = [kks for kks in kks_list if kks not in kks_mask_list]
+
+        kks_requested_list += kks_mask_list
+        kks_descr_list = kks[kks[0].isin(kks_requested_list)][2].tolist()
+        logger.info(len(kks_requested_list))
+    elif CLIENT_MODE == 'CH':
+        ip, port, username, password = operations.read_clickhouse_server_conf()
+        try:
+            client = operations.create_client(ip, port, username, password)
+            logger.info("Clickhouse connected")
+
+            # Отбор тегов по указанным маскам (полследовательный или с объединением найденных тегов)
             if selection_tag == "sequential":
-                for mask in mask_list:
-                    kks = kks[kks[0].str.contains(mask, regex=True)]
-                kks_mask_list = kks[0].tolist()
+                kks = client.query_df(f"WITH {mask_list} AS arr_reg, {types_list} AS arr_type "
+                                      f"SELECT item_name FROM archive.v_static_data "
+                                      f"WHERE data_type_name in arr_type AND "
+                                      f"length(multiMatchAllIndices(item_name, arr_reg)) = length(arr_reg)")
+
+                kks_mask_list = kks['item_name'].tolist()
 
             if selection_tag == "union":
-                kks_mask_set = set()
-                for mask in mask_list:
-                    template_kks_set = set(kks[kks[0].str.contains(mask, regex=True)][0].tolist())
-                    kks_mask_set = kks_mask_set.union(template_kks_set)
-                kks_mask_list = list(kks_mask_set)
-    except re.error as regular_expression_except:
-        logger.info(mask)
-        logger.error(f"Неверный синтаксис регулярного выражения {regular_expression_except} в {mask}")
-        return ['', mask]
+                kks = client.query_df(f"WITH {mask_list} AS arr_reg , {types_list} AS arr_type "
+                                      f"SELECT item_name FROM archive.v_static_data "
+                                      f"WHERE data_type_name in arr_type AND "
+                                      f"multiMatchAny(item_name, arr_reg)")
 
-    # Отбор тегов,указанных вручную с их объединением
-    if kks_list:
-        kks_requested_list = [kks for kks in kks_list if kks not in kks_mask_list]
+                kks_mask_list = kks['item_name'].tolist()
 
-    kks_requested_list += kks_mask_list
-    logger.info(len(kks_requested_list))
+            # Отбор тегов,указанных вручную с их объединением
+            if kks_list:
+                kks_requested_list = [kks for kks in kks_list if kks not in kks_mask_list]
+
+            kks_requested_list += kks_mask_list
+            kks = client.query_df(f"WITH {kks_requested_list} AS arr_kks , {types_list} AS arr_type "
+                                  f"SELECT item_name, item_descr FROM archive.v_static_data "
+                                  f"WHERE data_type_name in arr_type AND item_name in arr_kks")
+            kks_requested_list = kks['item_name'].tolist()
+            kks_descr_list = kks['item_descr'].tolist()
+            logger.info(len(kks_requested_list))
+            client.close()
+            logger.info("Clickhouse disconnected")
+        except clickhouse_exceptions.DatabaseError as pattern_error:
+            logger.error(pattern_error)
+            mask_error = [mask for mask in mask_list if mask in str(pattern_error)]
+            logger.info(mask_error)
+            logger.error(f"Неверный синтаксис регулярного выражения {pattern_error} в {mask_error[0]}")
+            return ['', mask_error[0]]
+        except clickhouse_exceptions.Error as error:
+            logger.error(error)
 
     tags_df = pd.DataFrame(columns=['Наименование тега', 'Описание тега'],
                            data={'Наименование тега': kks_requested_list,
-                                 'Описание тега': kks[kks[0].isin(kks_requested_list)][2].tolist()})
+                                 'Описание тега': kks_descr_list})
     tags_df.to_csv(constants.CSV_TAGS)
     shutil.copy(constants.CSV_TAGS, f'{constants.WEB_DIR}tags.csv')
     logger.info(f'Датафрейм {constants.WEB_DIR}tags.csv доступен для выкачки')
@@ -818,7 +920,7 @@ def get_signals_data(types_list, selection_tag, mask_list, kks_list, quality, da
     def get_signals_data_spawn(types_list, selection_tag, mask_list, kks_list, quality, date,
                                last_value_checked, interval_or_date_checked, interval, dimension, date_deep_search):
         """
-        Функция запуска выполнения запроса по срезам тегов
+        Функция запуска выполнения запроса по срезам тегов по OPC UA
         :param types_list: массив выбранных пользователем типов данных
         :param selection_tag: выбранный вид отбора тегов
         :param mask_list: массив маск шаблонов поиска regex
@@ -1052,18 +1154,119 @@ def get_signals_data(types_list, selection_tag, mask_list, kks_list, quality, da
                       to=sid)
         return slice
 
+    def get_signals_from_ch_data_spawn(types_list, selection_tag, mask_list, kks_list, quality, date,
+                                       last_value_checked, interval_or_date_checked, interval, dimension, date_deep_search):
+        """
+        Функция запуска выполнения запроса по срезам тегов из Clickhouse
+        :param types_list: массив выбранных пользователем типов данных
+        :param selection_tag: выбранный вид отбора тегов
+        :param mask_list: массив маск шаблонов поиска regex
+        :param kks_list: массив kks напрямую, указанные пользователем
+        :param quality: массив кодов качества, указанные пользователем
+        :param date: дата, указанная пользователем в запросе
+        :param last_value_checked: флаг выдачи в таблицах срезов последних по времени значений
+        :param interval_or_date_checked: флаг формата задачи даты
+        :param interval: интервал
+        :param dimension: размерность интервала [день, час, минута, секунда]
+        :param date_deep_search: дата глубины поиска данных в архивах
+        :return: json объект для заполнения таблицы срезов тегов
+        """
+        logger.info(
+            f"get_signals_from_ch_data_spawn({types_list}, {selection_tag}, {mask_list}, {kks_list}, {quality}, {date},"
+            f"{last_value_checked}, {interval_or_date_checked}, {interval}, {dimension}, {date_deep_search})")
+
+        logger.info(sid)
+        global sid_proc
+        sid_proc = sid
+
+        socketio.emit("setUpdateSignalsRequestStatus", {"message": f"Формирование списка kks сигналов\n"}, to=sid)
+        kks_requested_list = get_kks(types_list, mask_list, kks_list, selection_tag)
+        socketio.emit("setUpdateSignalsRequestStatus", {"message": f"Список kks сигналов успешно сформирован\n"},
+                      to=sid)
+        socketio.emit("setProgressBarSignals", {"count": 10}, to=sid)
+
+        # Формирование запроса sql к Clickhouse
+        socketio.emit("setUpdateSignalsRequestStatus", {"message": f"Формирование запроса к БД Clickhouse\n"},
+                      to=sid)
+        query_string = operations.fill_signals_query(kks_requested_list, quality, date, last_value_checked,
+                                                     interval_or_date_checked, interval, dimension, date_deep_search)
+        logger.info(query_string)
+        socketio.emit("setProgressBarSignals", {"count": 20}, to=sid)
+
+        ip, port, username, password = operations.read_clickhouse_server_conf()
+        try:
+            socketio.emit("setUpdateSignalsRequestStatus", {"message": f"Запрос к БД Clickhouse\n"},
+                          to=sid)
+            socketio.emit("setProgressBarSignals", {"count": 50}, to=sid)
+            client = operations.create_client(ip, port, username, password)
+            logger.info("Clickhouse connected")
+
+            df_signals = client.query_df(query_string)
+            logger.info(df_signals)
+
+            socketio.emit("setUpdateSignalsRequestStatus", {"message": f"Запрос к БД Clickhouse выполнен успешно\n"},
+                          to=sid)
+
+            client.close()
+            logger.info("Clickhouse disconnected")
+        except clickhouse_exceptions.Error as error:
+            logger.error(error)
+            socketio.emit("setUpdateSignalsRequestStatus",
+                          {"message": f"Никаких данных не нашлось\n"}, to=sid)
+            return f"Никаких данных не нашлось"
+
+        df_report = pd.DataFrame(
+            columns=['Код сигнала (KKS)', 'Дата и время измерения', 'Значение', 'Качество',
+                     'Код качества'],
+            data={'Код сигнала (KKS)': df_signals['kks'],
+                  'Дата и время измерения': df_signals['timestamp'],
+                  'Значение': df_signals['val'],
+                  'Качество': df_signals['q_name'],
+                  'Код качества': df_signals['quality']})
+        df_report.fillna("NaN", inplace=True)
+
+        logger.info(df_report)
+
+        df_report.to_csv(constants.CSV_SIGNALS, index=False, encoding='utf-8')
+        logger.info("Датафрейм сформирован")
+        shutil.copy(constants.CSV_SIGNALS, f'{constants.WEB_DIR}signals_slice.csv')
+        logger.info("Датафрейм доступен для выкачки")
+        df_report['Дата и время измерения'] = df_report['Дата и время измерения'].dt.strftime('%Y-%m-%d %H:%M:%S')
+        socketio.emit("setUpdateSignalsRequestStatus",
+                      {"message": f"Запрос успешно завершен\n"}, to=sid)
+
+        socketio.emit("setProgressBarSignals", {"count": 90}, to=sid)
+        socketio.emit("setUpdateSignalsRequestStatus", {"message": f"Формирование отчета\n"}, to=sid)
+        slice = json.loads(df_report.to_json(orient='records'))
+        render_slice(slice)
+        socketio.emit("setUpdateSignalsRequestStatus", {"message": f"Отчет сформирован\n"}, to=sid)
+
+        socketio.emit("setProgressBarSignals", {"count": 95}, to=sid)
+        socketio.emit("setUpdateSignalsRequestStatus", {"message": f"Передача данных в веб-приложение...\n"},
+                      to=sid)
+
+        return slice
+
     sid = request.sid
 
     global signals_greenlet
     global grid_greenlet
     global bounce_greenlet
     global sid_proc
+    global CLIENT_MODE
     started_greenlet = [signals_greenlet, grid_greenlet, bounce_greenlet]
     if any(started_greenlet):
         logger.warning(f"signals_greenlet is running")
         return f"Запрос уже выполняется для другого клиента. Попробуйте выполнить запрос позже"
-    signals_greenlet = spawn(get_signals_data_spawn, types_list, selection_tag, mask_list, kks_list, quality, date,
-                             last_value_checked, interval_or_date_checked, interval, dimension, date_deep_search)
+    # Запуск запроса срезов через gevent в зависимости от режима
+    if CLIENT_MODE == 'OPC':
+        signals_greenlet = spawn(get_signals_data_spawn, types_list, selection_tag, mask_list, kks_list, quality, date,
+                                 last_value_checked, interval_or_date_checked, interval, dimension, date_deep_search)
+
+    if CLIENT_MODE == 'CH':
+        signals_greenlet = spawn(get_signals_from_ch_data_spawn, types_list, selection_tag, mask_list, kks_list, quality, date,
+                                 last_value_checked, interval_or_date_checked, interval, dimension, date_deep_search)
+
     gevent.joinall([signals_greenlet])
     sid_proc = None
     return signals_greenlet.value
@@ -1239,42 +1442,9 @@ def get_grid_data(kks, date_begin, date_end, interval, dimension):
         code = json.loads(code.to_json(orient='records'))
 
         # Разделение таблиц по группам по 5 датчикам
-        separate_count = 1
-        grid_separated_json_list = []
-        status_separated_json_list = []
-
-        grid_separated_json_list_single = []
-        status_separated_json_list_single = []
-
-        temp_df_slice = df_report[['Метка времени']].copy()
-        temp_df_status = df_report_slice[['Метка времени']].copy()
-
-        for kks in df_report.columns.tolist()[1:]:
-            temp_df_slice[kks] = df_report[kks]
-            temp_df_status[kks] = df_report_slice[kks]
-
-            if (separate_count % constants.SEPARATED_COUNT == 0) \
-                    or (separate_count == len(df_report.columns.tolist()[1:])):
-                temp_json_grid = json.loads(temp_df_slice.to_json(orient='records'))
-                temp_json_status = json.loads(temp_df_status.to_json(orient='records'))
-
-                grid_separated_json_list.append(temp_json_grid)
-                status_separated_json_list.append(temp_json_status)
-
-                for index in temp_df_slice.columns.tolist()[1:]:
-                    temp_json_grid_single = json.loads(temp_df_slice[['Метка времени', index]].copy()
-                                                       .to_json(orient='records'))
-                    temp_json_status_single = json.loads(temp_df_status[['Метка времени', index]].copy()
-                                                         .to_json(orient='records'))
-
-                    grid_separated_json_list_single.append(temp_json_grid_single)
-                    status_separated_json_list_single.append(temp_json_status_single)
-
-                temp_df_slice = df_report[['Метка времени']].copy()
-                temp_df_status = df_report_slice[['Метка времени']].copy()
-            separate_count += 1
-        # grid, status = json.loads(df_report.to_json(orient='records')), json.loads(df_report_slice.
-        #                                                                            to_json(orient='records'))
+        grid_separated_json_list, status_separated_json_list, \
+        grid_separated_json_list_single, status_separated_json_list_single = \
+            operations.prepare_for_grid_render(df_report, df_report_slice)
 
         parameters_of_request = {
             "date_begin": date_begin,
@@ -1294,18 +1464,144 @@ def get_grid_data(kks, date_begin, date_end, interval, dimension):
                json.loads(df_report_slice[constants.FIRST:constants.LAST].to_json(orient='records')),\
                len(df_report)
 
+    def get_grid_from_ch_data_spawn(kks, date_begin, date_end, interval, dimension):
+        """
+        Функция запуска выполнения запроса сетки
+        :param kks: массив kks
+        :param date_begin: начальная дата сетки
+        :param date_end: конечная дата сетки
+        :param interval: интервал
+        :param dimension: размерность интервала [день, час, минута, секунда]
+        :return: json объект для заполнения таблицы сеток
+        """
+        logger.info(f"get_grid_from_ch_data_spawn({kks}, {date_begin}, {date_end}, {interval}, {dimension})")
+
+        logger.info(sid)
+        global sid_proc
+        global REPORT_DF
+        global REPORT_DF_STATUS
+        sid_proc = sid
+
+        # Формирование запроса sql к Clickhouse
+        socketio.emit("setUpdateGridRequestStatus", {"message": f"Формирование запроса sql к БД Clickhouse\n"}, to=sid)
+        socketio.emit("setProgressBarGrid", {"count": 10}, to=sid)
+
+        query_drop, query_create, query_value, query_status = operations.fill_grid_queries_value(kks, date_begin, date_end, interval, dimension)
+
+        socketio.emit("setProgressBarGrid", {"count": 20}, to=sid)
+
+        ip, port, username, password = operations.read_clickhouse_server_conf()
+        try:
+            socketio.emit("setUpdateGridRequestStatus", {"message": f"Запрос к БД Clickhouse (получение значений)\n"}, to=sid)
+            socketio.emit("setProgressBarGrid", {"count": 40}, to=sid)
+            client = operations.create_client(ip, port, username, password)
+            logger.info("Clickhouse connected")
+            client.command(query_drop)
+            client.command(query_create)
+            df_slice_csv = client.query_df(query_value)
+            socketio.emit("setUpdateGridRequestStatus", {"message": f"Запрос к БД Clickhouse (получение кодов качества)\n"},
+                          to=sid)
+            df_slice_status_csv = client.query_df(query_status)
+            socketio.emit("setProgressBarGrid", {"count": 50}, to=sid)
+            client.close()
+            logger.info("Clickhouse disconnected")
+        except clickhouse_exceptions.Error as error:
+            logger.error(error)
+            socketio.emit("setUpdateGridRequestStatus", {"message": f"Ошибка: {error}\n"}, to=sid)
+            return error
+
+        socketio.emit("setUpdateGridRequestStatus", {"message": f"Формирование таблиц отчета\n"}, to=sid)
+
+        df_report = pd.DataFrame(df_slice_csv['grid'])
+        df_report.rename(columns={'grid': 'Метка времени'}, inplace=True)
+
+        df_report_slice = pd.DataFrame(df_slice_status_csv['grid'])
+        df_report_slice.rename(columns={'grid': 'Метка времени'}, inplace=True)
+
+        for index, kks in enumerate(df_slice_csv.columns.tolist()[1:]):
+            df_report[index] = df_slice_csv[kks]
+            df_report_slice[index] = df_slice_status_csv[kks]
+
+        df_report.fillna(0, inplace=True)
+        df_report.fillna("NaN", inplace=True)
+
+        df_report_slice = df_report_slice.astype(str)
+        df_report_slice.replace({"<NA>": "missed"}, inplace=True)
+
+        for k in df_report_slice.columns.tolist()[1:]:
+            df_report_slice[k] = df_report_slice[k].map(constants.QUALITY_DICT_REVERSE)
+
+        socketio.emit("setProgressBarGrid", {"count": 70}, to=sid)
+
+        logger.info(df_report)
+        logger.info(df_report_slice)
+
+        socketio.emit("setUpdateGridRequestStatus", {"message": f"Сохранение таблиц отчета\n"}, to=sid)
+        code = pd.DataFrame(data={
+            '№': [i for i in range(len(df_slice_csv.columns.tolist()[1:]))],
+            'Обозначение сигнала': [kks for kks in df_slice_csv.columns.tolist()[1:]]})
+
+        REPORT_DF = df_report.copy(deep=True)
+        REPORT_DF_STATUS = df_report_slice.copy(deep=True)
+
+        code.to_csv(constants.CSV_CODE, index=False, encoding='utf-8')
+        df_report.to_csv(constants.CSV_GRID, index=False, encoding='utf-8')
+        df_report_slice.to_csv(constants.CSV_GRID_STATUS, index=False, encoding='utf-8')
+
+        REPORT_DF = pd.read_csv(constants.CSV_GRID)
+        REPORT_DF_STATUS = pd.read_csv(constants.CSV_GRID_STATUS)
+
+        logger.info("Датафреймы сформированы")
+
+        shutil.copy(constants.CSV_GRID, f'{constants.WEB_DIR}grid.csv')
+        shutil.copy(constants.CSV_CODE, f'{constants.WEB_DIR}code.csv')
+        logger.info("Датафреймы доступны для выкачки")
+
+        socketio.emit("setProgressBarGrid", {"count": 90}, to=sid)
+        socketio.emit("setUpdateGridRequestStatus", {"message": f"Формирование отчета\n"}, to=sid)
+        code = json.loads(code.to_json(orient='records'))
+
+        # Разделение таблиц по группам по 5 датчикам
+        grid_separated_json_list, status_separated_json_list, \
+        grid_separated_json_list_single, status_separated_json_list_single = \
+            operations.prepare_for_grid_render(df_report, df_report_slice)
+
+        parameters_of_request = {
+            "date_begin": date_begin,
+            "date_end": date_end,
+            "interval": interval,
+            "dimension": constants.INTERVAL_TO_LOCALE[dimension]
+        }
+
+        render_grid(code, grid_separated_json_list, status_separated_json_list,
+                    grid_separated_json_list_single, status_separated_json_list_single, parameters_of_request)
+        socketio.emit("setUpdateGridRequestStatus", {"message": f"Отчет сформирован\n"}, to=sid)
+
+        socketio.emit("setProgressBarGrid", {"count": 95}, to=sid)
+        socketio.emit("setUpdateGridRequestStatus", {"message": f"Передача данных в веб-приложение...\n"}, to=sid)
+
+        return json.loads(df_report[constants.FIRST:constants.LAST].to_json(orient='records')), \
+               json.loads(df_report_slice[constants.FIRST:constants.LAST].to_json(orient='records')), \
+               len(df_report)
+
     sid = request.sid
 
     global signals_greenlet
     global grid_greenlet
     global bounce_greenlet
     global sid_proc
+    global CLIENT_MODE
     started_greenlet = [signals_greenlet, grid_greenlet, bounce_greenlet]
     if any(started_greenlet):
         logger.warning(f"grid_greenlet is running")
         return f"Запрос уже выполняется для другого клиента. Попробуйте выполнить запрос позже"
+    # Запуск запроса срезов через gevent в зависимости от режима
+    if CLIENT_MODE == 'OPC':
+        grid_greenlet = spawn(get_grid_data_spawn, kks, date_begin, date_end, interval, dimension)
 
-    grid_greenlet = spawn(get_grid_data_spawn, kks, date_begin, date_end, interval, dimension)
+    if CLIENT_MODE == 'CH':
+        grid_greenlet = spawn(get_grid_from_ch_data_spawn, kks, date_begin, date_end, interval, dimension)
+
     gevent.joinall([grid_greenlet])
     sid_proc = None
     return grid_greenlet.value
@@ -1644,18 +1940,107 @@ def get_bounce_signals_data(kks, date, interval, dimension, top):
 
         return bounce
 
+    def get_bounce_from_ch_signals_data_spawn(kks, date, interval, dimension, top):
+        """
+        Функция запуска выполнения запроса дребезга
+        :param kks: массив kks
+        :param date: дата отсчета дребезга
+        :param interval: интервал
+        :param dimension: размерность интервала [день, час, минута, секунда]
+        :param top: количество показываемых датчиков
+        :return: json объект для заполнения таблицы дребезга
+        """
+        logger.info(f"get_bounce_from_ch_signals_data_spawn({kks}, {date}, {interval}, {dimension}, {top})")
+
+        logger.info(sid)
+        global sid_proc
+        sid_proc = sid
+
+        # Формирование запроса sql к Clickhouse
+
+        socketio.emit("setUpdateBounceRequestStatus", {"message": f"Формирование запроса sql к Clickhouse\n"}, to=sid)
+        socketio.emit("setProgressBarBounceSignals", {"count": 10}, to=sid)
+
+        query_string = operations.fill_bounce_query(kks, date, interval, dimension, top)
+
+        socketio.emit("setProgressBarBounceSignals", {"count": 20}, to=sid)
+
+        ip, port, username, password = operations.read_clickhouse_server_conf()
+        try:
+            socketio.emit("setUpdateBounceRequestStatus", {"message": f"Запрос к БД Clickhouse (получение значений)\n"},
+                          to=sid)
+            socketio.emit("setProgressBarBounceSignals", {"count": 40}, to=sid)
+            client = operations.create_client(ip, port, username, password)
+            logger.info("Clickhouse connected")
+            df_bounce = client.query_df(query_string)
+            socketio.emit("setProgressBarBounceSignals", {"count": 50}, to=sid)
+            client.close()
+            logger.info("Clickhouse disconnected")
+        except clickhouse_exceptions.Error as error:
+            logger.error(error)
+            socketio.emit("setUpdateGridRequestStatus", {"message": f"Ошибка: {error}\n"}, to=sid)
+            return error
+
+        logger.info(df_bounce)
+
+        if df_bounce.empty:
+            msg = "Не нашлось ни одного значения из выбранных датчиков. Возможно интервал слишком мал."
+            logger.info(msg)
+            socketio.emit("setUpdateBounceRequestStatus", {"message": f"{msg}\n"}, to=sid)
+            return msg
+
+        socketio.emit("setUpdateBounceRequestStatus", {"message": f"Формирование таблиц отчета\n"}, to=sid)
+
+        df_counts = pd.DataFrame()
+        df_counts['Частота'] = df_bounce['count_change']
+        df_counts.index.name = 'Наименование датчика'
+        df_counts['Наименование датчика'] = df_bounce['kks']
+
+        socketio.emit("setProgressBarBounceSignals", {"count": 80}, to=sid)
+        socketio.emit("setUpdateBounceRequestStatus", {"message": f"Сохранение таблиц отчета\n"}, to=sid)
+        df_counts.to_csv(constants.CSV_BOUNCE, index=False, encoding='utf-8')
+        logger.info("Датафрейм сформирован")
+        shutil.copy(constants.CSV_BOUNCE, f'{constants.WEB_DIR}bounce.csv')
+        logger.info("Датафрейм доступен для выкачки")
+
+        socketio.emit("setProgressBarBounceSignals", {"count": 90}, to=sid)
+        socketio.emit("setUpdateBounceRequestStatus", {"message": f"Формирование отчета\n"}, to=sid)
+
+        parameters_of_request = {
+            "date": date,
+            "interval": interval,
+            "dimension": constants.INTERVAL_TO_LOCALE[dimension],
+            "top": top
+        }
+
+        bounce = json.loads(df_counts[:int(top)].to_json(orient='records'))
+        render_bounce(bounce, parameters_of_request)
+        socketio.emit("setUpdateBounceRequestStatus", {"message": f"Отчет сформирован\n"}, to=sid)
+
+        socketio.emit("setProgressBarBounceSignals", {"count": 95}, to=sid)
+        socketio.emit("setUpdateBounceRequestStatus", {"message": f"Передача данных в веб-приложение...\n"}, to=sid)
+
+        return bounce
+
     sid = request.sid
 
     global signals_greenlet
     global grid_greenlet
     global bounce_greenlet
     global sid_proc
+    global CLIENT_MODE
     started_greenlet = [signals_greenlet, grid_greenlet, bounce_greenlet]
     if any(started_greenlet):
         logger.warning(f"bounce_greenlet is running")
         return f"Запрос уже выполняется для другого клиента. Попробуйте выполнить запрос позже"
 
-    bounce_greenlet = spawn(get_bounce_signals_data_spawn, kks, date, interval, dimension, top)
+    # Запуск запроса дребезга через gevent в зависимости от режима
+    if CLIENT_MODE == 'OPC':
+        bounce_greenlet = spawn(get_bounce_signals_data_spawn, kks, date, interval, dimension, top)
+
+    if CLIENT_MODE == 'CH':
+        bounce_greenlet = spawn(get_bounce_from_ch_signals_data_spawn, kks, date, interval, dimension, top)
+
     gevent.joinall([bounce_greenlet])
     sid_proc = None
     return bounce_greenlet.value

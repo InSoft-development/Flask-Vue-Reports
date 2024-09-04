@@ -54,15 +54,17 @@ export async function getServerConfig(configServer, checkFileActive) {
  */
 export async function getIpAndPortConfig(ipOPC, portOPC, ipCH, portCH, usernameCH, passwordCH) {
   await new Promise((resolve) => {
-    socket.emit('get_ip_port_config', (ipConfOPC, portConfOPC, ipConfCH, portConfCH, username, password) => {
-      ipOPC.value = ipConfOPC
-      portOPC.value = portConfOPC
-      ipCH.value = ipConfCH
-      portCH.value = portConfCH
-      usernameCH.value = username,
-      passwordCH.value = password
-      resolve([ipConfOPC, portConfOPC, ipConfCH, portConfCH, username, password])
-    })
+    socket.emit(
+      'get_ip_port_config',
+      (ipConfOPC, portConfOPC, ipConfCH, portConfCH, username, password) => {
+        ipOPC.value = ipConfOPC
+        portOPC.value = portConfOPC
+        ipCH.value = ipConfCH
+        portCH.value = portConfCH
+        ;(usernameCH.value = username), (passwordCH.value = password)
+        resolve([ipConfOPC, portConfOPC, ipConfCH, portConfCH, username, password])
+      }
+    )
   })
 }
 

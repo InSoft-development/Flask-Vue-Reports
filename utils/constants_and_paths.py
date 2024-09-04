@@ -99,6 +99,19 @@ QUALITY_DICT = {
     'GoodLocalTime': 224,
 }
 
+QUALITY_DICT_REVERSE = {
+    "8": 'BadNoCommunication',
+    "16": 'BadSensorFailure',
+    "24": 'BadCommunicationFailure',
+    "28": 'BadDeviceFailure',
+    "88": 'UncertainLastUsableValue',
+    "192": 'Good',
+    "200": 'GoodХОРОШ РАСЧЕТ',
+    "216": 'GoodХОРОШ ИМИТИР',
+    "224": 'GoodLocalTime',
+    "missed": "missed"
+}
+
 QUALITY_CODE_DICT = {
     '8 - (BNC) - ОТКАЗ СВЯЗИ (TIMEOUT)': 'BadNoCommunication',
     '16 - (BSF) - ОТКАЗ ПАРАМ': 'BadSensorFailure',
@@ -109,6 +122,18 @@ QUALITY_CODE_DICT = {
     '200 - (GLC) - ХОРОШ РАСЧЕТ': 'GoodХОРОШ РАСЧЕТ',
     '216 - (GFO) - ХОРОШ ИМИТИР': 'GoodХОРОШ ИМИТИР',
     '224 - (GLT) - ХОРОШ ЛОКАЛ ВРЕМ': 'GoodLocalTime'
+}
+
+QUALITY_SHORT_CODE_DICT = {
+    '8 - (BNC) - ОТКАЗ СВЯЗИ (TIMEOUT)': 'BNC',
+    '16 - (BSF) - ОТКАЗ ПАРАМ': 'BSF',
+    '24 - (BCF) - ОТКАЗ СВЯЗИ': 'BCF',
+    '28 - (BOS) - ОТКАЗ ОБСЛУЖ': 'BOS',
+    '88 - (BLC) - ОТКАЗ РАСЧЕТ': 'BLC',
+    '192 - (GOD) – ХОРОШ': 'GOD',
+    '200 - (GLC) - ХОРОШ РАСЧЕТ': 'GLC',
+    '216 - (GFO) - ХОРОШ ИМИТИР': 'GFO',
+    '224 - (GLT) - ХОРОШ ЛОКАЛ ВРЕМ': 'GLT'
 }
 
 BAD_CODE_LIST = ['BadNoCommunication', 'BadSensorFailure', 'BadCommunicationFailure',
