@@ -100,7 +100,6 @@ export default {
 
     const dateTimeEnd = ref(new Date())
     const dateTimeBegin = ref(new Date(dateTimeEnd.value - 10 * 60000))
-    // const dateTimeBegin = ref(dateTimeEnd.value.setMinutes(dateTimeEnd.value.getMinutes()-10))
 
     const dateTimeBeginReport = ref()
     const dateTimeEndReport = ref()
@@ -247,16 +246,26 @@ export default {
 
     onBeforeUnmount(async () => {
       window.removeEventListener('beforeunload', async (event) => {})
-      let verticalScroll = document.getElementById('data-table')
-      verticalScroll = verticalScroll.querySelector('.p-virtualscroller.p-virtualscroller-inline')
-      verticalScroll.removeEventListener('scroll', synchroScroll)
+      try {
+        let verticalScroll = document.getElementById('data-table')
+        verticalScroll = verticalScroll.querySelector('.p-virtualscroller.p-virtualscroller-inline')
+        verticalScroll.removeEventListener('scroll', synchroScroll)
+      }
+      catch (e) {
+        console.log(e)
+      }
     })
 
     onUnmounted(async () => {
       await cancelGrid()
-      let verticalScroll = document.getElementById('data-table')
-      verticalScroll = verticalScroll.querySelector('.p-virtualscroller.p-virtualscroller-inline')
-      verticalScroll.removeEventListener('scroll', synchroScroll)
+      try {
+        let verticalScroll = document.getElementById('data-table')
+        verticalScroll = verticalScroll.querySelector('.p-virtualscroller.p-virtualscroller-inline')
+        verticalScroll.removeEventListener('scroll', synchroScroll)
+      }
+      catch (e) {
+        console.log(e)
+      }
     })
 
     async function onTypesOfSensorsDataChange(val) {
@@ -356,45 +365,50 @@ export default {
       textarea.scrollTop = textarea.scrollHeight
     })
 
-    function onButtonDownloadCsvClick() {
-      const link = document.createElement('a')
-      const pathCodeCsv = 'code.csv'
-      link.setAttribute('download', pathCodeCsv)
-      link.setAttribute('type', 'text/csv')
-      link.setAttribute('href', 'code.csv')
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
+    async function onButtonDownloadCsvClick() {
+      const linkCodeCsv = document.createElement('a')
+      linkCodeCsv.download = 'code.csv'
+      const dataCodeCsv = await fetch('code.csv').then((res) => res.blob())
+      linkCodeCsv.href = window.URL.createObjectURL(
+        new Blob([dataCodeCsv], { type: 'text/csv' })
+      )
+      linkCodeCsv.click()
+      linkCodeCsv.remove()
+      window.URL.revokeObjectURL(linkCodeCsv.href)
 
-      const pathGridCsv = 'grid.csv'
-      link.setAttribute('download', pathGridCsv)
-      link.setAttribute('type', 'text/csv')
-      link.setAttribute('href', 'grid.csv')
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
+      const linkGridCsv = document.createElement('a')
+      linkGridCsv.download = 'grid.csv'
+      const dataGridCsv = await fetch('grid.csv').then((res) => res.blob())
+      linkGridCsv.href = window.URL.createObjectURL(
+        new Blob([dataGridCsv], { type: 'text/csv' })
+      )
+      linkGridCsv.click()
+      linkGridCsv.remove()
+      window.URL.revokeObjectURL(linkGridCsv.href)
     }
 
-    function onButtonDownloadPdfClick() {
-      const link = document.createElement('a')
-      const pathSignalsReport = 'report/grid.zip'
-      link.setAttribute('download', pathSignalsReport)
-      link.setAttribute('type', 'application/octet-stream')
-      link.setAttribute('href', 'report/grid.zip')
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
+    async function onButtonDownloadPdfClick() {
+      const linkGridZip = document.createElement('a')
+      linkGridZip.download = 'report/grid.zip'
+      const dataGridZip = await fetch('report/grid.zip').then((res) => res.blob())
+      linkGridZip.href = window.URL.createObjectURL(
+        new Blob([dataGridZip], { type: 'application/zip' })
+      )
+      linkGridZip.click()
+      linkGridZip.remove()
+      window.URL.revokeObjectURL(linkGridZip.href)
     }
 
-    function onButtonDownloadTagsClick() {
-      const link = document.createElement('a')
-      const pathTagsReport = 'tags.csv'
-      link.setAttribute('download', pathTagsReport)
-      link.setAttribute('type', 'text/csv')
-      link.setAttribute('href', 'tags.csv')
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
+    async function onButtonDownloadTagsClick() {
+      const linkTagsCsv = document.createElement('a')
+      linkTagsCsv.download = 'tags.csv'
+      const dataTagsCsv = await fetch('tags.csv').then((res) => res.blob())
+      linkTagsCsv.href = window.URL.createObjectURL(
+        new Blob([dataTagsCsv], { type: 'text/csv' })
+      )
+      linkTagsCsv.click()
+      linkTagsCsv.remove()
+      window.URL.revokeObjectURL(linkTagsCsv.href)
     }
 
     function statusClass(index, field) {
@@ -790,7 +804,7 @@ export default {
           </Dialog>
         </div>
         <div class="col align-self-center" v-if="dataTableRequested">
-          <a href="report/grid.zip" download="report/grid.zip" type="application/octet-stream"
+          <a @click="onButtonDownloadPdfClick" href="javascript:;" type="application/octet-stream"
             >Загрузить отчет</a
           >
           <!--          <Button @click="onButtonDownloadPdfClick">Загрузить отчет</Button>-->

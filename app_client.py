@@ -6,6 +6,8 @@ import argparse
 
 from loguru import logger
 
+import utils.constants_and_paths as constants
+
 
 VERSION = '1.0.0'
 
@@ -62,4 +64,4 @@ if __name__ == '__main__':
         logger.info(f'{VERSION} flask socket io + vue 3 web-application version')
         exit(0)
     logger.info("started")
-    app.run(host=args.host, port=args.port)
+    app.run(host=args.host, port=args.port, ssl_context=(constants.SSL_CERT, constants.SSL_KEY))

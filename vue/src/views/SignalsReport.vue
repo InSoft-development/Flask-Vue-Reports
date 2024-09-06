@@ -278,37 +278,40 @@ export default {
       textarea.scrollTop = textarea.scrollHeight
     })
 
-    function onButtonDownloadCsvClick() {
-      const link = document.createElement('a')
-      const pathSignalsCsv = 'signals_slice.csv'
-      link.setAttribute('download', pathSignalsCsv)
-      link.setAttribute('type', 'text/csv')
-      link.setAttribute('href', 'signals_slice.csv')
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
+    async function onButtonDownloadCsvClick() {
+      const linkSignalsCsv = document.createElement('a')
+      linkSignalsCsv.download = 'signals_slice.csv'
+      const dataSignalsCsv = await fetch('signals_slice.csv').then((res) => res.blob())
+      linkSignalsCsv.href = window.URL.createObjectURL(
+        new Blob([dataSignalsCsv], { type: 'text/csv' })
+      )
+      linkSignalsCsv.click()
+      linkSignalsCsv.remove()
+      window.URL.revokeObjectURL(linkSignalsCsv.href)
     }
 
-    function onButtonDownloadPdfClick() {
-      const link = document.createElement('a')
-      const pathSignalsReport = 'report/signals_slice.pdf'
-      link.setAttribute('download', pathSignalsReport)
-      link.setAttribute('type', 'application/octet-stream')
-      link.setAttribute('href', 'report/signals_slice.pdf')
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
+    async function onButtonDownloadPdfClick() {
+      const linkSignalsPdf = document.createElement('a')
+      linkSignalsPdf.download = 'report/signals_slice.pdf'
+      const dataSignalsPdf = await fetch('report/signals_slice.pdf').then((res) => res.blob())
+      linkSignalsPdf.href = window.URL.createObjectURL(
+        new Blob([dataSignalsPdf], { type: 'application/octet-stream' })
+      )
+      linkSignalsPdf.click()
+      linkSignalsPdf.remove()
+      window.URL.revokeObjectURL(linkSignalsPdf.href)
     }
 
-    function onButtonDownloadTagsClick() {
-      const link = document.createElement('a')
-      const pathTagsReport = 'tags.csv'
-      link.setAttribute('download', pathTagsReport)
-      link.setAttribute('type', 'text/csv')
-      link.setAttribute('href', 'tags.csv')
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
+    async function onButtonDownloadTagsClick() {
+      const linkTagsCsv = document.createElement('a')
+      linkTagsCsv.download = 'tags.csv'
+      const dataTagsCsv = await fetch('tags.csv').then((res) => res.blob())
+      linkTagsCsv.href = window.URL.createObjectURL(
+        new Blob([dataTagsCsv], { type: 'text/csv' })
+      )
+      linkTagsCsv.click()
+      linkTagsCsv.remove()
+      window.URL.revokeObjectURL(linkTagsCsv.href)
     }
 
     async function onButtonCancelBigRequestClick() {
@@ -703,15 +706,15 @@ export default {
         </div>
         <div class="col align-self-center" v-if="dataTableRequested">
           <a
-            href="report/signals_slice.pdf"
-            download="report/signals_slice.pdf"
-            type="application/octet-stream"
+              @click="onButtonDownloadPdfClick"
+              href="javascript:;"
+              type="application/octet-stream"
             >Загрузить отчет</a
           >
           <!--          <Button @click="onButtonDownloadPdfClick">Загрузить отчет</Button>-->
         </div>
         <div class="col align-self-center" v-if="dataTableRequested">
-          <a href="signals_slice.csv" download="signals_slice.csv" type="text/csv">Загрузить CSV</a>
+          <a @click="onButtonDownloadCsvClick" href="javascript:;" type="text/csv">Загрузить CSV</a>
           <!--          <Button @click="onButtonDownloadCsvClick">Загрузить CSV</Button>-->
         </div>
       </div>

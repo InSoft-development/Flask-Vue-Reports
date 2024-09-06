@@ -4,8 +4,6 @@
 import os
 
 DATA_DIRECTORY = f'data{os.sep}'
-DATA_ANALOG = f'{DATA_DIRECTORY}data_AM.txt'
-DATA_DISCRETE = f'{DATA_DIRECTORY}democub_all.csv'
 DATA_KKS_ALL = f'{DATA_DIRECTORY}kks_all.csv'
 DATA_KKS_ALL_BACK = f'{DATA_DIRECTORY}kks_all_back.csv'
 DATA_DEFAULT_FIELDS_CONFIG = f'{DATA_DIRECTORY}default_fields.json'
@@ -37,7 +35,7 @@ WEB_DIR_REPORT_GRID = f'{WEB_DIR_REPORT}grid.pdf'
 WEB_DIR_REPORT_GRID_ZIP = f'{WEB_DIR_REPORT}grid.zip'
 WEB_DIR_REPORT_BOUNCE = f'{WEB_DIR_REPORT}bounce.pdf'
 WEB_DIR_ASSETS = f'{WEB_DIR}assets{os.sep}'
-WEB_DIR_ASSETS_INDEX_JS = f'{WEB_DIR_ASSETS}index-DOhmVhGx.js'
+WEB_DIR_ASSETS_INDEX_JS = f'{WEB_DIR_ASSETS}js{os.sep}index-CyGywMvP.js'
 
 CLIENT_DIR = f'client{os.sep}'
 CLIENT_BINARY = f'{CLIENT_DIR}client_lesson02.so'
@@ -73,6 +71,9 @@ JINJA_TEMPLATE_BOUNCE = f'{JINJA_TEMPLATE}bounce{os.sep}'
 JINJA_TEMPLATE_BOUNCE_TABLE = f'{JINJA_TEMPLATE_BOUNCE}table.html'
 
 JINJA_PYLIB = f'{JINJA}pylib{os.sep}'
+
+SSL_CERT = f'{DATA_DIRECTORY}cert.pem'
+SSL_KEY = f'{DATA_DIRECTORY}key.pem'
 
 
 QUALITY = [

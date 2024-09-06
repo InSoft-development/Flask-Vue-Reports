@@ -2109,13 +2109,13 @@ if __name__ == '__main__':
         header = bs(fp.read(), 'html.parser')
         for link in header.find_all('link', href=True):
             href = link['href']
-            replacement_string = href[href.find('http://')+len('http://'):href.find('/bootstrap')]
+            replacement_string = href[href.find('https://')+len('https://'):href.find('/bootstrap')]
             link['href'] = href.replace(replacement_string, f'{args.host}:{args.port}')
 
         for script in header.find_all('script', {"src":True}):
             src = script['src']
-            replacement_string = src[src.find('http://') + len('http://'):src.find('/bootstrap')] if 'bootstrap' in src \
-                else src[src.find('http://') + len('http://'):src.find('/plotly.js-dist-min')]
+            replacement_string = src[src.find('https://') + len('https://'):src.find('/bootstrap')] if 'bootstrap' in src \
+                else src[src.find('https://') + len('https://'):src.find('/plotly.js-dist-min')]
             script['src'] = src.replace(replacement_string, f'{args.host}:{args.port}')
 
     with open(constants.JINJA_TEMPLATE_SOURCE_HEADER, 'w') as fp:
@@ -2127,14 +2127,14 @@ if __name__ == '__main__':
     asset = None
     with open(constants.WEB_DIR_ASSETS_INDEX_JS, 'r') as fp:
         asset = fp.read()
-        replacement_string = asset[asset.find("const cS=\"http://") + len("const cS=\"http://"):
-                                   asset.find("\",Ye=Os(cS)")]
+        replacement_string = asset[asset.find("const g2=\"https://") + len("const g2=\"https://"):
+                                   asset.find("\",Ge=Ps(g2)")]
         logger.info(replacement_string)
         asset = asset.replace(replacement_string, f'{args.host}:{args.port}')
         # fp.write(asset)
     with open(constants.WEB_DIR_ASSETS_INDEX_JS, 'w') as fp:
         fp.write(str(asset))
-        # const cS="http://10.23.23.31:8004",Ye=Os(cS)
+        # const cS="https://10.23.23.31:8004",Ye=Os(cS)
     logger.info(f"asset {constants.WEB_DIR_ASSETS_INDEX_JS} has been modified by monkey path")
 
     # Проверяем наличие файла с параметрами
@@ -2158,4 +2158,4 @@ if __name__ == '__main__':
     }
 
     logger.info(f"starting...")
-    socketio.run(app, host=args.host, port=args.port)
+    socketio.run(app, host=args.host, port=args.port, keyfile=constants.SSL_KEY, certfile=constants.SSL_CERT)

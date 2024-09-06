@@ -239,37 +239,40 @@ export default {
       textarea.scrollTop = textarea.scrollHeight
     })
 
-    function onButtonDownloadCsvClick() {
-      const link = document.createElement('a')
-      const pathBounceCsv = 'bounce.csv'
-      link.setAttribute('download', pathBounceCsv)
-      link.setAttribute('type', 'text/csv')
-      link.setAttribute('href', 'bounce.csv')
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
+    async function onButtonDownloadCsvClick() {
+      const linkBounceCsv = document.createElement('a')
+      linkBounceCsv.download = 'bounce.csv'
+      const dataBounceCsv = await fetch('bounce.csv').then((res) => res.blob())
+      linkBounceCsv.href = window.URL.createObjectURL(
+        new Blob([dataBounceCsv], { type: 'text/csv' })
+      )
+      linkBounceCsv.click()
+      linkBounceCsv.remove()
+      window.URL.revokeObjectURL(linkBounceCsv.href)
     }
 
-    function onButtonDownloadPdfClick() {
-      const link = document.createElement('a')
-      const pathBounceReport = 'report/bounce.pdf'
-      link.setAttribute('download', pathBounceReport)
-      link.setAttribute('type', 'application/octet-stream')
-      link.setAttribute('href', 'report/bounce.pdf')
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
+    async function onButtonDownloadPdfClick() {
+      const linkBouncePdf = document.createElement('a')
+      linkBouncePdf.download = 'report/bounce.pdf'
+      const dataBouncePdf = await fetch('report/bounce.pdf').then((res) => res.blob())
+      linkBouncePdf.href = window.URL.createObjectURL(
+        new Blob([dataBouncePdf], { type: 'application/octet-stream' })
+      )
+      linkBouncePdf.click()
+      linkBouncePdf.remove()
+      window.URL.revokeObjectURL(linkBouncePdf.href)
     }
 
-    function onButtonDownloadTagsClick() {
-      const link = document.createElement('a')
-      const pathTagsReport = 'tags.csv'
-      link.setAttribute('download', pathTagsReport)
-      link.setAttribute('type', 'text/csv')
-      link.setAttribute('href', 'tags.csv')
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
+    async function onButtonDownloadTagsClick() {
+      const linkTagsCsv = document.createElement('a')
+      linkTagsCsv.download = 'tags.csv'
+      const dataTagsCsv = await fetch('tags.csv').then((res) => res.blob())
+      linkTagsCsv.href = window.URL.createObjectURL(
+        new Blob([dataTagsCsv], { type: 'text/csv' })
+      )
+      linkTagsCsv.click()
+      linkTagsCsv.remove()
+      window.URL.revokeObjectURL(linkTagsCsv.href)
     }
 
     async function onButtonCancelBigRequestClick() {
@@ -596,13 +599,13 @@ export default {
           </Dialog>
         </div>
         <div class="col align-self-center" v-if="dataTableRequested">
-          <a href="report/bounce.pdf" download="report/bounce.pdf" type="application/octet-stream"
+          <a @click="onButtonDownloadPdfClick" href="javascript:;" type="application/octet-stream"
             >Загрузить отчет</a
           >
           <!--          <Button @click="onButtonDownloadPdfClick">Загрузить отчет</Button>-->
         </div>
         <div class="col align-self-center" v-if="dataTableRequested">
-          <a href="bounce.csv" download="bounce.csv" type="text/csv">Загрузить CSV</a>
+          <a @click="onButtonDownloadCsvClick" href="javascript:;" type="text/csv">Загрузить CSV</a>
           <!--          <Button @click="onButtonDownloadCsvClick">Загрузить CSV</Button>-->
         </div>
       </div>
