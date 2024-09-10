@@ -389,8 +389,8 @@ export default {
 
     async function onButtonDownloadPdfClick() {
       const linkGridZip = document.createElement('a')
-      linkGridZip.download = 'report/grid.zip'
-      const dataGridZip = await fetch('report/grid.zip').then((res) => res.blob())
+      linkGridZip.download = 'grid.zip'
+      const dataGridZip = await fetch('grid.zip').then((res) => res.blob())
       linkGridZip.href = window.URL.createObjectURL(
         new Blob([dataGridZip], { type: 'application/zip' })
       )

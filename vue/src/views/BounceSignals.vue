@@ -253,8 +253,8 @@ export default {
 
     async function onButtonDownloadPdfClick() {
       const linkBouncePdf = document.createElement('a')
-      linkBouncePdf.download = 'report/bounce.pdf'
-      const dataBouncePdf = await fetch('report/bounce.pdf').then((res) => res.blob())
+      linkBouncePdf.download = 'bounce.pdf'
+      const dataBouncePdf = await fetch('bounce.pdf').then((res) => res.blob())
       linkBouncePdf.href = window.URL.createObjectURL(
         new Blob([dataBouncePdf], { type: 'application/octet-stream' })
       )

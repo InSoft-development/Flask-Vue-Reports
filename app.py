@@ -158,8 +158,13 @@ def get_client_mode():
     """
     logger.info(f"get_client_mode()")
     global CLIENT_MODE
-    with open(constants.CLIENT_CHOOSEN_MODE, "r") as readfile:
-        CLIENT_MODE = readfile.readline()
+    # with open(constants.CLIENT_CHOOSEN_MODE, "r") as readfile:
+    #     CLIENT_MODE = readfile.readline()
+    #     logger.info(CLIENT_MODE)
+
+    with open(constants.CONFIG, "r") as read_config:
+        config = json.load(read_config)
+        CLIENT_MODE = config["mode"]
         logger.info(CLIENT_MODE)
 
     return CLIENT_MODE
@@ -173,14 +178,22 @@ def change_client_mode(client_mode):
     :return:
     """
     logger.info(f"change_client_mode()")
-    with open(constants.CLIENT_CHOOSEN_MODE, "w") as writefile:
-        writefile.write(client_mode)
+    # with open(constants.CLIENT_CHOOSEN_MODE, "w") as writefile:
+    #     writefile.write(client_mode)
+
+    with open(constants.CONFIG, "r") as read_config:
+        config = json.load(read_config)
+
+    config["mode"] = client_mode
+
+    with open(constants.CONFIG, "w") as write_config:
+        json.dump(config, write_config, indent=4)
 
 
 @socketio.on("get_server_config")
 def get_server_config():
     """
-    Функция возвращает конфигурацию клиента OPC UA
+    Функция возвращает конфигурацию клиента OPC UA или Clickhouse
     :return: строка конфигурации клиента OPC UA, True/False результат проверки существования файла тегов kks_all.csv
     """
     logger.info(f"get_server_config()")
@@ -266,11 +279,18 @@ def get_ip_port_config():
     :return: строка ip-адресс, строка порта
     """
     logger.info(f"get_ip_port_config()")
-    with open(constants.CLIENT_SERVER_CONF, "r") as readfile:
-        server_config = readfile.readline().replace("opc.tcp://", '')
-        logger.info(server_config)
+    with open(constants.CONFIG, "r") as read_config:
+        config = json.load(read_config)
+        opc_config = config["opc"]
+        logger.info(opc_config)
 
-    ip, port = server_config.split(':')
+    # with open(constants.CLIENT_SERVER_CONF, "r") as readfile:
+    #     server_config = readfile.readline().replace("opc.tcp://", '')
+    #     logger.info(server_config)
+
+    # ip, port = server_config.split(':')
+    ip, port = opc_config["ip"], opc_config["port"]
+
     ip_ch, port_ch, username, password = operations.read_clickhouse_server_conf()
     return ip, port, ip_ch, port_ch, username, password
 
@@ -286,15 +306,31 @@ def get_default_fields():
     global CLIENT_MODE
 
     try:
-        f = open(constants.DATA_DEFAULT_FIELDS_CONFIG, 'r', encoding='utf-8')
+        f = open(constants.CONFIG)
     except FileNotFoundError as file_not_found_error_exception:
         logger.error(file_not_found_error_exception)
-        default_fields = f"Файл {constants.DATA_DEFAULT_FIELDS_CONFIG} не найден. " \
-                         f"Установите параметры по умолчанию в конфигураторе"
-        return default_fields
+        default_config_error = f"Файл {constants.CONFIG} не найден. " \
+                               f"Установите параметры по умолчанию в конфигураторе"
+        return default_config_error
     else:
         with f:
-            default_fields = json.load(f)
+            default_config = json.load(f)
+            if not default_config["fields"]:
+                default_fields_error = f"Параметры по умолчанию пусты. Установите и сохраните " \
+                                       f"параметры по умолчанию в конфигураторе"
+                return default_fields_error
+            default_fields = default_config["fields"]
+
+    # try:
+    #     f = open(constants.DATA_DEFAULT_FIELDS_CONFIG, 'r', encoding='utf-8')
+    # except FileNotFoundError as file_not_found_error_exception:
+    #     logger.error(file_not_found_error_exception)
+    #     default_fields = f"Файл {constants.DATA_DEFAULT_FIELDS_CONFIG} не найден. " \
+    #                      f"Установите параметры по умолчанию в конфигураторе"
+    #     return default_fields
+    # else:
+    #     with f:
+    #         default_fields = json.load(f)
 
     return default_fields[CLIENT_MODE]
 
@@ -307,6 +343,15 @@ def change_opc_server_config(ip, port):
     :param port: порт
     """
     logger.info(f"change_opc_server_config({ip}, {port})")
+
+    with open(constants.CONFIG, "r") as read_config:
+        config = json.load(read_config)
+
+    opc_config = {"ip": ip, "port": port}
+    config["opc"] = opc_config
+
+    with open(constants.CONFIG, "w") as write_config:
+        json.dump(config, write_config, indent=4)
 
     with open(constants.CLIENT_SERVER_CONF, "w") as writefile:
         writefile.write(f"opc.tcp://{ip}:{port}")
@@ -327,8 +372,22 @@ def change_ch_server_config(ip, port, username, password):
     """
     logger.info(f"change_ch_server_config({ip}, {port}, {username}, {password})")
 
-    with open(constants.CLIENT_CLICKHOUSE_SERVER_CONF, "w") as writefile:
-        writefile.write(f"{ip}:{port},{username},{password}")
+    with open(constants.CONFIG, "r") as read_config:
+        config = json.load(read_config)
+
+    clickhouse_config = {
+        "ip": ip,
+        "port": port,
+        "username": username,
+        "password": password
+    }
+    config["clickhouse"] = clickhouse_config
+
+    with open(constants.CONFIG, "w") as write_config:
+        json.dump(config, write_config, indent=4)
+
+    # with open(constants.CLIENT_CLICKHOUSE_SERVER_CONF, "w") as writefile:
+    #     writefile.write(f"{ip}:{port},{username},{password}")
 
     ip_ch, port_ch, active_user, password_ch = operations.read_clickhouse_server_conf()
     host = f"{ip_ch}:{port_ch}"
@@ -348,15 +407,23 @@ def change_default_fields(default_fields):
 
     global CLIENT_MODE
 
-    with open(constants.DATA_DEFAULT_FIELDS_CONFIG, "r") as readfile:
-        default_data = json.load(readfile)
+    with open(constants.CONFIG, "r") as read_config:
+        config = json.load(read_config)
 
-    default_data[CLIENT_MODE] = default_fields
+    # with open(constants.DATA_DEFAULT_FIELDS_CONFIG, "r") as readfile:
+    #     default_data = json.load(readfile)
 
-    with open(constants.DATA_DEFAULT_FIELDS_CONFIG, "w") as f:
-        json.dump(default_data, f, indent=4)
+    # default_data[CLIENT_MODE] = default_fields
 
-    logger.info(f"Файл {constants.DATA_DEFAULT_FIELDS_CONFIG} был успешно сохранен")
+    config["fields"][CLIENT_MODE] = default_fields
+
+    with open(constants.CONFIG, "w") as write_config:
+        json.dump(config, write_config, indent=4)
+
+    # with open(constants.DATA_DEFAULT_FIELDS_CONFIG, "w") as f:
+    #     json.dump(default_data, f, indent=4)
+
+    logger.info(f"Файл {constants.CONFIG} был успешно сохранен")
 
 
 @socketio.on("get_types_of_sensors")
@@ -584,7 +651,6 @@ def get_kks(types_list, mask_list, kks_list, selection_tag=None):
                            data={'Наименование тега': kks_requested_list,
                                  'Описание тега': kks_descr_list})
     tags_df.to_csv(constants.CSV_TAGS)
-    shutil.copy(constants.CSV_TAGS, f'{constants.WEB_DIR}tags.csv')
     logger.info(f'Датафрейм {constants.WEB_DIR}tags.csv доступен для выкачки')
 
     return kks_requested_list
@@ -1137,7 +1203,6 @@ def get_signals_data(types_list, selection_tag, mask_list, kks_list, quality, da
 
         df_report.to_csv(constants.CSV_SIGNALS, index=False, encoding='utf-8')
         logger.info("Датафрейм сформирован")
-        shutil.copy(constants.CSV_SIGNALS, f'{constants.WEB_DIR}signals_slice.csv')
         logger.info("Датафрейм доступен для выкачки")
         df_report['Дата и время измерения'] = df_report['Дата и время измерения'].dt.strftime('%Y-%m-%d %H:%M:%S')
         socketio.emit("setUpdateSignalsRequestStatus",
@@ -1229,7 +1294,6 @@ def get_signals_data(types_list, selection_tag, mask_list, kks_list, quality, da
 
         df_report.to_csv(constants.CSV_SIGNALS, index=False, encoding='utf-8')
         logger.info("Датафрейм сформирован")
-        shutil.copy(constants.CSV_SIGNALS, f'{constants.WEB_DIR}signals_slice.csv')
         logger.info("Датафрейм доступен для выкачки")
         df_report['Дата и время измерения'] = df_report['Дата и время измерения'].dt.strftime('%Y-%m-%d %H:%M:%S')
         socketio.emit("setUpdateSignalsRequestStatus",
@@ -1432,9 +1496,6 @@ def get_grid_data(kks, date_begin, date_end, interval, dimension):
         REPORT_DF_STATUS = pd.read_csv(constants.CSV_GRID_STATUS)
 
         logger.info("Датафреймы сформированы")
-
-        shutil.copy(constants.CSV_GRID, f'{constants.WEB_DIR}grid.csv')
-        shutil.copy(constants.CSV_CODE, f'{constants.WEB_DIR}code.csv')
         logger.info("Датафреймы доступны для выкачки")
 
         socketio.emit("setProgressBarGrid", {"count": 90}, to=sid)
@@ -1552,9 +1613,6 @@ def get_grid_data(kks, date_begin, date_end, interval, dimension):
         REPORT_DF_STATUS = pd.read_csv(constants.CSV_GRID_STATUS)
 
         logger.info("Датафреймы сформированы")
-
-        shutil.copy(constants.CSV_GRID, f'{constants.WEB_DIR}grid.csv')
-        shutil.copy(constants.CSV_CODE, f'{constants.WEB_DIR}code.csv')
         logger.info("Датафреймы доступны для выкачки")
 
         socketio.emit("setProgressBarGrid", {"count": 90}, to=sid)
@@ -1918,7 +1976,6 @@ def get_bounce_signals_data(kks, date, interval, dimension, top):
         socketio.emit("setUpdateBounceRequestStatus", {"message": f"Сохранение таблиц отчета\n"}, to=sid)
         df_counts.to_csv(constants.CSV_BOUNCE, index=False, encoding='utf-8')
         logger.info("Датафрейм сформирован")
-        shutil.copy(constants.CSV_BOUNCE, f'{constants.WEB_DIR}bounce.csv')
         logger.info("Датафрейм доступен для выкачки")
 
         socketio.emit("setProgressBarBounceSignals", {"count": 90}, to=sid)
@@ -2000,7 +2057,6 @@ def get_bounce_signals_data(kks, date, interval, dimension, top):
         socketio.emit("setUpdateBounceRequestStatus", {"message": f"Сохранение таблиц отчета\n"}, to=sid)
         df_counts.to_csv(constants.CSV_BOUNCE, index=False, encoding='utf-8')
         logger.info("Датафрейм сформирован")
-        shutil.copy(constants.CSV_BOUNCE, f'{constants.WEB_DIR}bounce.csv')
         logger.info("Датафрейм доступен для выкачки")
 
         socketio.emit("setProgressBarBounceSignals", {"count": 90}, to=sid)
@@ -2090,8 +2146,19 @@ if __name__ == '__main__':
     check_correct_application_structure()
 
     # Пытаемся загрузить kks_all.csv и kks_all_back.csv если они существуют в зависимости от режима
-    with open(constants.CLIENT_CHOOSEN_MODE, "r") as mode_file:
-        CLIENT_MODE = mode_file.readline()
+    # with open(constants.CLIENT_CHOOSEN_MODE, "r") as mode_file:
+    #     CLIENT_MODE = mode_file.readline()
+
+    # Проверяем наличие конфига
+    try:
+        f = open(constants.CONFIG)
+    except FileNotFoundError:
+        default_config = {"mode": "OPC", "clickhouse": None, "opc": None, fields: {'OPC': None, 'CH': None}}
+        json.dump(default_config, constants.CONFIG, indent=4)
+
+    with open(constants.CONFIG, "r") as config_file:
+        config = json.load(config_file)
+        CLIENT_MODE = config["mode"]
 
     try:
         KKS_ALL = pd.read_csv(constants.DATA_KKS_ALL, header=None, sep=';')
@@ -2137,12 +2204,12 @@ if __name__ == '__main__':
         # const cS="https://10.23.23.31:8004",Ye=Os(cS)
     logger.info(f"asset {constants.WEB_DIR_ASSETS_INDEX_JS} has been modified by monkey path")
 
-    # Проверяем наличие файла с параметрами
-    try:
-        f = open(constants.DATA_DEFAULT_FIELDS_CONFIG)
-    except FileNotFoundError:
-        default_data = {'OPC': None, 'CH': None}
-        json.dump(default_data, constants.DATA_DEFAULT_FIELDS_CONFIG, indent=4)
+    # # Проверяем наличие файла с параметрами
+    # try:
+    #     f = open(constants.DATA_DEFAULT_FIELDS_CONFIG)
+    # except FileNotFoundError:
+    #     default_data = {'OPC': None, 'CH': None}
+    #     json.dump(default_data, constants.DATA_DEFAULT_FIELDS_CONFIG, indent=4)
 
     REPORT_DF = None
     REPORT_DF_STATUS = None

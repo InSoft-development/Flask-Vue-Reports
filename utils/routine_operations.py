@@ -18,12 +18,20 @@ import utils.constants_and_paths as constants
 
 def read_clickhouse_server_conf():
     logger.info(f"read_clickhouse_server_conf()")
-    with open(constants.CLIENT_CLICKHOUSE_SERVER_CONF, "r") as clickhouse_config:
-        server_config = clickhouse_config.readline().split(',')
-        host = server_config[0].split(':')
-        ip, port = host[0], host[1]
-        username = server_config[1]
-        password = server_config[2]
+
+    with open(constants.CONFIG, "r") as read_config:
+        config = json.load(read_config)
+        server_config = config["clickhouse"]
+        ip, port = server_config["ip"], server_config["port"]
+        username, password = server_config["username"], server_config["password"]
+
+    # with open(constants.CLIENT_CLICKHOUSE_SERVER_CONF, "r") as clickhouse_config:
+    #     server_config = clickhouse_config.readline().split(',')
+    #     host = server_config[0].split(':')
+    #     ip, port = host[0], host[1]
+    #     username = server_config[1]
+    #     password = server_config[2]
+
     return ip, port, username, password
 
 

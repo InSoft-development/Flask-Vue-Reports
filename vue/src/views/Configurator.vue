@@ -335,6 +335,18 @@ export default {
       }, 500)
     }
 
+    async function exportConfigDownloadClick() {
+      const linkConfigJson = document.createElement('a')
+      linkConfigJson.download = 'config.json'
+      const dataConfigJson = await fetch('config.json').then((res) => res.blob())
+      linkConfigJson.href = window.URL.createObjectURL(
+        new Blob([dataConfigJson], { type: 'application/json' })
+      )
+      linkConfigJson.click()
+      linkConfigJson.remove()
+      window.URL.revokeObjectURL(linkConfigJson.href)
+    }
+
     return {
       lastUpdateFileKKS,
       configServer,
@@ -380,7 +392,8 @@ export default {
       defaultInterval,
       defaultIntervalRadio,
       defaultCountShowSensors,
-      changeDefaultFields
+      changeDefaultFields,
+      exportConfigDownloadClick
     }
   }
 }
@@ -393,14 +406,18 @@ export default {
         <h4>Сведения о конфигурации</h4>
       </div>
     </div>
-    <div class="row" v-if="modeClientRadio === 'OPC'">
-      <div class="col">
+    <div class="row">
+      <div class="col-6" v-if="modeClientRadio === 'OPC'">
         Дата последнего обновления файла тегов KKS: <b>{{ lastUpdateFileKKS }}</b>
       </div>
-    </div>
-    <div class="row" v-if="modeClientRadio === 'CH'">
-      <div class="col">
+      <div class="col-6" v-if="modeClientRadio === 'CH'">
         Дата последнего обновления таблицы тегов KKS: <b>{{ lastUpdateFileKKS }}</b>
+      </div>
+      <div class="col text-end">
+        <Button :disabled="statusUpdateButtonActive">Импорт конфигурации</Button>
+      </div>
+      <div class="col text-end">
+        <Button @click="exportConfigDownloadClick" :disabled="statusUpdateButtonActive">Экспорт конфигурации</Button>
       </div>
     </div>
     <hr />

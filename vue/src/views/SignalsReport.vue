@@ -292,8 +292,8 @@ export default {
 
     async function onButtonDownloadPdfClick() {
       const linkSignalsPdf = document.createElement('a')
-      linkSignalsPdf.download = 'report/signals_slice.pdf'
-      const dataSignalsPdf = await fetch('report/signals_slice.pdf').then((res) => res.blob())
+      linkSignalsPdf.download = 'signals_slice.pdf'
+      const dataSignalsPdf = await fetch('signals_slice.pdf').then((res) => res.blob())
       linkSignalsPdf.href = window.URL.createObjectURL(
         new Blob([dataSignalsPdf], { type: 'application/octet-stream' })
       )

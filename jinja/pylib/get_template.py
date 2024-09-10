@@ -29,7 +29,7 @@ def render_slice(json_slice_table):
     string_loader = BaseLoader()
     env = Environment(loader=string_loader).from_string(html_template)
     html = env.render(rows=json_slice_table)
-    pdfkit.from_string(html, constants.WEB_DIR_REPORT_SLICE, options=constants.PDF_OPTIONS)
+    pdfkit.from_string(html, constants.REPORT_SLICE, options=constants.PDF_OPTIONS)
 
 
 def render_grid(json_code_table, json_grid_table_list, json_grid_status_table_list,
@@ -67,12 +67,12 @@ def render_grid(json_code_table, json_grid_table_list, json_grid_status_table_li
     sensor_html_list = [get_unfilled_html_from_source(sensor) for sensor in sensor_html_list]
 
     # Рендерим общий html
-    pdfkit.from_string(html, constants.WEB_DIR_REPORT_GRID, options=constants.PDF_OPTIONS)
+    pdfkit.from_string(html, constants.REPORT_GRID, options=constants.PDF_OPTIONS)
     logger.info(f"Общий html срендерен")
 
     # Сохраняем архив
-    with ZipFile(constants.WEB_DIR_REPORT_GRID_ZIP, 'w', compression=ZIP_DEFLATED) as zip_file:
-        zip_file.write(constants.WEB_DIR_REPORT_GRID, arcname="grid.pdf")
+    with ZipFile(constants.REPORT_GRID_ZIP, 'w', compression=ZIP_DEFLATED) as zip_file:
+        zip_file.write(constants.REPORT_GRID, arcname="grid.pdf")
         # Добавляем в архив отчет по каждому датчику
         for index, sensor in enumerate(sensor_html_list):
             zip_file.writestr(data=sensor, zinfo_or_arcname=f"{index}.html")
@@ -94,4 +94,4 @@ def render_bounce(json_bounce_table, parameters_of_request):
     string_loader = BaseLoader()
     env = Environment(loader=string_loader).from_string(html_template)
     html = env.render(rows=json_bounce_table, parameters=parameters_of_request)
-    pdfkit.from_string(html, constants.WEB_DIR_REPORT_BOUNCE, options=constants.PDF_OPTIONS)
+    pdfkit.from_string(html, constants.REPORT_BOUNCE, options=constants.PDF_OPTIONS)

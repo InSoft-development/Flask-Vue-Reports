@@ -8,19 +8,17 @@ DATA_KKS_ALL = f'{DATA_DIRECTORY}kks_all.csv'
 DATA_KKS_ALL_BACK = f'{DATA_DIRECTORY}kks_all_back.csv'
 DATA_DEFAULT_FIELDS_CONFIG = f'{DATA_DIRECTORY}default_fields.json'
 
+SSL_CERT = f'{DATA_DIRECTORY}cert.pem'
+SSL_KEY = f'{DATA_DIRECTORY}key.pem'
+CONFIG = f'{DATA_DIRECTORY}config.json'
+
 REPORTS_DIRECTORY = f'reports{os.sep}'
 REPORTS_CUSTOM = f'{REPORTS_DIRECTORY}custom{os.sep}'
+REPORT_SLICE = f'{REPORTS_DIRECTORY}signals_slice.pdf'
+REPORT_GRID = f'{REPORTS_DIRECTORY}grid.pdf'
+REPORT_GRID_ZIP = f'{REPORTS_DIRECTORY}grid.zip'
+REPORT_BOUNCE = f'{REPORTS_DIRECTORY}bounce.pdf'
 
-REPORTS_ANALOG_SLICES = f'{REPORTS_DIRECTORY}analog_slice.pdf'
-REPORTS_DISCRETE_SLICES = f'{REPORTS_DIRECTORY}discrete_slice.pdf'
-REPORTS_ANALOG_GRID = f'{REPORTS_DIRECTORY}analog_grid.pdf'
-REPORTS_DISCRETE_GRID = f'{REPORTS_DIRECTORY}discrete_grid.pdf'
-REPORTS_BOUNCE = f'{REPORTS_DIRECTORY}bounce.pdf'
-
-CSV_ANALOG_SLICES = f'{REPORTS_DIRECTORY}analog_slice.csv'
-CSV_DISCRETE_SLICES = f'{REPORTS_DIRECTORY}discrete_slice.csv'
-CSV_ANALOG_GRID = f'{REPORTS_DIRECTORY}analog_grid.csv'
-CSV_DISCRETE_GRID = f'{REPORTS_DIRECTORY}discrete_grid.csv'
 CSV_BOUNCE = f'{REPORTS_DIRECTORY}bounce.csv'
 CSV_SIGNALS = f'{REPORTS_DIRECTORY}signals_slice.csv'
 CSV_GRID = f'{REPORTS_DIRECTORY}grid.csv'
@@ -29,13 +27,8 @@ CSV_CODE = f'{REPORTS_DIRECTORY}code.csv'
 CSV_TAGS = f'{REPORTS_DIRECTORY}tags.csv'
 
 WEB_DIR = f'web{os.sep}'
-WEB_DIR_REPORT = f'{WEB_DIR}report{os.sep}'
-WEB_DIR_REPORT_SLICE = f'{WEB_DIR_REPORT}signals_slice.pdf'
-WEB_DIR_REPORT_GRID = f'{WEB_DIR_REPORT}grid.pdf'
-WEB_DIR_REPORT_GRID_ZIP = f'{WEB_DIR_REPORT}grid.zip'
-WEB_DIR_REPORT_BOUNCE = f'{WEB_DIR_REPORT}bounce.pdf'
 WEB_DIR_ASSETS = f'{WEB_DIR}assets{os.sep}'
-WEB_DIR_ASSETS_INDEX_JS = f'{WEB_DIR_ASSETS}js{os.sep}index-CyGywMvP.js'
+WEB_DIR_ASSETS_INDEX_JS = f'{WEB_DIR_ASSETS}js{os.sep}index-Lbv_i4N-.js'
 
 CLIENT_DIR = f'client{os.sep}'
 CLIENT_BINARY = f'{CLIENT_DIR}client_lesson02.so'
@@ -71,10 +64,6 @@ JINJA_TEMPLATE_BOUNCE = f'{JINJA_TEMPLATE}bounce{os.sep}'
 JINJA_TEMPLATE_BOUNCE_TABLE = f'{JINJA_TEMPLATE_BOUNCE}table.html'
 
 JINJA_PYLIB = f'{JINJA}pylib{os.sep}'
-
-SSL_CERT = f'{DATA_DIRECTORY}cert.pem'
-SSL_KEY = f'{DATA_DIRECTORY}key.pem'
-
 
 QUALITY = [
     "8 - (BNC) - ОТКАЗ СВЯЗИ (TIMEOUT)",

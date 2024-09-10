@@ -26,27 +26,47 @@ def catch_all(path):
 
 @app.route("/tags.csv")
 def get_tags_csv():
-    return send_file("web/tags.csv")
+    return send_file(constants.CSV_TAGS)
 
 
 @app.route("/signals_slice.csv")
 def get_signals_slice_csv():
-    return send_file("web/signals_slice.csv")
+    return send_file(constants.CSV_SIGNALS)
 
 
 @app.route("/code.csv")
 def get_code_csv():
-    return send_file("web/code.csv")
+    return send_file(constants.CSV_CODE)
 
 
 @app.route("/grid.csv")
 def get_grid_csv():
-    return send_file("web/grid.csv")
+    return send_file(constants.CSV_GRID)
 
 
 @app.route("/bounce.csv")
 def get_bounce_csv():
-    return send_file("web/bounce.csv")
+    return send_file(constants.CSV_BOUNCE)
+
+
+@app.route("/config.json")
+def get_config_json():
+    return send_file(constants.CONFIG)
+
+
+@app.route("/signals_slice.pdf")
+def get_signals_slice_pdf():
+    return send_file(constants.REPORT_SLICE)
+
+
+@app.route("/grid.zip")
+def get_grid_zip():
+    return send_file(constants.REPORT_GRID_ZIP)
+
+
+@app.route("/bounce.pdf")
+def get_bounce_pdf():
+    return send_file(constants.REPORT_BOUNCE)
 
 
 def parse_args():
