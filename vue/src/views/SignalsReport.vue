@@ -306,9 +306,7 @@ export default {
       const linkTagsCsv = document.createElement('a')
       linkTagsCsv.download = 'tags.csv'
       const dataTagsCsv = await fetch('tags.csv').then((res) => res.blob())
-      linkTagsCsv.href = window.URL.createObjectURL(
-        new Blob([dataTagsCsv], { type: 'text/csv' })
-      )
+      linkTagsCsv.href = window.URL.createObjectURL(new Blob([dataTagsCsv], { type: 'text/csv' }))
       linkTagsCsv.click()
       linkTagsCsv.remove()
       window.URL.revokeObjectURL(linkTagsCsv.href)
@@ -705,10 +703,7 @@ export default {
           </Dialog>
         </div>
         <div class="col align-self-center" v-if="dataTableRequested">
-          <a
-              @click="onButtonDownloadPdfClick"
-              href="javascript:;"
-              type="application/octet-stream"
+          <a @click="onButtonDownloadPdfClick" href="javascript:;" type="application/octet-stream"
             >Загрузить отчет</a
           >
           <!--          <Button @click="onButtonDownloadPdfClick">Загрузить отчет</Button>-->

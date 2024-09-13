@@ -104,10 +104,19 @@ export async function changeClientMode(modeClientRadio) {
   })
 }
 
+/***
+ * Процедура изменения конфигурации клиента Clickhouse
+ * @param ipCH
+ * @param portCH
+ * @param username
+ * @param password
+ * @returns {Promise<void>}
+ */
 export async function changeCHServerConfig(ipCH, portCH, username, password) {
   await new Promise((resolve) => {
-    socket.emit('change_ch_server_config', ipCH, portCH, username, password, () => {
-      resolve()
+    socket.emit('change_ch_server_config', ipCH, portCH, username, password, (status) => {
+      if (status === false) alert('ip адрес введен не корректно')
+      resolve(status)
     })
   })
 }
@@ -120,8 +129,9 @@ export async function changeCHServerConfig(ipCH, portCH, username, password) {
  */
 export async function changeOpcServerConfig(ipOPC, portOPC) {
   await new Promise((resolve) => {
-    socket.emit('change_opc_server_config', ipOPC, portOPC, () => {
-      resolve()
+    socket.emit('change_opc_server_config', ipOPC, portOPC, (status) => {
+      if (status === false) alert('ip адрес введен не корректно')
+      resolve(status)
     })
   })
 }

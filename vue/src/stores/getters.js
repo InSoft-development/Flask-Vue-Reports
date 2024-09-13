@@ -100,22 +100,24 @@ export async function getDefaultFields(defaultFields) {
       selectionTag: 'sequential',
       sensorsAndTemplateValue: ['Sochi2\\.GT\\.AM\\.\\S*-AM\\.Q?$'],
       quality: ['8 - (BNC) - ОТКАЗ СВЯЗИ (TIMEOUT)', '192 - (GOD) – ХОРОШ'],
-      lastValueChecked: false,
-      filterTableChecked: false,
       dateDeepOfSearch: new Date(),
       interval: 10,
       dimension: 'hour',
       countShowSensors: 10,
+      lastValueChecked: false,
+      intervalDeepOfSearch: 10,
+      dimensionDeepOfSearch: 'hour',
       modeOfFilter: 'historian',
       rootDirectory: '',
       exceptionDirectories: '',
-      exceptionExpertTags: false
+      exceptionExpertTags: false,
+      filterTableChecked: false
     })
     alert(result)
   } else {
     Object.assign(defaultFields, result)
     if (defaultFields.dateDeepOfSearch === null) defaultFields.dateDeepOfSearch = ''
-    else defaultFields.dateDeepOfSearch = new Date(defaultFields.dateDeepOfSearch)
+    else defaultFields.dateDeepOfSearch = new Date(Date.parse(defaultFields.dateDeepOfSearch))
   }
 }
 
@@ -210,7 +212,6 @@ export async function getKKSByMasksForTable(
     })
   })
   if (result[0] === '') {
-    console.log(result)
     alert('Неверный синтаксис регулярного выражения. Ничего не нашлось в маске: ' + result[1])
     return
   }

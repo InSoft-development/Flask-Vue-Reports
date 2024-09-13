@@ -12,8 +12,89 @@ import datetime
 from dateutil.parser import parse
 
 import json
+import jsonschema
+
+import ipaddress
+import re
 
 import utils.constants_and_paths as constants
+
+
+def validate_ip_address(ip):
+    try:
+        ipaddress.ip_address(ip)
+        return True
+    except ValueError as ip_validate_error:
+        logger.error(ip_validate_error)
+        return False
+
+
+def validate_imported_config(config):
+    logger.info("validate_imported_config")
+    logger.info(config)
+    # Валидация схемы
+    try:
+        jsonschema.validate(instance=config, schema=constants.CONFIG_SHEMA)
+    except jsonschema.exceptions.ValidationError as valid_error:
+        logger.error(valid_error.message)
+        return False, valid_error.message
+
+    # Валидация значений
+    # Валидация IP
+    if not (validate_ip_address(config["clickhouse"]["ip"]) and validate_ip_address(config["opc"]["ip"])):
+        return False, "ip адрес в импортируемом конфиге указан не корректно"
+
+    # Проверка соединения с БД Clickhouse по ip и порту
+    try:
+        client = create_client(config["clickhouse"]["ip"], config["clickhouse"]["port"],
+                               config["clickhouse"]["username"], config["clickhouse"]["password"])
+        logger.info("Clickhouse connected")
+        client.close()
+        logger.info("Clickhouse disconnected")
+    except clickhouse_exceptions.Error as error:
+        logger.error(error)
+        return False, "Ошибка конфигурации клиента БД Clickhouse"
+
+    # Валидация регулярных выражений
+    try:
+        mode = "OPC"
+        for opc_reg in config["fields"]["OPC"]["sensorsAndTemplateValue"]:
+            re.compile(opc_reg)
+        mode = "CH"
+        for ch_reg in config["fields"]["CH"]["sensorsAndTemplateValue"]:
+            re.compile(ch_reg)
+    except re.error as reg_error:
+        logger.error(reg_error)
+        return False, f"Ошибка в синтаксисе регулярных выражений. Режим {mode}, регулярное выражение " \
+                      f"{ opc_reg if mode=='OPC' else ch_reg }"
+
+    # Валидация даты глубины поиска в архивах
+    try:
+        mode = "OPC"
+        config["fields"]["OPC"]["dateDeepOfSearch"] = parse(config["fields"]["OPC"]["dateDeepOfSearch"], fuzzy=False)\
+            .strftime("%Y-%m-%dT%H:%M:%S")
+        mode = "CH"
+        config["fields"]["CH"]["dateDeepOfSearch"] = parse(config["fields"]["CH"]["dateDeepOfSearch"], fuzzy=False)\
+            .strftime("%Y-%m-%dT%H:%M:%S")
+    except ValueError as date_error:
+        logger.error(date_error)
+        config_clause = config['fields']['OPC']['dateDeepOfSearch'] if mode == 'OPC' \
+            else config['fields']['CH']['dateDeepOfSearch']
+        return False, f"Ошибка в дате глубины поиска в архивах. Режим {mode}, поле dateDeepOfSearch: " \
+                      f"{ config_clause }"
+
+    # Валидация типов данных
+    opc_uncorrect = [t for t in config["fields"]["OPC"]["typesOfSensors"] if t not in constants.OPC_TYPES_OF_SENSORS]
+    ch_uncorrect = [t for t in config["fields"]["CH"]["typesOfSensors"] if t not in constants.CH_TYPES_OF_SENSORS]
+
+    if opc_uncorrect or ch_uncorrect:
+        logger.warning(opc_uncorrect)
+        logger.warning(ch_uncorrect)
+        return True, f"Предупреждение. Обнаружены следующие типы данных, которые могут отсутствовать " \
+                     f"в источниках данных:" \
+                     f"\n{'OPC:' + str(opc_uncorrect) if opc_uncorrect else ''} " \
+                     f"\n{'CH:' + str(ch_uncorrect) if ch_uncorrect else ''}"
+    return True, ""
 
 
 def read_clickhouse_server_conf():
@@ -24,13 +105,6 @@ def read_clickhouse_server_conf():
         server_config = config["clickhouse"]
         ip, port = server_config["ip"], server_config["port"]
         username, password = server_config["username"], server_config["password"]
-
-    # with open(constants.CLIENT_CLICKHOUSE_SERVER_CONF, "r") as clickhouse_config:
-    #     server_config = clickhouse_config.readline().split(',')
-    #     host = server_config[0].split(':')
-    #     ip, port = host[0], host[1]
-    #     username = server_config[1]
-    #     password = server_config[2]
 
     return ip, port, username, password
 

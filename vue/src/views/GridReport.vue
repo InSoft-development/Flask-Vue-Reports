@@ -250,8 +250,7 @@ export default {
         let verticalScroll = document.getElementById('data-table')
         verticalScroll = verticalScroll.querySelector('.p-virtualscroller.p-virtualscroller-inline')
         verticalScroll.removeEventListener('scroll', synchroScroll)
-      }
-      catch (e) {
+      } catch (e) {
         console.log(e)
       }
     })
@@ -262,8 +261,7 @@ export default {
         let verticalScroll = document.getElementById('data-table')
         verticalScroll = verticalScroll.querySelector('.p-virtualscroller.p-virtualscroller-inline')
         verticalScroll.removeEventListener('scroll', synchroScroll)
-      }
-      catch (e) {
+      } catch (e) {
         console.log(e)
       }
     })
@@ -369,9 +367,7 @@ export default {
       const linkCodeCsv = document.createElement('a')
       linkCodeCsv.download = 'code.csv'
       const dataCodeCsv = await fetch('code.csv').then((res) => res.blob())
-      linkCodeCsv.href = window.URL.createObjectURL(
-        new Blob([dataCodeCsv], { type: 'text/csv' })
-      )
+      linkCodeCsv.href = window.URL.createObjectURL(new Blob([dataCodeCsv], { type: 'text/csv' }))
       linkCodeCsv.click()
       linkCodeCsv.remove()
       window.URL.revokeObjectURL(linkCodeCsv.href)
@@ -379,9 +375,7 @@ export default {
       const linkGridCsv = document.createElement('a')
       linkGridCsv.download = 'grid.csv'
       const dataGridCsv = await fetch('grid.csv').then((res) => res.blob())
-      linkGridCsv.href = window.URL.createObjectURL(
-        new Blob([dataGridCsv], { type: 'text/csv' })
-      )
+      linkGridCsv.href = window.URL.createObjectURL(new Blob([dataGridCsv], { type: 'text/csv' }))
       linkGridCsv.click()
       linkGridCsv.remove()
       window.URL.revokeObjectURL(linkGridCsv.href)
@@ -403,9 +397,7 @@ export default {
       const linkTagsCsv = document.createElement('a')
       linkTagsCsv.download = 'tags.csv'
       const dataTagsCsv = await fetch('tags.csv').then((res) => res.blob())
-      linkTagsCsv.href = window.URL.createObjectURL(
-        new Blob([dataTagsCsv], { type: 'text/csv' })
-      )
+      linkTagsCsv.href = window.URL.createObjectURL(new Blob([dataTagsCsv], { type: 'text/csv' }))
       linkTagsCsv.click()
       linkTagsCsv.remove()
       window.URL.revokeObjectURL(linkTagsCsv.href)

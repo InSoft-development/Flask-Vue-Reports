@@ -15,6 +15,7 @@ import Textarea from 'primevue/textarea'
 import Skeleton from 'primevue/skeleton'
 import ConfirmDialog from 'primevue/confirmdialog'
 import Password from 'primevue/password'
+import FileUpload from 'primevue/fileupload'
 
 const components = [
   {
@@ -80,6 +81,10 @@ const components = [
   {
     name: 'Password',
     component: Password
+  },
+  {
+    name: 'FileUpload',
+    component: FileUpload
   }
 ]
 

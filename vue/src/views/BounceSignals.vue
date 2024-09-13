@@ -267,9 +267,7 @@ export default {
       const linkTagsCsv = document.createElement('a')
       linkTagsCsv.download = 'tags.csv'
       const dataTagsCsv = await fetch('tags.csv').then((res) => res.blob())
-      linkTagsCsv.href = window.URL.createObjectURL(
-        new Blob([dataTagsCsv], { type: 'text/csv' })
-      )
+      linkTagsCsv.href = window.URL.createObjectURL(new Blob([dataTagsCsv], { type: 'text/csv' }))
       linkTagsCsv.click()
       linkTagsCsv.remove()
       window.URL.revokeObjectURL(linkTagsCsv.href)

@@ -155,6 +155,9 @@ export default {
     const defaultCountShowSensors = ref(0)
 
     const changeDefaultFields = () => {
+      let formatDateDeepOfSearch = new Date(
+        defaultDateDeepOfSearch.value.toString().split('GMT')[0] + ' UTC'
+      ).toISOString()
       let defaultFields = {
         typesOfSensors: defaultChosenTypesOfSensorsData,
         selectionTag: defaultSelectionTagRadio.value,
@@ -167,7 +170,7 @@ export default {
         filterTableChecked: defaultFilterTableChecked.value,
         intervalDeepOfSearch: defaultIntervalDeepOfSearch.value,
         dimensionDeepOfSearch: defaultDimensionDeepOfSearch.value,
-        dateDeepOfSearch: defaultDateDeepOfSearch.value,
+        dateDeepOfSearch: formatDateDeepOfSearch,
         interval: defaultInterval.value,
         dimension: defaultIntervalRadio.value,
         countShowSensors: defaultCountShowSensors.value,
@@ -347,6 +350,23 @@ export default {
       window.URL.revokeObjectURL(linkConfigJson.href)
     }
 
+    async function uploadConfig(xhr, files) {
+      statusUpdateButtonActive.value = true
+      await new Promise((resolve) => {
+        socket.emit('upload_config', xhr.files[0], (status) => {
+          alert(status)
+          resolve(status)
+        })
+      })
+      await getClientMode(modeClientRadio)
+      await getServerConfig(configServer, checkFileActive)
+      await getLastUpdateFileKKS(lastUpdateFileKKS)
+      await getTypesOfSensors(defaultTypesOfSensorsDataOptions)
+      await applicationStore.getFields()
+      fillDefaultField()
+      statusUpdateButtonActive.value = false
+    }
+
     return {
       lastUpdateFileKKS,
       configServer,
@@ -393,7 +413,8 @@ export default {
       defaultIntervalRadio,
       defaultCountShowSensors,
       changeDefaultFields,
-      exportConfigDownloadClick
+      exportConfigDownloadClick,
+      uploadConfig
     }
   }
 }
@@ -406,7 +427,7 @@ export default {
         <h4>Сведения о конфигурации</h4>
       </div>
     </div>
-    <div class="row">
+    <div class="row align-items-center">
       <div class="col-6" v-if="modeClientRadio === 'OPC'">
         Дата последнего обновления файла тегов KKS: <b>{{ lastUpdateFileKKS }}</b>
       </div>
@@ -414,10 +435,25 @@ export default {
         Дата последнего обновления таблицы тегов KKS: <b>{{ lastUpdateFileKKS }}</b>
       </div>
       <div class="col text-end">
-        <Button :disabled="statusUpdateButtonActive">Импорт конфигурации</Button>
+        <FileUpload
+          mode="basic"
+          name="config[]"
+          url="/upload_config"
+          accept=".json"
+          :maxFileSize="1000000"
+          :auto="true"
+          :customUpload="true"
+          :disabled="statusUpdateButtonActive"
+          chooseLabel="Импорт конфигурации"
+          style="border-radius: 0px"
+          @uploader="uploadConfig"
+        />
+        <!--        <Button :disabled="statusUpdateButtonActive">Импорт конфигурации</Button>-->
       </div>
       <div class="col text-end">
-        <Button @click="exportConfigDownloadClick" :disabled="statusUpdateButtonActive">Экспорт конфигурации</Button>
+        <Button @click="exportConfigDownloadClick" :disabled="statusUpdateButtonActive"
+          >Экспорт конфигурации</Button
+        >
       </div>
     </div>
     <hr />

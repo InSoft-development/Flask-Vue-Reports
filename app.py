@@ -27,6 +27,7 @@ import pandas as pd
 import re
 
 import json
+from ast import literal_eval
 from loguru import logger
 import datetime
 from dateutil.parser import parse
@@ -158,9 +159,6 @@ def get_client_mode():
     """
     logger.info(f"get_client_mode()")
     global CLIENT_MODE
-    # with open(constants.CLIENT_CHOOSEN_MODE, "r") as readfile:
-    #     CLIENT_MODE = readfile.readline()
-    #     logger.info(CLIENT_MODE)
 
     with open(constants.CONFIG, "r") as read_config:
         config = json.load(read_config)
@@ -178,8 +176,6 @@ def change_client_mode(client_mode):
     :return:
     """
     logger.info(f"change_client_mode()")
-    # with open(constants.CLIENT_CHOOSEN_MODE, "w") as writefile:
-    #     writefile.write(client_mode)
 
     with open(constants.CONFIG, "r") as read_config:
         config = json.load(read_config)
@@ -284,11 +280,6 @@ def get_ip_port_config():
         opc_config = config["opc"]
         logger.info(opc_config)
 
-    # with open(constants.CLIENT_SERVER_CONF, "r") as readfile:
-    #     server_config = readfile.readline().replace("opc.tcp://", '')
-    #     logger.info(server_config)
-
-    # ip, port = server_config.split(':')
     ip, port = opc_config["ip"], opc_config["port"]
 
     ip_ch, port_ch, username, password = operations.read_clickhouse_server_conf()
@@ -321,17 +312,6 @@ def get_default_fields():
                 return default_fields_error
             default_fields = default_config["fields"]
 
-    # try:
-    #     f = open(constants.DATA_DEFAULT_FIELDS_CONFIG, 'r', encoding='utf-8')
-    # except FileNotFoundError as file_not_found_error_exception:
-    #     logger.error(file_not_found_error_exception)
-    #     default_fields = f"Файл {constants.DATA_DEFAULT_FIELDS_CONFIG} не найден. " \
-    #                      f"Установите параметры по умолчанию в конфигураторе"
-    #     return default_fields
-    # else:
-    #     with f:
-    #         default_fields = json.load(f)
-
     return default_fields[CLIENT_MODE]
 
 
@@ -343,6 +323,10 @@ def change_opc_server_config(ip, port):
     :param port: порт
     """
     logger.info(f"change_opc_server_config({ip}, {port})")
+
+    # Проверка правильности ввода ip адреса
+    if not operations.validate_ip_address(ip):
+        return False
 
     with open(constants.CONFIG, "r") as read_config:
         config = json.load(read_config)
@@ -359,6 +343,7 @@ def change_opc_server_config(ip, port):
     with open(constants.CLIENT_SERVER_CONF, "r") as readfile:
         socketio.emit("setUpdateStatus", {"statusString": f"Конфигурация клиента OPC UA обновлена на: "
                                                           f"{readfile.read()}\n", "serviceFlag": False}, to=request.sid)
+    return True
 
 
 @socketio.on("change_ch_server_config")
@@ -371,6 +356,10 @@ def change_ch_server_config(ip, port, username, password):
     :param password: пароль
     """
     logger.info(f"change_ch_server_config({ip}, {port}, {username}, {password})")
+
+    # Проверка правильности ввода ip адреса
+    if not operations.validate_ip_address(ip):
+        return False
 
     with open(constants.CONFIG, "r") as read_config:
         config = json.load(read_config)
@@ -386,14 +375,12 @@ def change_ch_server_config(ip, port, username, password):
     with open(constants.CONFIG, "w") as write_config:
         json.dump(config, write_config, indent=4)
 
-    # with open(constants.CLIENT_CLICKHOUSE_SERVER_CONF, "w") as writefile:
-    #     writefile.write(f"{ip}:{port},{username},{password}")
-
     ip_ch, port_ch, active_user, password_ch = operations.read_clickhouse_server_conf()
     host = f"{ip_ch}:{port_ch}"
     socketio.emit("setUpdateStatus", {"statusString": f"Конфигурация клиента Clickhouse обновлена на: "
                                                       f"{host}, пользователь: {active_user}\n",
                                       "serviceFlag": False}, to=request.sid)
+    return True
 
 
 @socketio.on("change_default_fields")
@@ -407,23 +394,40 @@ def change_default_fields(default_fields):
 
     global CLIENT_MODE
 
+    # Приводим строку даты глубины поиска к формату без timezone
+    default_fields["dateDeepOfSearch"] = default_fields["dateDeepOfSearch"][:-5]
+    logger.info(default_fields)
+
     with open(constants.CONFIG, "r") as read_config:
         config = json.load(read_config)
-
-    # with open(constants.DATA_DEFAULT_FIELDS_CONFIG, "r") as readfile:
-    #     default_data = json.load(readfile)
-
-    # default_data[CLIENT_MODE] = default_fields
 
     config["fields"][CLIENT_MODE] = default_fields
 
     with open(constants.CONFIG, "w") as write_config:
         json.dump(config, write_config, indent=4)
 
-    # with open(constants.DATA_DEFAULT_FIELDS_CONFIG, "w") as f:
-    #     json.dump(default_data, f, indent=4)
-
     logger.info(f"Файл {constants.CONFIG} был успешно сохранен")
+
+
+@socketio.on("upload_config")
+def upload_config(file):
+    logger.info(file)
+    try:
+        config = json.loads(file.decode('utf-8'))
+    except json.JSONDecodeError as json_error:
+        logger.error(json_error)
+        return f"Ошибка считывания конфига: {json_error}"
+    logger.info(config)
+
+    # Валидация пользовательского конфигурационного файла
+    valid_flag, msg = operations.validate_imported_config(config)
+    if not valid_flag:
+        return f"Ошибка валидации пользовательского конфига: {msg}. Отмена импорта."
+
+    with open(constants.CONFIG, "w") as write_config:
+        json.dump(config, write_config, indent=4)
+
+    return f"Конфиг импортирован. {msg}"
 
 
 @socketio.on("get_types_of_sensors")
@@ -1107,10 +1111,6 @@ def get_signals_data(types_list, selection_tag, mask_list, kks_list, quality, da
                         logger.info(f'Получение по OPC UA: {element[0]}->{element[1]}')
                         logger.info(command_string)
 
-                        # eel.setUpdateSignalsRequestStatus(f"Получение по OPC UA: {element[0]}->{element[1]}\n"
-                        #                                   f"за период с {command_datetime_begin_time} по "
-                        #                                   f"{command_datetime_end_time}\n")
-
                         args = ["./client", "-b", f"{command_datetime_begin_time}", "-e",
                                 f"{command_datetime_end_time}",
                                 "-p", "100", "-t", "10000", "-xw"]
@@ -1279,7 +1279,7 @@ def get_signals_data(types_list, selection_tag, mask_list, kks_list, quality, da
             socketio.emit("setUpdateSignalsRequestStatus",
                           {"message": f"Никаких данных не нашлось\n"}, to=sid)
             return f"Никаких данных не нашлось"
-
+        logger.warning(df_signals)
         df_report = pd.DataFrame(
             columns=['Код сигнала (KKS)', 'Дата и время измерения', 'Значение', 'Качество',
                      'Код качества'],
@@ -1965,8 +1965,6 @@ def get_bounce_signals_data(kks, date, interval, dimension, top):
             socketio.emit("setUpdateBounceRequestStatus", {"message": f"{msg}\n"}, to=sid)
             return msg
 
-        # df_counts = pd.DataFrame(kks, columns=['Наименование датчика'])
-        # df_counts['Частота'] = df_sqlite['id'].value_counts()
         df_counts = pd.DataFrame()
         df_counts['Частота'] = df_sqlite['id'].value_counts()
         df_counts.index.name = 'Наименование датчика'
@@ -2145,10 +2143,6 @@ if __name__ == '__main__':
 
     check_correct_application_structure()
 
-    # Пытаемся загрузить kks_all.csv и kks_all_back.csv если они существуют в зависимости от режима
-    # with open(constants.CLIENT_CHOOSEN_MODE, "r") as mode_file:
-    #     CLIENT_MODE = mode_file.readline()
-
     # Проверяем наличие конфига
     try:
         f = open(constants.CONFIG)
@@ -2194,9 +2188,8 @@ if __name__ == '__main__':
     asset = None
     with open(constants.WEB_DIR_ASSETS_INDEX_JS, 'r') as fp:
         asset = fp.read()
-        replacement_string = asset[asset.find("const g2=\"https://") + len("const g2=\"https://"):
-                                   asset.find("\",Ge=Ps(g2)")]
-        logger.info(replacement_string)
+        replacement_string = asset[asset.find("const RC=\"https://") + len("const RC=\"https://"):
+                                   asset.find("\",Ge=As(RC)")]
         asset = asset.replace(replacement_string, f'{args.host}:{args.port}')
         # fp.write(asset)
     with open(constants.WEB_DIR_ASSETS_INDEX_JS, 'w') as fp:
