@@ -4,7 +4,7 @@ gevent.monkey.patch_all()
 
 from flask import Flask, request, send_from_directory
 from flask_cors import CORS
-from flask_socketio import SocketIO, send, emit
+from flask_socketio import SocketIO
 
 import os
 import signal
@@ -16,7 +16,6 @@ import time
 import shutil
 
 import sqlite3
-import clickhouse_connect
 from clickhouse_connect.driver import exceptions as clickhouse_exceptions
 
 from gevent import subprocess, spawn
@@ -27,7 +26,6 @@ import pandas as pd
 import re
 
 import json
-from ast import literal_eval
 from loguru import logger
 import datetime
 from dateutil.parser import parse
@@ -1408,7 +1406,7 @@ def get_grid_data(kks, date_begin, date_end, interval, dimension):
                                 f"{command_datetime_end_time_binary} -p 100 -t 10000 -rxw"
 
         delta_interval = interval * constants.DELTA_INTERVAL_IN_SECONDS[dimension]
-        command_string = f'cd client && python ./slicer_for_streamlit.py -d {delta_interval} ' \
+        command_string = f'cd client && python ./slicer.py -d {delta_interval} ' \
                          f'-t \"{command_datetime_begin_time}\" \"{command_datetime_end_time}\"'
 
         logger.info("Получение по OPC UA")
@@ -1438,7 +1436,7 @@ def get_grid_data(kks, date_begin, date_end, interval, dimension):
 
         socketio.emit("setUpdateGridRequestStatus", {"message": f"Получение срезов\n"}, to=sid)
 
-        args = ["python", "./slicer_for_streamlit.py", "-d", f"{delta_interval}",
+        args = ["python", "./slicer.py", "-d", f"{delta_interval}",
                 "-t", f"{command_datetime_begin_time}", f"{command_datetime_end_time}"]
         try:
             socketio.emit("setProgressBarGrid", {"count": 40}, to=sid)

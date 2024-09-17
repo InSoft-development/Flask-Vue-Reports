@@ -60,6 +60,8 @@ def validate_imported_config(config):
         mode = "OPC"
         for opc_reg in config["fields"]["OPC"]["sensorsAndTemplateValue"]:
             re.compile(opc_reg)
+        for opc_reg in config["fields"]["OPC"]["exceptionDirectories"]:
+            re.compile(opc_reg)
         mode = "CH"
         for ch_reg in config["fields"]["CH"]["sensorsAndTemplateValue"]:
             re.compile(ch_reg)
