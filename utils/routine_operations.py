@@ -21,6 +21,11 @@ import utils.constants_and_paths as constants
 
 
 def validate_ip_address(ip):
+    """
+    Функция валидации IPv4 адреса
+    :param ip: строка IP-адреса
+    :return: True/False результат валидации строки в IPv4 адрес
+    """
     try:
         ipaddress.ip_address(ip)
         return True
@@ -30,6 +35,12 @@ def validate_ip_address(ip):
 
 
 def validate_imported_config(config):
+    """
+    Функция валидации импортируемгого конфига
+    :param config: json объект конфига
+    :return: True/False: результат валидации конфига,
+             строка с указанием ошибки валидации, если возвращается False
+    """
     logger.info("validate_imported_config")
     logger.info(config)
     # Валидация схемы
@@ -100,6 +111,13 @@ def validate_imported_config(config):
 
 
 def read_clickhouse_server_conf():
+    """
+    Функция чтения конфигурации клиента Clickhouse
+    :return: ip: IPv4 адрес клиента Clickhouse,
+             port: порт клиента Clickhouse
+             username: имя пользователя клиента Clickhouse
+             password: пароль клиента Clickhouse
+    """
     logger.info(f"read_clickhouse_server_conf()")
 
     with open(constants.CONFIG, "r") as read_config:
@@ -112,6 +130,16 @@ def read_clickhouse_server_conf():
 
 
 def get_client(sid, socketio, ip, port, username, password):
+    """
+    Функция инициализации и проверки клиента Clickhouse
+    :param sid: идентификатор сокета
+    :param socketio: объект сокета
+    :param ip: IPv4 адрес клиента Clickhouse
+    :param port: порт клиента Clickhouse
+    :param username: имя пользователя клиента Clickhouse
+    :param password: пароль клиента Clickhouse
+    :return: объект клиента Clickhouse или строка ошибки
+    """
     logger.info(f"get_client({sid}, {socketio}, {ip}, {port}, {username})")
     try:
         client = create_client(ip, port, username, password)
@@ -133,11 +161,31 @@ def get_client(sid, socketio, ip, port, username, password):
 
 
 def create_client(ip, port, username, password):
+    """
+    Функция инициализации клиента Clickhouse
+    :param ip: IPv4 адрес клиента Clickhouse
+    :param port: порт клиента Clickhouse
+    :param username: имя пользователя клиента Clickhouse
+    :param password: пароль клиента Clickhouse
+    :return:
+    """
     return clickhouse_connect.get_client(host=ip, port=port, username=username, password=password)
 
 
 def fill_signals_query(kks_requested_list, quality, date, last_value_checked, interval_or_date_checked,
                        interval, dimension, date_deep_search):
+    """
+    Функция заполнения запроса срезов сигнала к Clickhouse
+    :param kks_requested_list: массив kks напрямую, указанные пользователем
+    :param quality: массив кодов качества, указанные пользователем
+    :param date: дата, указанная пользователем в запросе
+    :param last_value_checked: флаг выдачи в таблицах срезов последних по времени значений
+    :param interval_or_date_checked:  флаг формата задачи даты
+    :param interval: интервал
+    :param dimension: размерность интервала [день, час, минута, секунда]
+    :param date_deep_search: дата глубины поиска данных в архивах
+    :return: строка запроса срезов сигнала
+    """
     # Подготовка к выполнению запроса
     # Формирование списка выбранных кодов качества для sql запроса
     correct_quality_list = list(map(lambda x: constants.QUALITY_SHORT_CODE_DICT[x], quality))
@@ -185,10 +233,23 @@ def fill_signals_query(kks_requested_list, quality, date, last_value_checked, in
 
 
 def fill_grid_drop_table():
+    """
+    Функция заполнения запроса сброса временной таблицы сетки к Clickhouse
+    :return: строка запроса сброса временной таблицы сетки
+    """
     return f"DROP TEMPORARY TABLE IF EXISTS temp_grid"
 
 
 def fill_grid_temporary_table(kks, date_begin, date_end, interval, dimension):
+    """
+    Функция заполнения запроса временной таблицы сетки к Clickhouse
+    :param kks: массив kks
+    :param date_begin: начальная дата сетки
+    :param date_end: конечная дата сетки
+    :param interval: интервал
+    :param dimension: размерность интервала [день, час, минута, секунда]
+    :return: строка запроса заполнения временной таблицы сетки
+    """
     delta_interval = interval * constants.DELTA_INTERVAL_IN_SECONDS[dimension]
     argument_datetime_begin_time = parse(date_begin).strftime("%Y-%m-%d %H:%M:%S")
     argument_datetime_end_time = parse(date_end).strftime("%Y-%m-%d %H:%M:%S")
@@ -242,6 +303,15 @@ def fill_grid_temporary_table(kks, date_begin, date_end, interval, dimension):
 
 
 def fill_grid_queries_value(kks, date_begin, date_end, interval, dimension):
+    """
+    Функция заполнения запроса значений сетки к Clickhouse
+    :param kks: массив kks
+    :param date_begin: начальная дата сетки
+    :param date_end: конечная дата сетки
+    :param interval: интервал
+    :param dimension: размерность интервала [день, час, минута, секунда]
+    :return: строка запроса значений сетки
+    """
     # Подготовка к выполнению запроса
     grid_item_value = ""
     grid_item_status = ""
@@ -266,6 +336,15 @@ def fill_grid_queries_value(kks, date_begin, date_end, interval, dimension):
 
 
 def fill_bounce_query(kks, date, interval, dimension, top):
+    """
+    Функция заполнения запроса дребезга к Clickhouse
+    :param kks: массив kks
+    :param date: дата отсчета дребезга
+    :param interval: интервал
+    :param dimension: размерность интервала [день, час, минута, секунда]
+    :param top: количество показываемых датчиков
+    :return: строка запроса дребезга
+    """
     delta_interval = interval * constants.DELTA_INTERVAL_IN_SECONDS[dimension]
     argument_datetime_begin_time = (parse(date) - datetime.timedelta(seconds=delta_interval)).strftime(
         "%Y-%m-%d %H:%M:%S")
@@ -297,6 +376,12 @@ def fill_bounce_query(kks, date, interval, dimension, top):
 
 
 def prepare_for_grid_render(df_report, df_report_slice):
+    """
+    Функция подготовки рендеринга в шаблоне
+    :param df_report: pandas фрейм значений сетки
+    :param df_report_slice: pandas фрейм статуса сетки
+    :return: json объекты под рендеринг в шаблоне и отчете
+    """
     # Разделение таблиц по группам по 5 датчикам
     separate_count = 1
     grid_separated_json_list = []

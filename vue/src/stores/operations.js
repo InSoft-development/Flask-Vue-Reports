@@ -98,8 +98,9 @@ export async function cancelBounce() {
  */
 export async function changeClientMode(modeClientRadio) {
   await new Promise((resolve) => {
-    socket.emit('change_client_mode', modeClientRadio, () => {
-      resolve()
+    socket.emit('change_client_mode', modeClientRadio, (msg) => {
+      if (msg) alert(msg)
+      resolve(msg)
     })
   })
 }
@@ -114,9 +115,10 @@ export async function changeClientMode(modeClientRadio) {
  */
 export async function changeCHServerConfig(ipCH, portCH, username, password) {
   await new Promise((resolve) => {
-    socket.emit('change_ch_server_config', ipCH, portCH, username, password, (status) => {
+    socket.emit('change_ch_server_config', ipCH, portCH, username, password, (status, msg) => {
       if (status === false) alert('ip адрес введен не корректно')
-      resolve(status)
+      if (msg) alert(msg)
+      resolve(status, msg)
     })
   })
 }
@@ -129,9 +131,10 @@ export async function changeCHServerConfig(ipCH, portCH, username, password) {
  */
 export async function changeOpcServerConfig(ipOPC, portOPC) {
   await new Promise((resolve) => {
-    socket.emit('change_opc_server_config', ipOPC, portOPC, (status) => {
+    socket.emit('change_opc_server_config', ipOPC, portOPC, (status, msg) => {
       if (status === false) alert('ip адрес введен не корректно')
-      resolve(status)
+      if (msg) alert(msg)
+      resolve(status, msg)
     })
   })
 }
@@ -143,8 +146,9 @@ export async function changeOpcServerConfig(ipOPC, portOPC) {
  */
 export async function changeDefaultFields(defaultFields) {
   await new Promise((resolve) => {
-    socket.emit('change_default_fields', defaultFields, () => {
-      resolve()
+    socket.emit('change_default_fields', defaultFields, (msg) => {
+      if (msg) alert(msg)
+      resolve(msg)
     })
   })
 }

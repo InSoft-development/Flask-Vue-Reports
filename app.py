@@ -175,6 +175,16 @@ def change_client_mode(client_mode):
     """
     logger.info(f"change_client_mode()")
 
+    global signals_greenlet
+    global grid_greenlet
+    global bounce_greenlet
+    global update_greenlet
+    global change_update_greenlet
+    started_greenlet = [update_greenlet, change_update_greenlet, signals_greenlet, grid_greenlet, bounce_greenlet]
+    if any(started_greenlet):
+        logger.warning(f"started_greenlet is running")
+        return f"Выполняется запрос для другого клиента. ёИзменение режима клиента временно невозможно"
+
     with open(constants.CONFIG, "r") as read_config:
         config = json.load(read_config)
 
@@ -322,9 +332,20 @@ def change_opc_server_config(ip, port):
     """
     logger.info(f"change_opc_server_config({ip}, {port})")
 
+    global signals_greenlet
+    global grid_greenlet
+    global bounce_greenlet
+    global update_greenlet
+    global change_update_greenlet
+    started_greenlet = [update_greenlet, change_update_greenlet, signals_greenlet, grid_greenlet, bounce_greenlet]
+    if any(started_greenlet):
+        logger.warning(f"started_greenlet is running")
+        return True, f"Выполняется запрос для другого клиента. " \
+                     f"Сохранение конфигурации клиента OPC UA временно невозможно"
+
     # Проверка правильности ввода ip адреса
     if not operations.validate_ip_address(ip):
-        return False
+        return False, ""
 
     with open(constants.CONFIG, "r") as read_config:
         config = json.load(read_config)
@@ -341,7 +362,7 @@ def change_opc_server_config(ip, port):
     with open(constants.CLIENT_SERVER_CONF, "r") as readfile:
         socketio.emit("setUpdateStatus", {"statusString": f"Конфигурация клиента OPC UA обновлена на: "
                                                           f"{readfile.read()}\n", "serviceFlag": False}, to=request.sid)
-    return True
+    return True, ""
 
 
 @socketio.on("change_ch_server_config")
@@ -355,9 +376,20 @@ def change_ch_server_config(ip, port, username, password):
     """
     logger.info(f"change_ch_server_config({ip}, {port}, {username}, {password})")
 
+    global signals_greenlet
+    global grid_greenlet
+    global bounce_greenlet
+    global update_greenlet
+    global change_update_greenlet
+    started_greenlet = [update_greenlet, change_update_greenlet, signals_greenlet, grid_greenlet, bounce_greenlet]
+    if any(started_greenlet):
+        logger.warning(f"started_greenlet is running")
+        return True, f"Выполняется запрос для другого клиента. " \
+                     f"Сохранение конфигурации клиента Clickhouse временно невозможно"
+
     # Проверка правильности ввода ip адреса
     if not operations.validate_ip_address(ip):
-        return False
+        return False, ""
 
     with open(constants.CONFIG, "r") as read_config:
         config = json.load(read_config)
@@ -378,7 +410,7 @@ def change_ch_server_config(ip, port, username, password):
     socketio.emit("setUpdateStatus", {"statusString": f"Конфигурация клиента Clickhouse обновлена на: "
                                                       f"{host}, пользователь: {active_user}\n",
                                       "serviceFlag": False}, to=request.sid)
-    return True
+    return True, ""
 
 
 @socketio.on("change_default_fields")
@@ -389,6 +421,16 @@ def change_default_fields(default_fields):
     :return:
     """
     logger.info(f"change_default_fields({default_fields})")
+
+    global signals_greenlet
+    global grid_greenlet
+    global bounce_greenlet
+    global update_greenlet
+    global change_update_greenlet
+    started_greenlet = [update_greenlet, change_update_greenlet, signals_greenlet, grid_greenlet, bounce_greenlet]
+    if any(started_greenlet):
+        logger.warning(f"started_greenlet is running")
+        return f"Выполняется запрос для другого клиента. Сохранение параметров временно невозможно"
 
     global CLIENT_MODE
 
@@ -405,11 +447,28 @@ def change_default_fields(default_fields):
         json.dump(config, write_config, indent=4)
 
     logger.info(f"Файл {constants.CONFIG} был успешно сохранен")
+    return ""
 
 
 @socketio.on("upload_config")
 def upload_config(file):
+    """
+    Функция импортирует пользовательский конфиг
+    :param file: json файл конфига
+    :return: Строка сообщения об успехе импорта или ошибке
+    """
     logger.info(file)
+
+    global signals_greenlet
+    global grid_greenlet
+    global bounce_greenlet
+    global update_greenlet
+    global change_update_greenlet
+    started_greenlet = [update_greenlet, change_update_greenlet, signals_greenlet, grid_greenlet, bounce_greenlet]
+    if any(started_greenlet):
+        logger.warning(f"started_greenlet is running")
+        return f"Выполняется запрос для другого клиента. Импорт конфига временно невозможен"
+
     try:
         config = json.loads(file.decode('utf-8'))
     except json.JSONDecodeError as json_error:
@@ -558,6 +617,7 @@ def get_kks(types_list, mask_list, kks_list, selection_tag=None):
     global CLIENT_MODE
 
     kks_requested_list = []
+    kks_descr_list = []
     kks_mask_list = []
 
     if selection_tag is None:
@@ -592,18 +652,23 @@ def get_kks(types_list, mask_list, kks_list, selection_tag=None):
                         template_kks_set = set(kks[kks[0].str.contains(mask, regex=True)][0].tolist())
                         kks_mask_set = kks_mask_set.union(template_kks_set)
                     kks_mask_list = list(kks_mask_set)
+
+            # Отбор тегов,указанных вручную с их объединением
+            if kks_list:
+                kks_requested_list = [kks for kks in kks_list if kks not in kks_mask_list]
+
+            kks_requested_list += kks_mask_list
+            kks_descr_list = kks[kks[0].isin(kks_requested_list)][2].tolist()
+            logger.info(len(kks_requested_list))
         except re.error as regular_expression_except:
             logger.info(mask)
             logger.error(f"Неверный синтаксис регулярного выражения {regular_expression_except} в {mask}")
             return ['', mask]
-
-        # Отбор тегов,указанных вручную с их объединением
-        if kks_list:
-            kks_requested_list = [kks for kks in kks_list if kks not in kks_mask_list]
-
-        kks_requested_list += kks_mask_list
-        kks_descr_list = kks[kks[0].isin(kks_requested_list)][2].tolist()
-        logger.info(len(kks_requested_list))
+        finally:
+            tags_df = pd.DataFrame(columns=['Наименование тега', 'Описание тега'],
+                                   data={'Наименование тега': kks_requested_list,
+                                         'Описание тега': kks_descr_list})
+            tags_df.to_csv(constants.CSV_TAGS)
     elif CLIENT_MODE == 'CH':
         ip, port, username, password = operations.read_clickhouse_server_conf()
         try:
@@ -644,15 +709,18 @@ def get_kks(types_list, mask_list, kks_list, selection_tag=None):
             logger.error(pattern_error)
             mask_error = [mask for mask in mask_list if mask in str(pattern_error)]
             logger.info(mask_error)
+            if not mask_error:
+                logger.error(pattern_error)
+                return ['', str(pattern_error)]
             logger.error(f"Неверный синтаксис регулярного выражения {pattern_error} в {mask_error[0]}")
             return ['', mask_error[0]]
         except clickhouse_exceptions.Error as error:
             logger.error(error)
-
-    tags_df = pd.DataFrame(columns=['Наименование тега', 'Описание тега'],
-                           data={'Наименование тега': kks_requested_list,
-                                 'Описание тега': kks_descr_list})
-    tags_df.to_csv(constants.CSV_TAGS)
+        finally:
+            tags_df = pd.DataFrame(columns=['Наименование тега', 'Описание тега'],
+                                   data={'Наименование тега': kks_requested_list,
+                                         'Описание тега': kks_descr_list})
+            tags_df.to_csv(constants.CSV_TAGS)
     logger.info(f'Датафрейм {constants.WEB_DIR}tags.csv доступен для выкачки')
 
     return kks_requested_list
@@ -1314,9 +1382,11 @@ def get_signals_data(types_list, selection_tag, mask_list, kks_list, quality, da
     global signals_greenlet
     global grid_greenlet
     global bounce_greenlet
+    global update_greenlet
+    global change_update_greenlet
     global sid_proc
     global CLIENT_MODE
-    started_greenlet = [signals_greenlet, grid_greenlet, bounce_greenlet]
+    started_greenlet = [update_greenlet, change_update_greenlet, signals_greenlet, grid_greenlet, bounce_greenlet]
     if any(started_greenlet):
         logger.warning(f"signals_greenlet is running")
         return f"Запрос уже выполняется для другого клиента. Попробуйте выполнить запрос позже"
@@ -1567,11 +1637,16 @@ def get_grid_data(kks, date_begin, date_end, interval, dimension):
         except clickhouse_exceptions.Error as error:
             logger.error(error)
             socketio.emit("setUpdateGridRequestStatus", {"message": f"Ошибка: {error}\n"}, to=sid)
-            return error
+            return str(error)
 
         socketio.emit("setUpdateGridRequestStatus", {"message": f"Формирование таблиц отчета\n"}, to=sid)
 
-        df_report = pd.DataFrame(df_slice_csv['grid'])
+        try:
+            df_report = pd.DataFrame(df_slice_csv['grid'])
+        except KeyError as error:
+            logger.error(error)
+            socketio.emit("setUpdateGridRequestStatus", {"message": f"Ошибка: Клиент Clickhouse ничего не нашел\n"}, to=sid)
+            return "Ошибка: Клиент Clickhouse ничего не нашел"
         df_report.rename(columns={'grid': 'Метка времени'}, inplace=True)
 
         df_report_slice = pd.DataFrame(df_slice_status_csv['grid'])
@@ -1645,9 +1720,11 @@ def get_grid_data(kks, date_begin, date_end, interval, dimension):
     global signals_greenlet
     global grid_greenlet
     global bounce_greenlet
+    global update_greenlet
+    global change_update_greenlet
     global sid_proc
     global CLIENT_MODE
-    started_greenlet = [signals_greenlet, grid_greenlet, bounce_greenlet]
+    started_greenlet = [update_greenlet, change_update_greenlet, signals_greenlet, grid_greenlet, bounce_greenlet]
     if any(started_greenlet):
         logger.warning(f"grid_greenlet is running")
         return f"Запрос уже выполняется для другого клиента. Попробуйте выполнить запрос позже"
@@ -2079,9 +2156,11 @@ def get_bounce_signals_data(kks, date, interval, dimension, top):
     global signals_greenlet
     global grid_greenlet
     global bounce_greenlet
+    global update_greenlet
+    global change_update_greenlet
     global sid_proc
     global CLIENT_MODE
-    started_greenlet = [signals_greenlet, grid_greenlet, bounce_greenlet]
+    started_greenlet = [update_greenlet, change_update_greenlet, signals_greenlet, grid_greenlet, bounce_greenlet]
     if any(started_greenlet):
         logger.warning(f"bounce_greenlet is running")
         return f"Запрос уже выполняется для другого клиента. Попробуйте выполнить запрос позже"
@@ -2184,23 +2263,24 @@ if __name__ == '__main__':
 
     # Патч обезьяны для запуска сокета с клиента дистрибутивной версии веб-приложения
     asset = None
-    with open(constants.WEB_DIR_ASSETS_INDEX_JS, 'r') as fp:
+
+    asset_file = [filename for filename in os.listdir(constants.WEB_DIR_ASSETS_INDEX_JS)
+                  if os.path.isfile(os.path.join(constants.WEB_DIR_ASSETS_INDEX_JS, filename))
+                  and filename.startswith("index") and filename.endswith(".js")][0]
+    logger.info(asset_file)
+    asset_file = os.path.join(constants.WEB_DIR_ASSETS_INDEX_JS, asset_file)
+    logger.info(asset_file)
+
+    with open(asset_file, 'r') as fp:
         asset = fp.read()
         replacement_string = asset[asset.find("const RC=\"https://") + len("const RC=\"https://"):
                                    asset.find("\",Ge=As(RC)")]
         asset = asset.replace(replacement_string, f'{args.host}:{args.port}')
         # fp.write(asset)
-    with open(constants.WEB_DIR_ASSETS_INDEX_JS, 'w') as fp:
+    with open(asset_file, 'w') as fp:
         fp.write(str(asset))
         # const cS="https://10.23.23.31:8004",Ye=Os(cS)
-    logger.info(f"asset {constants.WEB_DIR_ASSETS_INDEX_JS} has been modified by monkey path")
-
-    # # Проверяем наличие файла с параметрами
-    # try:
-    #     f = open(constants.DATA_DEFAULT_FIELDS_CONFIG)
-    # except FileNotFoundError:
-    #     default_data = {'OPC': None, 'CH': None}
-    #     json.dump(default_data, constants.DATA_DEFAULT_FIELDS_CONFIG, indent=4)
+    logger.info(f"asset {asset_file} has been modified by monkey path")
 
     REPORT_DF = None
     REPORT_DF_STATUS = None

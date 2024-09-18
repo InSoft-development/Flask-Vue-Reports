@@ -246,9 +246,10 @@ export async function getKKSByTextMasksFromSearch(
     })
   })
   if (result[0] === '') {
-    alert('Неверный синтаксис регулярного выражения. Ничего не нашлось')
+    alert('Неверный синтаксис регулярного выражения. Ничего не нашлось в маске: ' + result[1])
     countOfTags.value = 0
-    dialogSearchedTagsTextArea.value = 'Неверный синтаксис регулярного выражения. Ничего не нашлось'
+    dialogSearchedTagsTextArea.value =
+      'Неверный синтаксис регулярного выражения. Ничего не нашлось в маске: ' + result[1]
     return
   }
   countOfTags.value = result.length
@@ -371,25 +372,28 @@ export async function getGrid(
       interval,
       dimension,
       (data, status, dataLength) => {
+        console.log(data)
+        console.log(status)
         result[0] = data
         result[1] = status
-        result[3] = dataLength
+        result[2] = dataLength
         resolve([data, status, dataLength])
       }
     )
   })
-  if (typeof result === 'string') {
+  if (typeof result[0] === 'string') {
     dataTableRequested.value = false
-    alert(result)
+    alert(result[0])
+    return
   }
   if (Array.isArray(result)) {
-    dataTable.value = Array.from({ length: result[3] }, () => 'None')
+    dataTable.value = Array.from({ length: result[2] }, () => 'None')
     Array.prototype.splice.apply(dataTable.value, [
       ...[first, last],
       ...result[0].slice(first, last)
     ])
 
-    dataTableStatus.value = Array.from({ length: result[3] }, () => 'None')
+    dataTableStatus.value = Array.from({ length: result[2] }, () => 'None')
     Array.prototype.splice.apply(dataTableStatus.value, [
       ...[first, last],
       ...result[1].slice(first, last)

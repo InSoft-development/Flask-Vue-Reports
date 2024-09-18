@@ -28,7 +28,7 @@ CSV_TAGS = f'{REPORTS_DIRECTORY}tags.csv'
 
 WEB_DIR = f'web{os.sep}'
 WEB_DIR_ASSETS = f'{WEB_DIR}assets{os.sep}'
-WEB_DIR_ASSETS_INDEX_JS = f'{WEB_DIR_ASSETS}js{os.sep}index-BoamCDaa.js'
+WEB_DIR_ASSETS_INDEX_JS = f'{WEB_DIR_ASSETS}js{os.sep}'
 
 CLIENT_DIR = f'client{os.sep}'
 CLIENT_BINARY = f'{CLIENT_DIR}client_lesson02.so'
