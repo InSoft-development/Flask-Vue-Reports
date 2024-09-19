@@ -2206,7 +2206,9 @@ def bounce_data_cancel():
 def parse_args():
     parser = argparse.ArgumentParser(description="start flask + vue 3 web-application")
     parser.add_argument("-ip", "--host", type=str, help="specify IPv4 address of host", default='localhost')
-    parser.add_argument("-p", "--port", type=int, help="specify port")
+    parser.add_argument("-p", "--port", type=int, help="specify port", default=8004)
+    parser.add_argument("-s", "--structure", default=False, help="prepare structure of web-app",
+                        required=False, action="store_true")
     parser.add_argument("-v", "--version", action="version", help="print version", version=f'{VERSION}')
     return parser.parse_args()
 
@@ -2218,14 +2220,29 @@ if __name__ == '__main__':
         logger.info(f'{VERSION} flask socket io + vue 3 web-application version')
         exit(0)
 
-    check_correct_application_structure()
+    if args.structure:
+        logger.info("Создание структуры веб-приложения")
+        check_correct_application_structure()
+        logger.info("Структура создана")
+        exit(0)
 
     # Проверяем наличие конфига
     try:
         f = open(constants.CONFIG)
+        config = json.load(f)
+        # Валидируем конфиг при запуске бэкенда
+        valid_flag, msg = operations.validate_imported_config(config)
+        if not valid_flag:
+            logger.error("Ошибка валидации конфига при запуске")
+            exit(0)
     except FileNotFoundError:
-        default_config = {"mode": "OPC", "clickhouse": None, "opc": None, fields: {'OPC': None, 'CH': None}}
+        logger.error("Отсутствует конфигурационный файл ./data/config.json")
+        default_config = {"mode": "OPC", "clickhouse": {}, "opc": {}, "fields": {'OPC': {}, 'CH': {}}}
         json.dump(default_config, constants.CONFIG, indent=4)
+    except json.JSONDecodeError as json_error:
+        logger.error("Ошибка считывания json файла")
+        logger.error(json_error)
+        exit(0)
 
     with open(constants.CONFIG, "r") as config_file:
         config = json.load(config_file)
