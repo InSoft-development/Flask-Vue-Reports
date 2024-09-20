@@ -2226,6 +2226,7 @@ if __name__ == '__main__':
         logger.info("Структура создана")
         exit(0)
 
+    check_correct_application_structure()
     # Проверяем наличие конфига
     try:
         f = open(constants.CONFIG)
