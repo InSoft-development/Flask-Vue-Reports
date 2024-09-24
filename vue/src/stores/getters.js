@@ -42,7 +42,6 @@ export async function getServerConfig(configServer, checkFileActive) {
       configServer.value = serverConfig
       checkFileActive.value = checkFile
       resolve([serverConfig, checkFile])
-      console.log(checkFileActive.value)
     })
   })
 }
