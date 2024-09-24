@@ -9,7 +9,7 @@ from loguru import logger
 import utils.constants_and_paths as constants
 
 
-VERSION = '1.0.0'
+VERSION = '1.0.1'
 
 clients = {}
 

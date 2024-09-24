@@ -36,7 +36,7 @@ import utils.routine_operations as operations
 
 from jinja.pylib.get_template import render_slice, render_grid, render_bounce
 
-VERSION = '1.0.0'
+VERSION = '1.0.1'
 
 clients = {}
 
@@ -220,7 +220,7 @@ def get_server_config():
             check = client.command("CHECK TABLE archive.static_data")
             client.close()
             logger.info("Clickhouse disconnected")
-            return f'Текущая конфигурация клиента CH: {host}, {username}', check
+            return f'Текущая конфигурация клиента CH: {host}, {username}', bool(check)
         except AttributeError as attr_error:
             logger.info(attr_error)
             return client, os.path.isfile(constants.DATA_KKS_ALL)

@@ -35,11 +35,12 @@ export default {
       await changeClientMode(modeClientRadio.value)
       await getClientMode(modeClientRadio)
       await getServerConfig(configServer, checkFileActive)
+      statusUpdateTextArea.value = configServer.value
       await getLastUpdateFileKKS(lastUpdateFileKKS)
+      if (!checkFileActive.value) return
       await getTypesOfSensors(defaultTypesOfSensorsDataOptions)
       await applicationStore.getFields()
       fillDefaultField()
-      statusUpdateTextArea.value = configServer.value
     }
 
     const ipOPC = ref('')
@@ -219,6 +220,10 @@ export default {
     }
 
     onMounted(async () => {
+      window.addEventListener('beforeunload', async (event) => {
+        await cancelUpdate()
+      })
+
       statusUpdateButtonActive.value = true
 
       await getClientMode(modeClientRadio)
@@ -227,11 +232,11 @@ export default {
       await getIpAndPortConfig(ipOPC, portOPC, ipCH, portCH, usernameCH, passwordCH)
 
       statusUpdateTextArea.value = configServer.value
-      if (!checkFileActive.value)
+      if (!checkFileActive.value) {
         alert('Не найден файл kks_all.csv.\nСконфигурируйте клиент OPC UA и обновите файл тегов')
-      window.addEventListener('beforeunload', async (event) => {
-        await cancelUpdate()
-      })
+        statusUpdateButtonActive.value = false
+        return
+      }
 
       await getTypesOfSensors(defaultTypesOfSensorsDataOptions)
       fillDefaultField()
@@ -630,12 +635,12 @@ export default {
         />
       </div>
     </div>
-    <div class="row components-margin-bottom" v-if="modeClientRadio === 'OPC'">
+    <div class="row components-margin-bottom" v-if="modeClientRadio === 'OPC' && checkFileActive">
       <div class="col">
         <h4>Отбор тегов</h4>
       </div>
     </div>
-    <div class="row align-items-center" v-if="modeClientRadio === 'OPC'">
+    <div class="row align-items-center" v-if="modeClientRadio === 'OPC' && checkFileActive">
       <div class="col-3">Режим фильтрации обновления тегов:</div>
       <div class="col-2">
         <RadioButton
@@ -659,7 +664,7 @@ export default {
         </InputText>
       </div>
     </div>
-    <div class="row align-items-center" v-if="modeClientRadio === 'OPC'">
+    <div class="row align-items-center" v-if="modeClientRadio === 'OPC' && checkFileActive">
       <div class="col-3">
         <Button
           @click="changeUpdate"
@@ -717,7 +722,7 @@ export default {
       </div>
     </div>
     <hr />
-    <div class="row align-items-center">
+    <div class="row align-items-center" v-if="checkFileActive">
       <div class="col-8 text-start">
         <h4>Установка параметров по умолчанию</h4>
       </div>
@@ -727,7 +732,7 @@ export default {
         >
       </div>
     </div>
-    <div class="row">
+    <div class="row" v-if="checkFileActive">
       <div class="col">
         <label for="typesOfSensorsDataSignals">Выберите тип данных тегов по умолчанию</label>
         <Multiselect
@@ -746,7 +751,7 @@ export default {
         ></Multiselect>
       </div>
     </div>
-    <div class="row g-0 align-items-center">
+    <div class="row g-0 align-items-center" v-if="checkFileActive">
       <div class="col-3">Применять фильтр по умолчанию как:</div>
       <div class="col-3">
         <RadioButton
@@ -773,7 +778,7 @@ export default {
         <label for="unionDefault" class="radio-interval-margin">Объединение шаблонов</label>
       </div>
     </div>
-    <div class="row">
+    <div class="row" v-if="checkFileActive">
       <div class="col">
         <label for="default-template"
           >Шаблон тегов по умолчанию (перечислите шаблоны или теги через запятую)</label
@@ -788,12 +793,12 @@ export default {
         </InputText>
       </div>
     </div>
-    <div class="row">
+    <div class="row" v-if="checkFileActive">
       <div class="col">
         <h4>Параметры отчетов</h4>
       </div>
     </div>
-    <div class="row">
+    <div class="row" v-if="checkFileActive">
       <div class="col text-start">
         <label for="qualitySignals">Код качества сигнала по умолчанию</label>
         <Multiselect
@@ -914,7 +919,7 @@ export default {
         </div>
       </div>
     </div>
-    <div class="row">
+    <div class="row" v-if="checkFileActive">
       <div class="col-3">
         <label for="intervalDefaultGrid">Интервал по умолчанию: </label><br />
         <InputNumber
@@ -950,7 +955,7 @@ export default {
         </InputNumber>
       </div>
     </div>
-    <div class="row">
+    <div class="row" v-if="checkFileActive">
       <div class="col">
         <RadioButton
           v-model="defaultIntervalRadio"

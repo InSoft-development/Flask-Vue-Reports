@@ -84,3 +84,7 @@ def check_correct_application_structure():
     except OSError as e:
         if e.errno != errno.EEXIST:
             logger.error(e)
+
+    if not os.path.isfile(constants.CLIENT_SERVER_CONF):
+        with open(constants.CLIENT_SERVER_CONF, "w") as writefile:
+            writefile.write("")
