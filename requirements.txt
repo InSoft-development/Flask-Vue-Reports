@@ -1,6 +1,6 @@
 beautifulsoup4==4.11.1
 clickhouse_connect==0.5.18
-Flask==2.2.2
+Flask==2.2.5
 Flask_Cors==4.0.1
 Flask_SocketIO==5.3.6
 gevent==22.10.2
@@ -14,3 +14,4 @@ pandas==1.4.4
 pdfkit==1.0.0
 python_dateutil==2.8.2
 traces==0.6.4
+werkzeug==3.0.3
