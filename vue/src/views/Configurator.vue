@@ -155,7 +155,7 @@ export default {
 
     const defaultCountShowSensors = ref(0)
 
-    const changeDefaultFields = () => {
+    const changeDefaultFields = async () => {
       let formatDateDeepOfSearch = new Date(
         defaultDateDeepOfSearch.value.toString().split('GMT')[0] + ' UTC'
       ).toISOString()
@@ -184,6 +184,8 @@ export default {
         exceptionExpertTags: defaultExceptionExpertTags.value
       }
       applicationStore.setFields(defaultFields)
+      await applicationStore.getFields()
+      fillDefaultField()
       alert('Параметры по умолчанию сохранены')
     }
 
@@ -252,6 +254,7 @@ export default {
     })
 
     async function onButtonDialogUpdate() {
+      changeOpcServerConfig(ipOPC.value, portOPC.value)
       runUpdateFlag.value = true
       statusUpdateButtonActive.value = true
       statusUpdateTextArea.value = ''

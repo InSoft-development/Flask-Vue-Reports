@@ -36,7 +36,7 @@ import utils.routine_operations as operations
 
 from jinja.pylib.get_template import render_slice, render_grid, render_bounce
 
-VERSION = '1.0.1'
+VERSION = '1.0.2'
 
 clients = {}
 
@@ -2238,8 +2238,10 @@ if __name__ == '__main__':
             exit(0)
     except FileNotFoundError:
         logger.error("Отсутствует конфигурационный файл ./data/config.json")
-        default_config = {"mode": "OPC", "clickhouse": {}, "opc": {}, "fields": {'OPC': {}, 'CH': {}}}
+        default_config = constants.CONFIG_DEFAULT
         json.dump(default_config, constants.CONFIG, indent=4)
+        logger.warning("Создан шаблон для заполнения конфигурационного файла ./data/config.json")
+        exit(0)
     except json.JSONDecodeError as json_error:
         logger.error("Ошибка считывания json файла")
         logger.error(json_error)
@@ -2248,6 +2250,9 @@ if __name__ == '__main__':
     with open(constants.CONFIG, "r") as config_file:
         config = json.load(config_file)
         CLIENT_MODE = config["mode"]
+
+    # Записываем в файл server.conf клиента OPC UA ip адрес и порт из конфига
+    change_opc_server_config(config["opc"]["ip"], config["opc"]["port"])
 
     try:
         KKS_ALL = pd.read_csv(constants.DATA_KKS_ALL, header=None, sep=';')
