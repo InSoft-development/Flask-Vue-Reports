@@ -183,7 +183,7 @@ def change_client_mode(client_mode):
     started_greenlet = [update_greenlet, change_update_greenlet, signals_greenlet, grid_greenlet, bounce_greenlet]
     if any(started_greenlet):
         logger.warning(f"started_greenlet is running")
-        return f"Выполняется запрос для другого клиента. ёИзменение режима клиента временно невозможно"
+        return f"Выполняется запрос для другого клиента. Изменение режима клиента временно невозможно"
 
     with open(constants.CONFIG, "r") as read_config:
         config = json.load(read_config)
@@ -2209,6 +2209,8 @@ def parse_args():
     parser.add_argument("-p", "--port", type=int, help="specify port", default=8004)
     parser.add_argument("-s", "--structure", default=False, help="prepare structure of web-app",
                         required=False, action="store_true")
+    parser.add_argument("-c", "--config", default=False, help="create data/config.json from template",
+                        required=False, action="store_true")
     parser.add_argument("-v", "--version", action="version", help="print version", version=f'{VERSION}')
     return parser.parse_args()
 
@@ -2218,6 +2220,15 @@ if __name__ == '__main__':
         args = parse_args()
     except SystemExit:
         logger.info(f'{VERSION} flask socket io + vue 3 web-application version')
+        exit(0)
+
+    if args.config:
+        logger.info("Создание шаблона для заполнения конфигурационного файла ./data/config.json")
+        check_correct_application_structure()
+        with open(constants.CONFIG, 'w') as write_default:
+            default_config = constants.CONFIG_DEFAULT
+            json.dump(default_config, write_default, indent=4)
+        logger.info("Создан шаблон конфигурационного файла ./data/config.json")
         exit(0)
 
     if args.structure:
@@ -2238,8 +2249,9 @@ if __name__ == '__main__':
             exit(0)
     except FileNotFoundError:
         logger.error("Отсутствует конфигурационный файл ./data/config.json")
-        default_config = constants.CONFIG_DEFAULT
-        json.dump(default_config, constants.CONFIG, indent=4)
+        with open(constants.CONFIG, 'w') as write_default:
+            default_config = constants.CONFIG_DEFAULT
+            json.dump(default_config, write_default, indent=4)
         logger.warning("Создан шаблон для заполнения конфигурационного файла ./data/config.json")
         exit(0)
     except json.JSONDecodeError as json_error:
@@ -2252,7 +2264,8 @@ if __name__ == '__main__':
         CLIENT_MODE = config["mode"]
 
     # Записываем в файл server.conf клиента OPC UA ip адрес и порт из конфига
-    change_opc_server_config(config["opc"]["ip"], config["opc"]["port"])
+    with open(constants.CLIENT_SERVER_CONF, "w") as writefile:
+        writefile.write(f"opc.tcp://{config['opc']['ip']}:{config['opc']['port']}")
 
     try:
         KKS_ALL = pd.read_csv(constants.DATA_KKS_ALL, header=None, sep=';')
