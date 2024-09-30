@@ -232,6 +232,7 @@ export default {
       await getServerConfig(configServer, checkFileActive)
       await getLastUpdateFileKKS(lastUpdateFileKKS)
       await getIpAndPortConfig(ipOPC, portOPC, ipCH, portCH, usernameCH, passwordCH)
+      fillDefaultField()
 
       statusUpdateTextArea.value = configServer.value
       if (!checkFileActive.value) {
@@ -241,7 +242,6 @@ export default {
       }
 
       await getTypesOfSensors(defaultTypesOfSensorsDataOptions)
-      fillDefaultField()
       statusUpdateButtonActive.value = false
     })
 
@@ -638,12 +638,12 @@ export default {
         />
       </div>
     </div>
-    <div class="row components-margin-bottom" v-if="modeClientRadio === 'OPC' && checkFileActive">
+    <div class="row components-margin-bottom" v-if="modeClientRadio === 'OPC'">
       <div class="col">
         <h4>Отбор тегов</h4>
       </div>
     </div>
-    <div class="row align-items-center" v-if="modeClientRadio === 'OPC' && checkFileActive">
+    <div class="row align-items-center" v-if="modeClientRadio === 'OPC'">
       <div class="col-3">Режим фильтрации обновления тегов:</div>
       <div class="col-2">
         <RadioButton
@@ -667,9 +667,10 @@ export default {
         </InputText>
       </div>
     </div>
-    <div class="row align-items-center" v-if="modeClientRadio === 'OPC' && checkFileActive">
+    <div class="row align-items-center" v-if="modeClientRadio === 'OPC'">
       <div class="col-3">
         <Button
+          v-if="checkFileActive"
           @click="changeUpdate"
           :disabled="statusUpdateButtonActive || defaultModeOfFilterRadio === 'historian'"
           style="width: 90%"
