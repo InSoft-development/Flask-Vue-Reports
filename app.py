@@ -36,7 +36,7 @@ import utils.routine_operations as operations
 
 from jinja.pylib.get_template import render_slice, render_grid, render_bounce
 
-VERSION = '1.0.2'
+VERSION = '1.0.3'
 
 clients = {}
 
@@ -911,6 +911,18 @@ def update_kks_all(mode, root_directory, exception_directories, exception_expert
 
     # Запуск процесса обновления тегов через gevent в зависимости от режима
     if CLIENT_MODE == 'OPC':
+        # Валидация регулярных выражений
+        if mode == "exception":
+            try:
+                for directory in exception_directories:
+                    re.compile(directory)
+            except re.error as regular_expression_except:
+                logger.error(f"Неверный синтаксис регулярного выражения {regular_expression_except}")
+                socketio.emit("setUpdateStatus",
+                              {"statusString": f"Неверный синтаксис регулярного выражения {regular_expression_except}\n",
+                               "serviceFlag": True},
+                              to=sid)
+                return
         update_greenlet = spawn(update_kks_all_spawn, mode, root_directory, exception_directories, exception_expert)
 
     if CLIENT_MODE == 'CH':
@@ -2245,7 +2257,7 @@ if __name__ == '__main__':
         # Валидируем конфиг при запуске бэкенда
         valid_flag, msg = operations.validate_imported_config(config)
         if not valid_flag:
-            logger.error("Ошибка валидации конфига при запуске")
+            logger.error(f"Ошибка валидации конфига при запуске: {msg}")
             exit(0)
     except FileNotFoundError:
         logger.error("Отсутствует конфигурационный файл ./data/config.json")

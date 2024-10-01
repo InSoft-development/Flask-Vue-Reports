@@ -476,22 +476,12 @@ python app_client.py --host {указать IPv4 адрес клиента} --po
                         "lastValueChecked": {"type": "boolean"},  
                         "intervalDeepOfSearch": {"type": "integer", "minimum": 0},  
                         "dimensionDeepOfSearch": {"type": "string", "enum": ["day", "hour", "minute", "second"]},  
-                        "modeOfFilter": {"type": "string", "enum": ["historian", "exception"]},  
-                        "rootDirectory": {"type": "string"},  
-                        "exceptionDirectories": {  
-                            "type": "array",  
-                            "items": {  
-                                "type": "string"  
-                            }  
-                        },  
-                        "exceptionExpertTags": {"type": "boolean"},  
                         "filterTableChecked": {"type": "boolean"}  
                     },  
                     "additionalProperties": False,  
                     "required": ["typesOfSensors", "selectionTag", "sensorsAndTemplateValue", "quality",  
                                  "dateDeepOfSearch", "interval", "dimension", "countShowSensors",  
-                                 "lastValueChecked", "intervalDeepOfSearch", "dimensionDeepOfSearch", "modeOfFilter",  
-                                 "rootDirectory", "exceptionDirectories", "exceptionExpertTags", "filterTableChecked"]  
+                                 "lastValueChecked", "intervalDeepOfSearch", "dimensionDeepOfSearch", "filterTableChecked"]  
                 }  
             },  
             "additionalProperties": False,  

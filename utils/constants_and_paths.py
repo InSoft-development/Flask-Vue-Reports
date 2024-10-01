@@ -233,12 +233,6 @@ CONFIG_DEFAULT = {
             "lastValueChecked": True,
             "intervalDeepOfSearch": 10,
             "dimensionDeepOfSearch": "hour",
-            "modeOfFilter": "historian",
-            "rootDirectory": "Root_test",
-            "exceptionDirectories": [
-                "Exception_test"
-            ],
-            "exceptionExpertTags": True,
             "filterTableChecked": False
         }
     }
@@ -356,22 +350,13 @@ CONFIG_SHEMA = {
                         "lastValueChecked": {"type": "boolean"},
                         "intervalDeepOfSearch": {"type": "integer", "minimum": 0},
                         "dimensionDeepOfSearch": {"type": "string", "enum": ["day", "hour", "minute", "second"]},
-                        "modeOfFilter": {"type": "string", "enum": ["historian", "exception"]},
-                        "rootDirectory": {"type": "string"},
-                        "exceptionDirectories": {
-                            "type": "array",
-                            "items": {
-                                "type": "string"
-                            }
-                        },
-                        "exceptionExpertTags": {"type": "boolean"},
                         "filterTableChecked": {"type": "boolean"}
                     },
                     "additionalProperties": False,
                     "required": ["typesOfSensors", "selectionTag", "sensorsAndTemplateValue", "quality",
                                  "dateDeepOfSearch", "interval", "dimension", "countShowSensors",
-                                 "lastValueChecked", "intervalDeepOfSearch", "dimensionDeepOfSearch", "modeOfFilter",
-                                 "rootDirectory", "exceptionDirectories", "exceptionExpertTags", "filterTableChecked"]
+                                 "lastValueChecked", "intervalDeepOfSearch", "dimensionDeepOfSearch",
+                                 "filterTableChecked"]
                 }
             },
             "additionalProperties": False,

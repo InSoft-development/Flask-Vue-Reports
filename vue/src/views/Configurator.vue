@@ -155,44 +155,57 @@ export default {
 
     const defaultCountShowSensors = ref(0)
 
+    let changeDefaultTimeout = null
     const changeDefaultFields = async () => {
-      let formatDateDeepOfSearch = new Date(
-        defaultDateDeepOfSearch.value.toString().split('GMT')[0] + ' UTC'
-      ).toISOString()
-      let defaultFields = {
-        typesOfSensors: defaultChosenTypesOfSensorsData,
-        selectionTag: defaultSelectionTagRadio.value,
-        sensorsAndTemplateValue: defaultTemplate.value
-          .split(',')
-          .map((item) => item.trim())
-          .filter((item) => item.length),
-        quality: defaultChosenQuality,
-        lastValueChecked: defaultLastValueChecked.value,
-        filterTableChecked: defaultFilterTableChecked.value,
-        intervalDeepOfSearch: defaultIntervalDeepOfSearch.value,
-        dimensionDeepOfSearch: defaultDimensionDeepOfSearch.value,
-        dateDeepOfSearch: formatDateDeepOfSearch,
-        interval: defaultInterval.value,
-        dimension: defaultIntervalRadio.value,
-        countShowSensors: defaultCountShowSensors.value,
-        modeOfFilter: defaultModeOfFilterRadio.value,
-        rootDirectory: defaultRootDirectory.value,
-        exceptionDirectories: defaultExceptionDirectories.value
-          .split(',')
-          .map((item) => item.trim())
-          .filter((item) => item.length),
-        exceptionExpertTags: defaultExceptionExpertTags.value
+      if (changeDefaultTimeout) {
+        clearTimeout(changeDefaultTimeout)
       }
-      applicationStore.setFields(defaultFields)
-      await applicationStore.getFields()
-      fillDefaultField()
-      alert('Параметры по умолчанию сохранены')
+
+      changeDefaultTimeout = setTimeout(async function () {
+        statusUpdateButtonActive.value = true
+        let formatDateDeepOfSearch = new Date(
+          defaultDateDeepOfSearch.value.toString().split('GMT')[0] + ' UTC'
+        ).toISOString()
+        let defaultFields = {
+          typesOfSensors: defaultChosenTypesOfSensorsData,
+          selectionTag: defaultSelectionTagRadio.value,
+          sensorsAndTemplateValue: defaultTemplate.value
+            .split(',')
+            .map((item) => item.trim())
+            .filter((item) => item.length),
+          quality: defaultChosenQuality,
+          lastValueChecked: defaultLastValueChecked.value,
+          filterTableChecked: defaultFilterTableChecked.value,
+          intervalDeepOfSearch: defaultIntervalDeepOfSearch.value,
+          dimensionDeepOfSearch: defaultDimensionDeepOfSearch.value,
+          dateDeepOfSearch: formatDateDeepOfSearch,
+          interval: defaultInterval.value,
+          dimension: defaultIntervalRadio.value,
+          countShowSensors: defaultCountShowSensors.value
+        }
+        if (modeClientRadio.value === 'OPC') {
+          let separateTags = {
+            modeOfFilter: defaultModeOfFilterRadio.value,
+            rootDirectory: defaultRootDirectory.value,
+            exceptionDirectories: defaultExceptionDirectories.value
+              .split(',')
+              .map((item) => item.trim())
+              .filter((item) => item.length),
+            exceptionExpertTags: defaultExceptionExpertTags.value
+          }
+          defaultFields = { ...defaultFields, ...separateTags }
+        }
+        await applicationStore.setFields(defaultFields)
+        await applicationStore.getFields()
+        fillDefaultField()
+        statusUpdateTextArea.value = 'Параметры по умолчанию сохранены...\n'
+        statusUpdateButtonActive.value = false
+      }, 500)
     }
 
     const fillDefaultField = () => {
-      console.log(applicationStore.defaultFields)
-      defaultTypesOfSensorsDataValue.value = applicationStore.defaultFields.typesOfSensors
       defaultChosenTypesOfSensorsData = applicationStore.defaultFields.typesOfSensors
+      defaultTypesOfSensorsDataValue.value = applicationStore.defaultFields.typesOfSensors
 
       defaultSelectionTagRadio.value = applicationStore.defaultFields.selectionTag
 
@@ -214,11 +227,13 @@ export default {
 
       defaultCountShowSensors.value = applicationStore.defaultFields.countShowSensors
 
-      defaultModeOfFilterRadio.value = applicationStore.defaultFields.modeOfFilter
-      defaultRootDirectory.value = applicationStore.defaultFields.rootDirectory
-      defaultExceptionDirectories.value =
-        applicationStore.defaultFields.exceptionDirectories.join(', ')
-      defaultExceptionExpertTags.value = applicationStore.defaultFields.exceptionExpertTags
+      if (modeClientRadio.value === 'OPC') {
+        defaultModeOfFilterRadio.value = applicationStore.defaultFields.modeOfFilter
+        defaultRootDirectory.value = applicationStore.defaultFields.rootDirectory
+        defaultExceptionDirectories.value =
+          applicationStore.defaultFields.exceptionDirectories.join(', ')
+        defaultExceptionExpertTags.value = applicationStore.defaultFields.exceptionExpertTags
+      }
     }
 
     onMounted(async () => {
@@ -242,6 +257,7 @@ export default {
       }
 
       await getTypesOfSensors(defaultTypesOfSensorsDataOptions)
+      fillDefaultField()
       statusUpdateButtonActive.value = false
     })
 
@@ -303,7 +319,7 @@ export default {
         clearTimeout(inputTimeout)
       }
 
-      inputTimeout = setTimeout(function () {
+      inputTimeout = setTimeout(async function () {
         try {
           const numberTarget = $event.originalEvent.target
           numberTarget.blur()
@@ -315,9 +331,9 @@ export default {
           alert('Заполните IP адрес и порт')
           return
         }
-        changeOpcServerConfig(ipOPC.value, portOPC.value)
-        getServerConfig(configServer, checkFileActive)
-        getIpAndPortConfig(ipOPC, portOPC, ipCH, portCH, usernameCH, passwordCH)
+        await changeOpcServerConfig(ipOPC.value, portOPC.value)
+        await getServerConfig(configServer, checkFileActive)
+        await getIpAndPortConfig(ipOPC, portOPC, ipCH, portCH, usernameCH, passwordCH)
       }, 500)
     }
 
@@ -328,7 +344,7 @@ export default {
         clearTimeout(inputTimeout)
       }
 
-      inputTimeout = setTimeout(function () {
+      inputTimeout = setTimeout(async function () {
         try {
           const numberTarget = $event.originalEvent.target
           numberTarget.blur()
@@ -340,9 +356,9 @@ export default {
           alert('Заполните IP адрес и порт')
           return
         }
-        changeCHServerConfig(ipCH.value, portCH.value, usernameCH.value, passwordCH.value)
-        getServerConfig(configServer, checkFileActive)
-        getIpAndPortConfig(ipOPC, portOPC, ipCH, portCH, usernameCH, passwordCH)
+        await changeCHServerConfig(ipCH.value, portCH.value, usernameCH.value, passwordCH.value)
+        await getServerConfig(configServer, checkFileActive)
+        await getIpAndPortConfig(ipOPC, portOPC, ipCH, portCH, usernameCH, passwordCH)
       }, 500)
     }
 
@@ -652,6 +668,7 @@ export default {
           name="modeFilterHistorianDefault"
           value="historian"
           :disabled="statusUpdateButtonActive"
+          @change="changeDefaultFields"
         />
         <label for="modeFilterHistorianDefault" class="radio-interval-margin">Historian</label>
       </div>
@@ -663,6 +680,7 @@ export default {
           id="default-root-directory"
           :disabled="statusUpdateButtonActive || defaultModeOfFilterRadio === 'historian'"
           style="width: 100%"
+          @input="changeDefaultFields"
         >
         </InputText>
       </div>
@@ -684,6 +702,7 @@ export default {
           name="modeFilterExceptionDefault"
           value="exception"
           :disabled="statusUpdateButtonActive"
+          @change="changeDefaultFields"
         />
         <label for="modeFilterExceptionDefault" class="radio-interval-margin"
           >Список исключений</label
@@ -699,6 +718,7 @@ export default {
           id="default-exception-directories"
           :disabled="statusUpdateButtonActive || defaultModeOfFilterRadio === 'historian'"
           style="width: 100%"
+          @input="changeDefaultFields"
         >
         </InputText>
         <Checkbox
@@ -706,6 +726,7 @@ export default {
           v-model="defaultExceptionExpertTags"
           :binary="true"
           :disabled="statusUpdateButtonActive || defaultModeOfFilterRadio === 'historian'"
+          @change="changeDefaultFields"
         ></Checkbox>
         <label for="default-exception-expert-tags" class="checkbox-margin"
           >Исключить теги, помеченные экспертом</label
