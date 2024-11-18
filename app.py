@@ -484,6 +484,8 @@ def upload_config(file):
     with open(constants.CONFIG, "w") as write_config:
         json.dump(config, write_config, indent=4)
 
+    logger.warning(config)
+
     return f"Конфиг импортирован. {msg}"
 
 
@@ -752,11 +754,13 @@ def update_kks_all(mode, root_directory, exception_directories, exception_expert
         sid_proc = sid
 
         if mode == "historian":
-            root_directory = "all"
+            # root_directory = "all"
+            root_directory = "begin"
 
         socketio.sleep(5)
-        command_kks_all_string = ["./client", "-k", root_directory, "-c"]
-        command_tail_kks_all_string = f"wc -l {constants.CLIENT_KKS} && tail -1 {constants.CLIENT_KKS}"
+        command_kks_all_string = ["./client", "-k", root_directory, "-c", "all", "-f", 'kks.csv']
+        # command_tail_kks_all_string = f"wc -l {constants.CLIENT_KKS} && tail -1 {constants.CLIENT_KKS}"
+        command_tail_kks_all_string = f"wc -l {constants.CLIENT_KKS} && tail -2 {constants.CLIENT_KKS} | head -1"
         logger.info(f'get from OPC_UA all kks and types')
         logger.info(command_kks_all_string)
 
@@ -768,7 +772,8 @@ def update_kks_all(mode, root_directory, exception_directories, exception_expert
             out = open(f'client{os.sep}out.log', 'w')
             err = open(f'client{os.sep}err.log', 'w')
             p_kks_all = subprocess.Popen(args, stdout=out, preexec_fn=os.setsid,
-                                         stderr=err, cwd=f"{os.getcwd()}{os.sep}client{os.sep}")
+                                         stderr=err, cwd=f"{os.getcwd()}{os.sep}client{os.sep}",
+                                         env={'LD_LIBRARY_PATH': '/home/spa/opt/openssl-1.1.1o'})
             socketio.sleep(10)  # даем небольшое время на наполнение временного файла тегов kks.csv
 
             # Если процесс завершается сразу, то скорее всего произошла ошибка
@@ -791,6 +796,8 @@ def update_kks_all(mode, root_directory, exception_directories, exception_expert
                 # Последний выкаченный тег
                 p_tail = subprocess.Popen(args_tail, stdout=subprocess.PIPE, shell=True)
                 out_tail, err_tail = p_tail.communicate()
+                logger.warning(out_tail)
+                logger.warning(out_tail.decode('utf-8'))
                 records = out_tail.decode('utf-8').split('\n')
                 count = records[0].split()[0]
                 record = records[1].split(';')[0]
@@ -827,7 +834,23 @@ def update_kks_all(mode, root_directory, exception_directories, exception_expert
         #     logger.error(subprocess_exception)
         #     eel.setUpdateStatus(f"Ошибка во время вызова клиента\nОшибка: {subprocess_exception}\n", True)
         #     return subprocess_exception
+        except UnicodeError as decode_error:
+            if p_kks_all:
+                # Убиваем по групповому id, чтобы завершить все дочерние процессы
+                os.killpg(os.getpgid(p_kks_all.pid), signal.SIGINT)
+                p_kks_all = None
+            # Если произошла ошибка во время декодировки тега, то ловим и выводим исключение
+            logger.error(decode_error)
+            socketio.emit("setUpdateStatus",
+                          {"statusString": f"Ошибка во время выполнения процесса\nОшибка: {decode_error}\n",
+                           "serviceFlag": True},
+                          to=sid)
+            return decode_error
         except RuntimeError as run_time_exception:
+            if p_kks_all:
+                # Убиваем по групповому id, чтобы завершить все дочерние процессы
+                os.killpg(os.getpgid(p_kks_all.pid), signal.SIGINT)
+                p_kks_all = None
             # Если произошла ошибка во время выполнения процесса, то ловим и выводим исключение
             logger.error(run_time_exception)
             socketio.emit("setUpdateStatus",
@@ -980,7 +1003,7 @@ def change_update_kks_all(root_directory, exception_directories, exception_exper
 
     def change_update_kks_all_spawn(root_directory, exception_directories, exception_expert):
         """
-        Процедура отмены процесса обновления и уничтожения гринлета gevent
+        Процедура применения списка исключений к уже обновленному файлу тегов
         :param root_directory: корневая папка
         :param exception_directories: список исключений
         :param exception_expert: флаг, исключения тегов, помеченных экспертом
@@ -1133,8 +1156,10 @@ def get_signals_data(types_list, selection_tag, mask_list, kks_list, quality, da
 
             args = ["./client", "-b", f"{command_datetime_begin_time}", "-e", f"{command_datetime_end_time}",
                     "-p", "100", "-t", "10000", "-r", "-xw"]
+
             try:
-                subprocess.run(args, capture_output=True, cwd=f"{os.getcwd()}{os.sep}client{os.sep}", check=True)
+                subprocess.run(args, capture_output=True, cwd=f"{os.getcwd()}{os.sep}client{os.sep}", check=True,
+                               env={'LD_LIBRARY_PATH': '/home/spa/opt/openssl-1.1.1o'})
             except subprocess.CalledProcessError as subprocess_exception:
                 # Если произошла ошибка во время вызова клиента, то ловим и выводим исключение
                 logger.error(subprocess_exception)
@@ -1192,9 +1217,11 @@ def get_signals_data(types_list, selection_tag, mask_list, kks_list, quality, da
                         args = ["./client", "-b", f"{command_datetime_begin_time}", "-e",
                                 f"{command_datetime_end_time}",
                                 "-p", "100", "-t", "10000", "-xw"]
+
                         try:
                             subprocess.run(args, capture_output=True,
-                                           cwd=f"{os.getcwd()}{os.sep}client{os.sep}", check=True)
+                                           cwd=f"{os.getcwd()}{os.sep}client{os.sep}", check=True,
+                                           env={'LD_LIBRARY_PATH': '/home/spa/opt/openssl-1.1.1o'})
                         except subprocess.CalledProcessError as subprocess_exception:
                             # Если произошла ошибка во время вызова клиента, то ловим и выводим исключение
                             logger.error(subprocess_exception)
@@ -1500,8 +1527,10 @@ def get_grid_data(kks, date_begin, date_end, interval, dimension):
 
         args = ["./client", "-b", f"{command_datetime_begin_time_binary}", "-e",
                 f"{command_datetime_end_time_binary}", "-p", "100", "-t", "10000" "-rxw"]
+
         try:
-            subprocess.run(args, capture_output=True, cwd=f"{os.getcwd()}{os.sep}client{os.sep}", check=True)
+            subprocess.run(args, capture_output=True, cwd=f"{os.getcwd()}{os.sep}client{os.sep}", check=True,
+                           env={'LD_LIBRARY_PATH': '/home/spa/opt/openssl-1.1.1o'})
             socketio.emit("setProgressBarGrid", {"count": 10}, to=sid)
         except subprocess.CalledProcessError as subprocess_exception:
             # Если произошла ошибка во время вызова клиента, то ловим и выводим исключение
@@ -2022,8 +2051,10 @@ def get_bounce_signals_data(kks, date, interval, dimension, top):
 
         args = ["./client", "-b", f"{command_datetime_begin_time}",
                 "-e", f"{command_datetime_end_time}", "-p", "100", "-t", "1", "-xw"]
+
         try:
-            subprocess.run(args, capture_output=True, cwd=f"{os.getcwd()}{os.sep}client{os.sep}", check=True)
+            subprocess.run(args, capture_output=True, cwd=f"{os.getcwd()}{os.sep}client{os.sep}", check=True,
+                           env={'LD_LIBRARY_PATH': '/home/spa/opt/openssl-1.1.1o'})
             socketio.emit("setProgressBarBounceSignals", {"count": 50}, to=sid)
         except subprocess.CalledProcessError as subprocess_exception:
             logger.error(subprocess_exception)
@@ -2039,11 +2070,17 @@ def get_bounce_signals_data(kks, date, interval, dimension, top):
         # Достаем фрейм из sqlite
         socketio.emit("setUpdateBounceRequestStatus", {"message": f"Формирование таблиц отчета\n"}, to=sid)
         con_current_data = sqlite3.connect(constants.CLIENT_DATA)
-        query_string = f"SELECT * from {constants.CLIENT_DYNAMIC_TABLE}"
+        query_string_data = f"SELECT * from {constants.CLIENT_DYNAMIC_TABLE}"
+        query_string_kks = f"SELECT  * FROM {constants.CLIENT_STATIC_TABLE}"
 
         df_sqlite = pd.read_sql_query(
-            query_string,
+            query_string_data,
             con_current_data, parse_dates=['t'])
+
+        df_sqlite_kks = pd.read_sql_query(
+            query_string_kks,
+            con_current_data)
+
         con_current_data.close()
 
         if df_sqlite.empty:
@@ -2055,7 +2092,8 @@ def get_bounce_signals_data(kks, date, interval, dimension, top):
         df_counts = pd.DataFrame()
         df_counts['Частота'] = df_sqlite['id'].value_counts()
         df_counts.index.name = 'Наименование датчика'
-        df_counts['Наименование датчика'] = df_counts.index.values.tolist()
+        df_counts['Наименование датчика'] = [df_sqlite_kks.loc[df_sqlite_kks['id'] == id]['name'].values[0]
+                                             for id in df_counts.index.values.tolist()]
 
         socketio.emit("setProgressBarBounceSignals", {"count": 80}, to=sid)
         socketio.emit("setUpdateBounceRequestStatus", {"message": f"Сохранение таблиц отчета\n"}, to=sid)

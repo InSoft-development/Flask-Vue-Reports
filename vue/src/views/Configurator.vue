@@ -384,6 +384,7 @@ export default {
       })
       await getClientMode(modeClientRadio)
       await getServerConfig(configServer, checkFileActive)
+      await getIpAndPortConfig(ipOPC, portOPC, ipCH, portCH, usernameCH, passwordCH)
       await getLastUpdateFileKKS(lastUpdateFileKKS)
       await getTypesOfSensors(defaultTypesOfSensorsDataOptions)
       await applicationStore.getFields()
