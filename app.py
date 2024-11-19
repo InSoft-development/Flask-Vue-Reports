@@ -1174,8 +1174,14 @@ def get_signals_data(types_list, selection_tag, mask_list, kks_list, quality, da
             # Достаем фрейм из sqlite
             con_current_data = sqlite3.connect(constants.CLIENT_DATA)
 
-            query_string = f"SELECT * from {constants.CLIENT_DYNAMIC_TABLE} WHERE id='{element[0]}' " \
-                           f"AND status='{element[-1]}' AND t <= '{parse(date).strftime('%Y-%m-%d %H:%M:%S')}' " \
+            # query_string = f"SELECT * from {constants.CLIENT_DYNAMIC_TABLE} WHERE id='{element[0]}' " \
+            #                f"AND status='{element[-1]}' AND t <= '{parse(date).strftime('%Y-%m-%d %H:%M:%S')}' " \
+            #                f"ORDER BY t DESC LIMIT 1"
+            query_string = f"SELECT {constants.CLIENT_DYNAMIC_TABLE}.*, {constants.CLIENT_STATIC_TABLE}.name AS name " \
+                           f"FROM {constants.CLIENT_DYNAMIC_TABLE} " \
+                           f"JOIN {constants.CLIENT_STATIC_TABLE} ON {constants.CLIENT_DYNAMIC_TABLE}.id = {constants.CLIENT_STATIC_TABLE}.id " \
+                           f"WHERE name='{element[0]}' AND status='{element[-1]}' " \
+                           f"AND t <= '{parse(date).strftime('%Y-%m-%d %H:%M:%S')}' " \
                            f"ORDER BY t DESC LIMIT 1"
             logger.info(query_string)
 
@@ -1293,7 +1299,7 @@ def get_signals_data(types_list, selection_tag, mask_list, kks_list, quality, da
         df_report = pd.DataFrame(
             columns=['Код сигнала (KKS)', 'Дата и время измерения', 'Значение', 'Качество',
                      'Код качества'],
-            data={'Код сигнала (KKS)': df_sqlite['id'],
+            data={'Код сигнала (KKS)': df_sqlite['name'],
                   'Дата и время измерения': df_sqlite['t'],
                   'Значение': df_sqlite['val'],
                   'Качество': df_sqlite['status'],

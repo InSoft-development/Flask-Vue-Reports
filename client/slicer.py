@@ -76,9 +76,13 @@ if __name__ == '__main__':
         print(kks)
         try:
             conn_raw = sqlite3.connect(infile)
-            sql = ("SELECT t as timestamp,val as value, status FROM dynamic_data WHERE id=\"" +
-               kks + "\" ") #and t > \"" + start_date.isoformat() + "\" and t < \"" +
-               #end_date.isoformat() + "\"")
+            # sql = ("SELECT t as timestamp,val as value, status FROM dynamic_data WHERE id=\"" +
+            #    kks + "\" ") #and t > \"" + start_date.isoformat() + "\" and t < \"" +
+            #    #end_date.isoformat() + "\"")
+            sql = ("SELECT t as timestamp,val as value, status, static_data.name as name "
+                   "FROM dynamic_data JOIN static_data ON dynamic_data.id = static_data.id WHERE name=\"" +
+                   kks + "\" ")  # and t > \"" + start_date.isoformat() + "\" and t < \"" +
+            # end_date.isoformat() + "\"")
             data_column = pd.read_sql(sql, conn_raw, parse_dates=['timestamp'])
             if len(data_column) == 0:
                 print("missing data!!")
@@ -106,7 +110,6 @@ if __name__ == '__main__':
         except:
             with open("failed_kks", "a") as f:
                 f.write(kks+"\n")
-
 
     print(time.time() - start_time)
     print(slices1)
