@@ -39,13 +39,14 @@ export const useApplicationStore = defineStore('ApplicationStore', () => {
   const gridTimeLimitInHours = 0.5
   const bounceTimeLimitInHours = 0.5
 
-  const defaultFields = reactive({})
+  let defaultFields = reactive({})
 
   const getFields = async () => {
     await getDefaultFields(defaultFields)
   }
 
   const setFields = async (fields) => {
+    Object.keys(defaultFields).forEach(key => delete defaultFields[key])
     Object.assign(defaultFields, fields)
     await changeDefaultFields(defaultFields)
   }

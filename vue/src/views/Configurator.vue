@@ -257,6 +257,7 @@ export default {
       }
 
       await getTypesOfSensors(defaultTypesOfSensorsDataOptions)
+      await applicationStore.getFields()
       fillDefaultField()
       statusUpdateButtonActive.value = false
     })
