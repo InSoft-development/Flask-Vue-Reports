@@ -6,6 +6,8 @@ import os
 import clickhouse_connect
 from clickhouse_connect.driver import exceptions as clickhouse_exceptions
 
+import pandas as pd
+
 from loguru import logger
 
 import datetime
@@ -399,17 +401,17 @@ def prepare_for_grid_render(df_report, df_report_slice):
 
         if (separate_count % constants.SEPARATED_COUNT == 0) \
                 or (separate_count == len(df_report.columns.tolist()[1:])):
-            temp_json_grid = json.loads(temp_df_slice.to_json(orient='records'))
-            temp_json_status = json.loads(temp_df_status.to_json(orient='records'))
+            temp_json_grid = json.loads(temp_df_slice.to_json(orient='records', date_format='iso'))
+            temp_json_status = json.loads(temp_df_status.to_json(orient='records', date_format='iso'))
 
             grid_separated_json_list.append(temp_json_grid)
             status_separated_json_list.append(temp_json_status)
 
             for index in temp_df_slice.columns.tolist()[1:]:
                 temp_json_grid_single = json.loads(temp_df_slice[['Метка времени', index]].copy()
-                                                   .to_json(orient='records'))
+                                                   .to_json(orient='records', date_format='iso'))
                 temp_json_status_single = json.loads(temp_df_status[['Метка времени', index]].copy()
-                                                     .to_json(orient='records'))
+                                                     .to_json(orient='records', date_format='iso'))
 
                 grid_separated_json_list_single.append(temp_json_grid_single)
                 status_separated_json_list_single.append(temp_json_status_single)
