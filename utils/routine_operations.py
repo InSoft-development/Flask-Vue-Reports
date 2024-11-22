@@ -2,27 +2,29 @@
 Модуль содержит функции рутинных операций (чтение конфигов из файлов, запись конфигов в файлы)
 """
 
-import os
 import clickhouse_connect
 from clickhouse_connect.driver import exceptions as clickhouse_exceptions
 
 import pandas as pd
 
-from loguru import logger
-
-import datetime
-from dateutil.parser import parse
-
 import json
 import jsonschema
 
+import os
+import datetime
+from dateutil.parser import parse
 import ipaddress
 import re
 
 import utils.constants_and_paths as constants
 
+from loguru import logger
 
-def validate_ip_address(ip):
+from typing import Dict, List, Tuple, Union
+from flask_socketio import SocketIO
+
+
+def validate_ip_address(ip: str) -> bool:
     """
     Функция валидации IPv4 адреса
     :param ip: строка IP-адреса
@@ -36,7 +38,7 @@ def validate_ip_address(ip):
         return False
 
 
-def validate_imported_config(config):
+def validate_imported_config(config: dict) -> Tuple[bool, str]:
     """
     Функция валидации импортируемгого конфига
     :param config: json объект конфига
@@ -112,7 +114,7 @@ def validate_imported_config(config):
     return True, ""
 
 
-def read_clickhouse_server_conf():
+def read_clickhouse_server_conf() -> Tuple[str, int, str, str]:
     """
     Функция чтения конфигурации клиента Clickhouse
     :return: ip: IPv4 адрес клиента Clickhouse,
@@ -131,7 +133,8 @@ def read_clickhouse_server_conf():
     return ip, port, username, password
 
 
-def get_client(sid, socketio, ip, port, username, password):
+def get_client(sid: int, socketio: SocketIO, ip: str, port: int, username: str, password: str) -> \
+        Union[str, clickhouse_connect.driver.HttpClient]:
     """
     Функция инициализации и проверки клиента Clickhouse
     :param sid: идентификатор сокета
@@ -162,7 +165,7 @@ def get_client(sid, socketio, ip, port, username, password):
         return f"Ошибка конфигурации клиента Clickhouse"
 
 
-def create_client(ip, port, username, password):
+def create_client(ip: str, port: int, username: str, password: str) -> clickhouse_connect.driver.HttpClient:
     """
     Функция инициализации клиента Clickhouse
     :param ip: IPv4 адрес клиента Clickhouse
@@ -174,8 +177,9 @@ def create_client(ip, port, username, password):
     return clickhouse_connect.get_client(host=ip, port=port, username=username, password=password)
 
 
-def fill_signals_query(kks_requested_list, quality, date, last_value_checked, interval_or_date_checked,
-                       interval, dimension, date_deep_search):
+def fill_signals_query(kks_requested_list: List[str], quality: List[str], date: str,
+                       last_value_checked: bool, interval_or_date_checked: bool,
+                       interval: int, dimension: str, date_deep_search: str) -> str:
     """
     Функция заполнения запроса срезов сигнала к Clickhouse
     :param kks_requested_list: массив kks напрямую, указанные пользователем
@@ -234,7 +238,7 @@ def fill_signals_query(kks_requested_list, quality, date, last_value_checked, in
     return arguments_string + body_of_query
 
 
-def fill_grid_drop_table():
+def fill_grid_drop_table() -> str:
     """
     Функция заполнения запроса сброса временной таблицы сетки к Clickhouse
     :return: строка запроса сброса временной таблицы сетки
@@ -242,7 +246,7 @@ def fill_grid_drop_table():
     return f"DROP TEMPORARY TABLE IF EXISTS temp_grid"
 
 
-def fill_grid_temporary_table(kks, date_begin, date_end, interval, dimension):
+def fill_grid_temporary_table(kks: List[str], date_begin: str, date_end: str, interval: int, dimension: str) -> str:
     """
     Функция заполнения запроса временной таблицы сетки к Clickhouse
     :param kks: массив kks
@@ -304,7 +308,8 @@ def fill_grid_temporary_table(kks, date_begin, date_end, interval, dimension):
     return arguments_string + body_of_query
 
 
-def fill_grid_queries_value(kks, date_begin, date_end, interval, dimension):
+def fill_grid_queries_value(kks: List[str], date_begin: str, date_end: str,
+                            interval: int, dimension: str) -> Tuple[str, str, str, str]:
     """
     Функция заполнения запроса значений сетки к Clickhouse
     :param kks: массив kks
@@ -337,7 +342,7 @@ def fill_grid_queries_value(kks, date_begin, date_end, interval, dimension):
            query_value, query_status
 
 
-def fill_bounce_query(kks, date, interval, dimension, top):
+def fill_bounce_query(kks: List[str], date: str, interval: int, dimension: str, top: int) -> str:
     """
     Функция заполнения запроса дребезга к Clickhouse
     :param kks: массив kks
@@ -377,7 +382,8 @@ def fill_bounce_query(kks, date, interval, dimension, top):
     return arguments_string + body_of_query
 
 
-def prepare_for_grid_render(df_report, df_report_slice):
+def prepare_for_grid_render(df_report: pd.DataFrame, df_report_slice: pd.DataFrame) -> \
+        Tuple[List[dict], List[dict], List[dict], List[dict]]:
     """
     Функция подготовки рендеринга в шаблоне
     :param df_report: pandas фрейм значений сетки

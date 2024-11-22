@@ -31,7 +31,6 @@ WEB_DIR_ASSETS = f'{WEB_DIR}assets{os.sep}'
 WEB_DIR_ASSETS_INDEX_JS = f'{WEB_DIR_ASSETS}js{os.sep}'
 
 CLIENT_DIR = f'client{os.sep}'
-CLIENT_BINARY = f'{CLIENT_DIR}client_lesson02.so'
 CLIENT_COMMON_DATA = f'{CLIENT_DIR}common_data.sqlite'
 CLIENT_COMMON_DATA_TABLE = f'common_data'
 CLIENT_DYNAMIC_TABLE = f'dynamic_data'
@@ -77,6 +76,7 @@ OPC_TYPES_OF_SENSORS = [
     "SByte",
     "Int32"
 ]
+# TODO: Используется в routine_operations.py
 
 CH_TYPES_OF_SENSORS = [
     "DOUBLE",
@@ -87,6 +87,7 @@ CH_TYPES_OF_SENSORS = [
     "UINT16",
     "UINT32"
 ]
+# TODO: Используется в routine_operations.py
 
 QUALITY = [
     "8 - (BNC) - ОТКАЗ СВЯЗИ (TIMEOUT)",

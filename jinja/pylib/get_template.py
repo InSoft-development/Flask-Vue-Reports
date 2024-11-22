@@ -9,8 +9,10 @@ import utils.constants_and_paths as constants
 
 from loguru import logger
 
+from typing import Dict, List, Tuple, Union
 
-def get_unfilled_html_from_source(content_for_render):
+
+def get_unfilled_html_from_source(content_for_render: str) -> str:
     logger.info(f"get_unfilled_html_from_source()")
     file_loader = FileSystemLoader(searchpath=constants.JINJA_TEMPLATE_SOURCE)
     env = Environment(loader=file_loader)
@@ -19,7 +21,7 @@ def get_unfilled_html_from_source(content_for_render):
     return default_html
 
 
-def render_slice(json_slice_table):
+def render_slice(json_slice_table: dict) -> None:
     logger.info(f"render_slice(json_slice_table)")
     # Рендерим header, content, footer
     with open(constants.JINJA_TEMPLATE_SLICE_TABLE, 'r') as slice_table_template_html:
@@ -32,8 +34,9 @@ def render_slice(json_slice_table):
     pdfkit.from_string(html, constants.REPORT_SLICE, options=constants.PDF_OPTIONS)
 
 
-def render_grid(json_code_table, json_grid_table_list, json_grid_status_table_list,
-                json_grid_table_list_single, json_grid_status_table_list_single, parameters_of_request):
+def render_grid(json_code_table: dict, json_grid_table_list: List[dict], json_grid_status_table_list: List[dict],
+                json_grid_table_list_single: List[dict], json_grid_status_table_list_single: List[dict],
+                parameters_of_request: dict) -> None:
     logger.info(f"render_grid(json_code_table, json_grid_table_list, json_grid_status_table_list,"
                 f"json_grid_table_list_single, json_grid_status_table_list_single, parameters_of_request)")
 
@@ -78,13 +81,8 @@ def render_grid(json_code_table, json_grid_table_list, json_grid_status_table_li
             zip_file.writestr(data=sensor, zinfo_or_arcname=f"{index}.html")
             logger.info(f"{index}.html добавлен в архив")
 
-        # # Добавляем стили и js скрипты в архив
-        # for file_path, file_name in constants.DOWNLOADED_STYLES_AND_JS_PATH.items():
-        #     zip_file.write(file_path, arcname=file_name)
-        #     logger.info(f"{file_name} добавлен в архив")
 
-
-def render_bounce(json_bounce_table, parameters_of_request):
+def render_bounce(json_bounce_table: dict, parameters_of_request: dict) -> None:
     logger.info(f"render_slice(json_bounce_table, parameters_of_request)")
     # Рендерим header, content, footer
     with open(constants.JINJA_TEMPLATE_BOUNCE_TABLE, 'r') as bounce_table_template_html:

@@ -6,35 +6,37 @@ from flask import Flask, request, send_from_directory
 from flask_cors import CORS
 from flask_socketio import SocketIO
 
+import argparse
 import os
 import signal
-import argparse
-from bs4 import BeautifulSoup as bs
-
-import time
-
-import shutil
 
 import sqlite3
 from clickhouse_connect.driver import exceptions as clickhouse_exceptions
 
 from gevent import subprocess, spawn
 from gevent.subprocess import check_output
-import itertools
 
 import pandas as pd
-import re
 
-import json
-from loguru import logger
 import datetime
 from dateutil.parser import parse
+
+from bs4 import BeautifulSoup as bs
+import json
+import itertools
+import re
+import shutil
+import time
 
 from utils.correct_start import check_correct_application_structure
 import utils.constants_and_paths as constants
 import utils.routine_operations as operations
 
 from jinja.pylib.get_template import render_slice, render_grid, render_bounce
+
+from loguru import logger
+
+from typing import Dict, List, Tuple, Union
 
 VERSION = '1.0.3'
 
@@ -126,7 +128,7 @@ def disconnect():
 
 
 @socketio.on("get_file_checked")
-def get_file_checked():
+def get_file_checked() -> Tuple[bool, str, bool]:
     """
     Функция возвращает результат проверки существования файла тегов kks_all.csv или верность настройки клиента Clickhouse
     :return: True/False результат проверки существования файла тегов kks_all.csv
@@ -150,7 +152,7 @@ def get_file_checked():
 
 
 @socketio.on("get_client_mode")
-def get_client_mode():
+def get_client_mode() -> str:
     """
     Функция возвращает выбранный режим работы клиента
     :return: строка ('OPC'/'CH') наименования выбранного режима клиента
@@ -167,7 +169,7 @@ def get_client_mode():
 
 
 @socketio.on("change_client_mode")
-def change_client_mode(client_mode):
+def change_client_mode(client_mode: str) -> Union[None, str]:
     """
     Процедура записывает в файл выбранный режим работы клиента
     :param client_mode: строка ('OPC'/'CH') наименования выбранного режима клиента
@@ -195,7 +197,7 @@ def change_client_mode(client_mode):
 
 
 @socketio.on("get_server_config")
-def get_server_config():
+def get_server_config() -> Tuple[str, bool]:
     """
     Функция возвращает конфигурацию клиента OPC UA или Clickhouse
     :return: строка конфигурации клиента OPC UA, True/False результат проверки существования файла тегов kks_all.csv
@@ -222,7 +224,7 @@ def get_server_config():
             logger.info("Clickhouse disconnected")
             return f'Текущая конфигурация клиента CH: {host}, {username}', bool(check)
         except AttributeError as attr_error:
-            logger.info(attr_error)
+            logger.error(attr_error)
             return client, os.path.isfile(constants.DATA_KKS_ALL)
         except clickhouse_exceptions.Error as error:
             logger.error(error)
@@ -234,7 +236,7 @@ def get_server_config():
 
 
 @socketio.on("get_last_update_file_kks")
-def get_last_update_file_kks():
+def get_last_update_file_kks() -> str:
     """
     Функция возвращает дату последнего обновления файла тегов kks_all.csv или таблицы clickhouse
     :return: строка даты последнего обновления файла тегов kks_all.csv или таблицы clickhouse
@@ -265,7 +267,7 @@ def get_last_update_file_kks():
             logger.info("Clickhouse disconnected")
             return modify_time[1]
         except AttributeError as attr_error:
-            logger.info(attr_error)
+            logger.error(attr_error)
             return client
         except clickhouse_exceptions.Error as error:
             logger.error(error)
@@ -277,7 +279,7 @@ def get_last_update_file_kks():
 
 
 @socketio.on("get_ip_port_config")
-def get_ip_port_config():
+def get_ip_port_config() -> Tuple[str, int, str, int, str, str]:
     """
     Функция возвращает ip-адрес и порт клиента OPC UA
     :return: строка ip-адресс, строка порта
@@ -295,7 +297,7 @@ def get_ip_port_config():
 
 
 @socketio.on("get_default_fields")
-def get_default_fields():
+def get_default_fields() -> Union[Dict[str, Union[str, int, bool, List[str]]], str]:
     """
     Функция возвращает конфигурацию вводимых полей для запроса по умолчанию
     :return: json объект полей по умочанию
@@ -324,7 +326,7 @@ def get_default_fields():
 
 
 @socketio.on("change_opc_server_config")
-def change_opc_server_config(ip, port):
+def change_opc_server_config(ip: str, port: int) -> Tuple[bool, str]:
     """
     Процедура заменяет строку конфигурации клиента OPC UA
     :param ip: ip-адресс
@@ -366,7 +368,7 @@ def change_opc_server_config(ip, port):
 
 
 @socketio.on("change_ch_server_config")
-def change_ch_server_config(ip, port, username, password):
+def change_ch_server_config(ip: str, port: int, username: str, password: str) -> Tuple[bool, str]:
     """
     Процедура заменяет строку конфигурации клиента БД CH
     :param ip: ip-адресс
@@ -414,7 +416,7 @@ def change_ch_server_config(ip, port, username, password):
 
 
 @socketio.on("change_default_fields")
-def change_default_fields(default_fields):
+def change_default_fields(default_fields: dict) -> str:
     """
     Процедура сохраняет конфигурацию вводимых полей для запроса по умолчанию в конфиг json
     :param default_fields: json объект полей по умолчанию
@@ -451,7 +453,7 @@ def change_default_fields(default_fields):
 
 
 @socketio.on("upload_config")
-def upload_config(file):
+def upload_config(file: dict) -> str:
     """
     Функция импортирует пользовательский конфиг
     :param file: json файл конфига
@@ -490,10 +492,10 @@ def upload_config(file):
 
 
 @socketio.on("get_types_of_sensors")
-def get_types_of_sensors():
+def get_types_of_sensors() -> List[str]:
     """
     Функция возвращает все типы данных тегов kks, найденных в файле тегов kks_all.csv
-    :return: массив строк типовы данных
+    :return: массив строк типов данных
     """
     logger.info(f"get_types_of_sensors()")
 
@@ -520,7 +522,7 @@ def get_types_of_sensors():
 
 
 @socketio.on("get_kks_tag_exist")
-def get_kks_tag_exist(kks_tag):
+def get_kks_tag_exist(kks_tag: str) -> bool:
     """
     Функция возвращает результат проверки наличия тега в файле тегов kks_all.csv или в Clickhouse
     :param kks_tag: проверяемый тег kks
@@ -553,7 +555,7 @@ def get_kks_tag_exist(kks_tag):
 
 
 @socketio.on("get_kks_by_masks")
-def get_kks_by_masks(types_list, mask_list):
+def get_kks_by_masks(types_list: List[str], mask_list: List[str]) -> List[Union[str, None]]:
     """
     Функция возвращает массив kks датчиков из файла тегов kks_all.csv или из Clickhouse по маске шаблона при поиске kks
     :param types_list: массив выбранных пользователем типов данных
@@ -604,7 +606,7 @@ def get_kks_by_masks(types_list, mask_list):
 
 
 @socketio.on("get_kks")
-def get_kks(types_list, mask_list, kks_list, selection_tag=None):
+def get_kks(types_list: List[str], mask_list: List[str], kks_list: List[str], selection_tag: str = None) -> List[str]:
     """
     Функция возвращает массив kks датчиков из файла тегов kks_all.csv по маске шаблона.
     Используется при выполнеии запросов на бэкенде
@@ -729,7 +731,7 @@ def get_kks(types_list, mask_list, kks_list, selection_tag=None):
 
 
 @socketio.on("update_kks_all")
-def update_kks_all(mode, root_directory, exception_directories, exception_expert):
+def update_kks_all(mode: str, root_directory: str, exception_directories: List[str], exception_expert: bool) -> None:
     """
     Процедура запуска гринлета обновления файла тегов kks_all.csv
     :param mode: выбранный режим фильтрации обновления тегов
@@ -739,7 +741,8 @@ def update_kks_all(mode, root_directory, exception_directories, exception_expert
     """
     logger.info(f"update_kks_all({mode}, {root_directory}, {exception_directories}, {exception_expert})")
 
-    def update_kks_all_spawn(mode, root_directory, exception_directories, exception_expert):
+    def update_kks_all_spawn(mode: str, root_directory: str,
+                             exception_directories: List[str], exception_expert: bool) -> str:
         """
         Процедура запуска обновления файла тегов kks_all.csv
         :param mode: выбранный режим фильтрации обновления тегов
@@ -829,11 +832,6 @@ def update_kks_all(mode, root_directory, exception_directories, exception_expert
             record = records[1].split(';')[0]
             socketio.emit("setUpdateStatus", {"statusString": f"{count}. {record} Успех\n", "serviceFlag": True},
                           to=sid)
-        # except subprocess.CalledProcessError as subprocess_exception:
-        #     # Если произошла ошибка во время вызова клиента, то ловим и выводим исключение
-        #     logger.error(subprocess_exception)
-        #     eel.setUpdateStatus(f"Ошибка во время вызова клиента\nОшибка: {subprocess_exception}\n", True)
-        #     return subprocess_exception
         except UnicodeError as decode_error:
             if p_kks_all:
                 # Убиваем по групповому id, чтобы завершить все дочерние процессы
@@ -845,7 +843,7 @@ def update_kks_all(mode, root_directory, exception_directories, exception_expert
                           {"statusString": f"Ошибка во время выполнения процесса\nОшибка: {decode_error}\n",
                            "serviceFlag": True},
                           to=sid)
-            return decode_error
+            return f'{decode_error}'
         except RuntimeError as run_time_exception:
             if p_kks_all:
                 # Убиваем по групповому id, чтобы завершить все дочерние процессы
@@ -857,7 +855,7 @@ def update_kks_all(mode, root_directory, exception_directories, exception_expert
                           {"statusString": f"Ошибка во время выполнения процесса\nОшибка: {run_time_exception}\n",
                            "serviceFlag": True},
                           to=sid)
-            return run_time_exception
+            return f'{run_time_exception}'
 
         shutil.copy(constants.CLIENT_KKS, constants.DATA_KKS_ALL)  # копируем kks.csv в data/kks_all.csv
         shutil.copy(constants.CLIENT_KKS, constants.DATA_KKS_ALL_BACK)  # копируем kks.csv в data/kks_all_back.csv
@@ -878,20 +876,20 @@ def update_kks_all(mode, root_directory, exception_directories, exception_expert
                           {"statusString": f"Неверный синтаксис регулярного выражения {regular_expression_except}\n",
                            "serviceFlag": True},
                           to=sid)
-            return regular_expression_except
+            return f'{regular_expression_except}'
         except FileNotFoundError as csv_exception:
             logger.error(csv_exception)
             socketio.emit("setUpdateStatus",
                           {"statusString": f"Ошибка при попытке загрузить файл kks_all.csv\nОшибка: {csv_exception}\n",
                            "serviceFlag": True},
                           to=sid)
-            return csv_exception
+            return f'{csv_exception}'
 
         socketio.emit("setUpdateStatus", {"statusString": f"Обновление тегов закончено\n", "serviceFlag": True},
                       to=sid)
         return f"Обновление тегов закончено\n"
 
-    def update_from_ch_kks_all_spawn():
+    def update_from_ch_kks_all_spawn() -> str:
         """
         Процедура запуска обновления файла тегов kks_all.csv
         """
@@ -957,7 +955,7 @@ def update_kks_all(mode, root_directory, exception_directories, exception_expert
 
 
 @socketio.on("update_cancel")
-def update_cancel():
+def update_cancel() -> None:
     """
     Процедура отмены процесса обновления и уничтожения гринлета gevent
     """
@@ -992,7 +990,7 @@ def update_cancel():
 
 
 @socketio.on("change_update_kks_all")
-def change_update_kks_all(root_directory, exception_directories, exception_expert):
+def change_update_kks_all(root_directory: str, exception_directories: List[str], exception_expert: bool) -> None:
     """
     Процедура применения списка исключений к уже обновленному файлу тегов
     :param root_directory: корневая папка
@@ -1001,7 +999,8 @@ def change_update_kks_all(root_directory, exception_directories, exception_exper
     """
     logger.info(f"change_update_kks_all({root_directory}, {exception_directories}, {exception_expert})")
 
-    def change_update_kks_all_spawn(root_directory, exception_directories, exception_expert):
+    def change_update_kks_all_spawn(root_directory: str,
+                                    exception_directories: List[str], exception_expert: bool) -> str:
         """
         Процедура применения списка исключений к уже обновленному файлу тегов
         :param root_directory: корневая папка
@@ -1035,14 +1034,14 @@ def change_update_kks_all(root_directory, exception_directories, exception_exper
                           {"statusString": f"Неверный синтаксис регулярного выражения {regular_expression_except}\n",
                            "serviceFlag": True},
                           to=sid)
-            return regular_expression_except
+            return f'{regular_expression_except}'
         except FileNotFoundError as csv_exception:
             logger.error(csv_exception)
             socketio.emit("setUpdateStatus",
                           {"statusString": f"Ошибка при попытке загрузить файл kks_all.csv\nОшибка: {csv_exception}\n",
                            "serviceFlag": True},
                           to=sid)
-            return csv_exception
+            return f'{csv_exception}'
         socketio.emit("setUpdateStatus", {"statusString": f"Применение списка исключений успешно завершено\n",
                                           "serviceFlag": False}, to=sid)
 
@@ -1060,16 +1059,17 @@ def change_update_kks_all(root_directory, exception_directories, exception_exper
         return
 
     # Запуск изменения обновленного файла тегов на основе списка исключений через gevent
-    change_update_greenlet = spawn(change_update_kks_all_spawn, root_directory, exception_directories,
-                                       exception_expert)
+    change_update_greenlet = spawn(change_update_kks_all_spawn, root_directory, exception_directories, exception_expert)
     gevent.joinall([change_update_greenlet])
 
     sid_proc = None
 
 
 @socketio.on("get_signals_data")
-def get_signals_data(types_list, selection_tag, mask_list, kks_list, quality, date,
-                     last_value_checked, interval_or_date_checked, interval, dimension, date_deep_search):
+def get_signals_data(types_list: List[str], selection_tag: str,
+                     mask_list: List[str], kks_list: List[str], quality: List[str],
+                     date: str, last_value_checked: bool, interval_or_date_checked: bool,
+                     interval: int, dimension: str, date_deep_search: str) -> Union[str, dict]:
     """
     Функция запуска гринлета выполнения запроса по срезам тегов
     :param types_list: массив выбранных пользователем типов данных
@@ -1088,8 +1088,10 @@ def get_signals_data(types_list, selection_tag, mask_list, kks_list, quality, da
     logger.info(f"get_signals_data({types_list}, {selection_tag}, {mask_list}, {kks_list}, {quality}, {date},"
                 f"{last_value_checked}, {interval_or_date_checked}, {interval}, {dimension}, {date_deep_search})")
 
-    def get_signals_data_spawn(types_list, selection_tag, mask_list, kks_list, quality, date,
-                               last_value_checked, interval_or_date_checked, interval, dimension, date_deep_search):
+    def get_signals_data_spawn(types_list: List[str], selection_tag: str,
+                               mask_list: List[str], kks_list: List[str], quality: List[str],
+                               date: str, last_value_checked: bool, interval_or_date_checked: bool,
+                               interval: int, dimension: str, date_deep_search: str) -> Union[str, None, dict]:
         """
         Функция запуска выполнения запроса по срезам тегов по OPC UA
         :param types_list: массив выбранных пользователем типов данных
@@ -1330,8 +1332,10 @@ def get_signals_data(types_list, selection_tag, mask_list, kks_list, quality, da
                       to=sid)
         return slice
 
-    def get_signals_from_ch_data_spawn(types_list, selection_tag, mask_list, kks_list, quality, date,
-                                       last_value_checked, interval_or_date_checked, interval, dimension, date_deep_search):
+    def get_signals_from_ch_data_spawn(types_list: List[str], selection_tag: str,
+                                       mask_list: List[str], kks_list: List[str], quality: List[str],
+                                       date: str, last_value_checked: bool, interval_or_date_checked: bool,
+                                       interval: int, dimension: str, date_deep_search: str) -> Union[str, dict]:
         """
         Функция запуска выполнения запроса по срезам тегов из Clickhouse
         :param types_list: массив выбранных пользователем типов данных
@@ -1450,7 +1454,7 @@ def get_signals_data(types_list, selection_tag, mask_list, kks_list, quality, da
 
 
 @socketio.on("signals_data_cancel")
-def signals_data_cancel():
+def signals_data_cancel() -> None:
     """
     Процедура отмены процесса выполнения запросов срезов и уничтожения гринлета gevent
     """
@@ -1475,7 +1479,8 @@ def signals_data_cancel():
 
 
 @socketio.on("get_grid_data")
-def get_grid_data(kks, date_begin, date_end, interval, dimension):
+def get_grid_data(kks: List[str], date_begin: str, date_end: str,
+                  interval: int, dimension: str) -> Union[str, None, Tuple[dict, dict, int]]:
     """
     Функция запуска гринлета выполнения запроса сетки
     :param kks: массив kks
@@ -1487,7 +1492,8 @@ def get_grid_data(kks, date_begin, date_end, interval, dimension):
     """
     logger.info(f"get_grid_data({kks}, {date_begin}, {date_end}, {interval}, {dimension})")
 
-    def get_grid_data_spawn(kks, date_begin, date_end, interval, dimension):
+    def get_grid_data_spawn(kks: List[str], date_begin: str, date_end: str,
+                            interval: int, dimension: str) -> Union[str, None, Tuple[dict, dict, int]]:
         """
         Функция запуска выполнения запроса сетки
         :param kks: массив kks
@@ -1640,7 +1646,8 @@ def get_grid_data(kks, date_begin, date_end, interval, dimension):
                json.loads(df_report_slice[constants.FIRST:constants.LAST].to_json(orient='records')),\
                len(df_report)
 
-    def get_grid_from_ch_data_spawn(kks, date_begin, date_end, interval, dimension):
+    def get_grid_from_ch_data_spawn(kks: List[str], date_begin: str, date_end: str,
+                                    interval: int, dimension: str) -> Union[str, Tuple[dict, dict, int]]:
         """
         Функция запуска выполнения запроса сетки
         :param kks: массив kks
@@ -1788,7 +1795,7 @@ def get_grid_data(kks, date_begin, date_end, interval, dimension):
 
 
 @socketio.on("get_grid_part_data")
-def get_grid_part_data(first, last):
+def get_grid_part_data(first: int, last: int) -> Tuple[dict, dict]:
     """
     Функция выгрузки части данных таблицы сетки
     :param first: индекс начальной строки выгрузки скроллера
@@ -1803,7 +1810,7 @@ def get_grid_part_data(first, last):
            json.loads(REPORT_DF_STATUS.iloc[first:last].to_json(orient='records'))
 
 
-def apply_filters(filters):
+def apply_filters(filters: dict) -> None:
     """
     Процедура применения фильтров по столбцов
     :param filters: объект фильтра таблицы сетки
@@ -1822,7 +1829,7 @@ def apply_filters(filters):
 
 
 @socketio.on("get_grid_sorted_and_filtered_data")
-def get_grid_sorted_and_filtered_data(params):
+def get_grid_sorted_and_filtered_data(params: dict) -> Tuple[dict, dict, int]:
     """
     Функция фильтрации по столбцам таблицы сетки
     :param params: объект сортировки и фильтра таблицы сетки
@@ -1845,12 +1852,12 @@ def get_grid_sorted_and_filtered_data(params):
                               inplace=True)
         REPORT_DF_STATUS = REPORT_DF_STATUS.reindex(REPORT_DF.index)
 
-    return json.loads(REPORT_DF.iloc[constants.FIRST:constants.LAST].to_json(orient='records')), \
+    return json.loads(REPORT_DF.iloc[constants.FIRST:constants.LAST].to_json(orient='records')),\
            json.loads(REPORT_DF_STATUS.iloc[constants.FIRST:constants.LAST].to_json(orient='records')), \
            len(REPORT_DF)
 
 
-def starts_with(col, val):
+def starts_with(col: str, val: str) -> None:
     """
     Процедура фильтрации колонки датафрейма по началу значения
     :param col: наименование колонки
@@ -1870,7 +1877,7 @@ def starts_with(col, val):
         REPORT_DF[col] = REPORT_DF[col].astype(float)
 
 
-def contains(col, val):
+def contains(col: str, val: str) -> None:
     """
     Процедура фильтрации колонки датафрейма по содержимому значения
     :param col: наименование колонки
@@ -1890,7 +1897,7 @@ def contains(col, val):
         REPORT_DF[col] = REPORT_DF[col].astype(float)
 
 
-def not_contains(col, val):
+def not_contains(col: str, val: str) -> None:
     """
     Процедура фильтрации колонки датафрейма по отсутсвию содержания значения
     :param col: наименование колонки
@@ -1910,7 +1917,7 @@ def not_contains(col, val):
         REPORT_DF[col] = REPORT_DF[col].astype(float)
 
 
-def ends_with(col, val):
+def ends_with(col: str, val: str) -> None:
     """
     Процедура фильтрации колонки датафрейма по окончанию значения
     :param col: наименование колонки
@@ -1930,7 +1937,7 @@ def ends_with(col, val):
         REPORT_DF[col] = REPORT_DF[col].astype(float)
 
 
-def equals(col, val):
+def equals(col: str, val: str) -> None:
     """
     Процедура фильтрации колонки датафрейма по равенству значения
     :param col: наименование колонки
@@ -1950,7 +1957,7 @@ def equals(col, val):
         REPORT_DF[col] = REPORT_DF[col].astype(float)
 
 
-def not_equals(col, val):
+def not_equals(col: str, val: str) -> None:
     """
     Процедура фильтрации колонки датафрейма по не равенству значения
     :param col: наименование колонки
@@ -1970,7 +1977,7 @@ def not_equals(col, val):
         REPORT_DF[col] = REPORT_DF[col].astype(float)
 
 
-def no_filter(col, val):
+def no_filter(col: str, val: str) -> None:
     """
     Процедура сброса фильтра
     :param col: наименование колонки
@@ -1982,7 +1989,7 @@ def no_filter(col, val):
 
 
 @socketio.on("grid_data_cancel")
-def grid_data_cancel():
+def grid_data_cancel() -> None:
     """
     Процедура отмены процесса выполнения запросов сетки и уничтожения гринлета gevent
     :return:
@@ -2008,7 +2015,8 @@ def grid_data_cancel():
 
 
 @socketio.on("get_bounce_signals_data")
-def get_bounce_signals_data(kks, date, interval, dimension, top):
+def get_bounce_signals_data(kks: List[str], date: str, interval: int,
+                            dimension: str, top: int) -> Union[str, None, dict]:
     """
     Функция запуска гринлета выполнения запроса дребезга
     :param kks: массив kks
@@ -2020,7 +2028,8 @@ def get_bounce_signals_data(kks, date, interval, dimension, top):
     """
     logger.info(f"get_bounce_signals_data({kks}, {date}, {interval}, {dimension}, {top})")
 
-    def get_bounce_signals_data_spawn(kks, date, interval, dimension, top):
+    def get_bounce_signals_data_spawn(kks: List[str], date: str, interval: int,
+                                      dimension: str, top: int) -> Union[str, None, dict]:
         """
         Функция запуска выполнения запроса дребезга
         :param kks: массив kks
@@ -2126,7 +2135,8 @@ def get_bounce_signals_data(kks, date, interval, dimension, top):
 
         return bounce
 
-    def get_bounce_from_ch_signals_data_spawn(kks, date, interval, dimension, top):
+    def get_bounce_from_ch_signals_data_spawn(kks: List[str], date: str, interval: int,
+                                              dimension: str, top: int) -> Union[str, dict]:
         """
         Функция запуска выполнения запроса дребезга
         :param kks: массив kks
@@ -2165,7 +2175,7 @@ def get_bounce_signals_data(kks, date, interval, dimension, top):
         except clickhouse_exceptions.Error as error:
             logger.error(error)
             socketio.emit("setUpdateGridRequestStatus", {"message": f"Ошибка: {error}\n"}, to=sid)
-            return error
+            return f'{error}'
 
         logger.info(df_bounce)
 
@@ -2234,7 +2244,7 @@ def get_bounce_signals_data(kks, date, interval, dimension, top):
 
 
 @socketio.on("bounce_data_cancel")
-def bounce_data_cancel():
+def bounce_data_cancel() -> None:
     """
     Процедура отмены процесса выполнения запросов дребезга сигналов и уничтожения гринлета gevent
     :return:
