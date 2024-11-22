@@ -12,20 +12,20 @@ from loguru import logger
 from typing import Dict, List, Tuple, Union
 
 
-def get_unfilled_html_from_source(content_for_render: str) -> str:
+def get_unfilled_html_from_source(content_for_render: str, url: str) -> str:
     logger.info(f"get_unfilled_html_from_source()")
     file_loader = FileSystemLoader(searchpath=constants.JINJA_TEMPLATE_SOURCE)
     env = Environment(loader=file_loader)
     tm = env.get_template('template.html')
-    default_html = tm.render(content=content_for_render)
+    default_html = tm.render(content=content_for_render, url=url)
     return default_html
 
 
-def render_slice(json_slice_table: dict) -> None:
+def render_slice(json_slice_table: dict, url: str) -> None:
     logger.info(f"render_slice(json_slice_table)")
     # Рендерим header, content, footer
     with open(constants.JINJA_TEMPLATE_SLICE_TABLE, 'r') as slice_table_template_html:
-        html_template = get_unfilled_html_from_source(slice_table_template_html.read())
+        html_template = get_unfilled_html_from_source(slice_table_template_html.read(), url)
 
     # Рендерим html
     string_loader = BaseLoader()
@@ -36,7 +36,7 @@ def render_slice(json_slice_table: dict) -> None:
 
 def render_grid(json_code_table: dict, json_grid_table_list: List[dict], json_grid_status_table_list: List[dict],
                 json_grid_table_list_single: List[dict], json_grid_status_table_list_single: List[dict],
-                parameters_of_request: dict) -> None:
+                parameters_of_request: dict, url: str) -> None:
     logger.info(f"render_grid(json_code_table, json_grid_table_list, json_grid_status_table_list,"
                 f"json_grid_table_list_single, json_grid_status_table_list_single, parameters_of_request)")
 
@@ -64,10 +64,10 @@ def render_grid(json_code_table: dict, json_grid_table_list: List[dict], json_gr
                         in enumerate(zip(json_grid_table_list_single, json_grid_status_table_list_single))]
 
     # Рендерим header, content, footer
-    html = get_unfilled_html_from_source(table_render_html)
+    html = get_unfilled_html_from_source(table_render_html, url)
 
     # Рендерим header, content, footer для отчета по каждому датчику
-    sensor_html_list = [get_unfilled_html_from_source(sensor) for sensor in sensor_html_list]
+    sensor_html_list = [get_unfilled_html_from_source(sensor, url) for sensor in sensor_html_list]
 
     # Рендерим общий html
     pdfkit.from_string(html, constants.REPORT_GRID, options=constants.PDF_OPTIONS)
@@ -82,11 +82,11 @@ def render_grid(json_code_table: dict, json_grid_table_list: List[dict], json_gr
             logger.info(f"{index}.html добавлен в архив")
 
 
-def render_bounce(json_bounce_table: dict, parameters_of_request: dict) -> None:
+def render_bounce(json_bounce_table: dict, parameters_of_request: dict, url: str) -> None:
     logger.info(f"render_slice(json_bounce_table, parameters_of_request)")
     # Рендерим header, content, footer
     with open(constants.JINJA_TEMPLATE_BOUNCE_TABLE, 'r') as bounce_table_template_html:
-        html_template = get_unfilled_html_from_source(bounce_table_template_html.read())
+        html_template = get_unfilled_html_from_source(bounce_table_template_html.read(), url)
 
     # Рендерим html
     string_loader = BaseLoader()

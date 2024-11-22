@@ -46,7 +46,7 @@ export const useApplicationStore = defineStore('ApplicationStore', () => {
   }
 
   const setFields = async (fields) => {
-    Object.keys(defaultFields).forEach(key => delete defaultFields[key])
+    Object.keys(defaultFields).forEach((key) => delete defaultFields[key])
     Object.assign(defaultFields, fields)
     await changeDefaultFields(defaultFields)
   }

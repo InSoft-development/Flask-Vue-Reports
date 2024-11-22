@@ -2,7 +2,7 @@
 import gevent.monkey
 gevent.monkey.patch_all()
 
-from flask import Flask, request, send_from_directory
+from flask import Flask, request, send_from_directory, send_file
 from flask_cors import CORS
 from flask_socketio import SocketIO
 
@@ -42,7 +42,7 @@ VERSION = '1.0.3'
 
 clients = {}
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder="./web", template_folder="./web", static_url_path="")
 CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
@@ -63,13 +63,29 @@ grid_greenlet = None
 bounce_greenlet = None
 
 
-@app.route('/')
-def hello():
+# @app.route('/')
+# def hello():
+#     """
+#     Функция для проверки работы веб-сервера Flask
+#     :return: Возвращает заголовок при запросе URL на порт Flask
+#     """
+#     return "<h1> HELLO WORLD </h1>"
+
+
+@app.route("/", defaults={"path": ""})
+@app.route("/<string:path>")
+@app.route("/<path:path>")
+def catch_all(path):
+    return app.send_static_file("index.html")
+
+
+@app.route('/api_urls.js')
+def get_api_urls_js():
     """
-    Функция для проверки работы веб-сервера Flask
-    :return: Возвращает заголовок при запросе URL на порт Flask
+    Функция посылки js файла с URL бэкенда
+    :return: ./web/api_urls.js
     """
-    return "<h1> HELLO WORLD </h1>"
+    return send_file('./web/api_urls.js')
 
 
 @app.route('/bootstrap/dist/css/bootstrap.min.css')
@@ -103,6 +119,51 @@ def get_plotly_js():
     logger.info(f"get_plotly_js()")
     logger.info(f"get script /plotly.js-dist-min/plotly.min.js")
     return send_from_directory('static/plotly.js-dist-min/', 'plotly.min.js')
+
+
+@app.route("/tags.csv")
+def get_tags_csv():
+    return send_file(constants.CSV_TAGS)
+
+
+@app.route("/signals_slice.csv")
+def get_signals_slice_csv():
+    return send_file(constants.CSV_SIGNALS)
+
+
+@app.route("/code.csv")
+def get_code_csv():
+    return send_file(constants.CSV_CODE)
+
+
+@app.route("/grid.csv")
+def get_grid_csv():
+    return send_file(constants.CSV_GRID)
+
+
+@app.route("/bounce.csv")
+def get_bounce_csv():
+    return send_file(constants.CSV_BOUNCE)
+
+
+@app.route("/config.json")
+def get_config_json():
+    return send_file(constants.CONFIG)
+
+
+@app.route("/signals_slice.pdf")
+def get_signals_slice_pdf():
+    return send_file(constants.REPORT_SLICE)
+
+
+@app.route("/grid.zip")
+def get_grid_zip():
+    return send_file(constants.REPORT_GRID_ZIP)
+
+
+@app.route("/bounce.pdf")
+def get_bounce_pdf():
+    return send_file(constants.REPORT_BOUNCE)
 
 
 @socketio.on("connect")
@@ -907,7 +968,8 @@ def update_kks_all(mode: str, root_directory: str, exception_directories: List[s
         client = operations.get_client(sid, socketio, ip, port, username, password)
         try:
             logger.info("Clickhouse connected")
-            socketio.emit("setUpdateStatus", {"statusString": f"Соединение с Clickhouse успешно установлено\n", "serviceFlag": True},
+            socketio.emit("setUpdateStatus",
+                          {"statusString": f"Соединение с Clickhouse успешно установлено\n", "serviceFlag": True},
                           to=sid)
             client.close()
             logger.info("Clickhouse disconnected")
@@ -1181,7 +1243,8 @@ def get_signals_data(types_list: List[str], selection_tag: str,
             #                f"ORDER BY t DESC LIMIT 1"
             query_string = f"SELECT {constants.CLIENT_DYNAMIC_TABLE}.*, {constants.CLIENT_STATIC_TABLE}.name AS name " \
                            f"FROM {constants.CLIENT_DYNAMIC_TABLE} " \
-                           f"JOIN {constants.CLIENT_STATIC_TABLE} ON {constants.CLIENT_DYNAMIC_TABLE}.id = {constants.CLIENT_STATIC_TABLE}.id " \
+                           f"JOIN {constants.CLIENT_STATIC_TABLE} ON " \
+                           f"{constants.CLIENT_DYNAMIC_TABLE}.id = {constants.CLIENT_STATIC_TABLE}.id " \
                            f"WHERE name='{element[0]}' AND status='{element[-1]}' " \
                            f"AND t <= '{parse(date).strftime('%Y-%m-%d %H:%M:%S')}' " \
                            f"ORDER BY t DESC LIMIT 1"
@@ -1203,7 +1266,8 @@ def get_signals_data(types_list: List[str], selection_tag: str,
                     deep_search_in_hour = (parse(date) - parse(date_deep_search)).total_seconds() / 3600
                 else:
                     delta_interval = interval * constants.DELTA_INTERVAL_IN_SECONDS[dimension]
-                    calculated_date_deep_search = (parse(date) - datetime.timedelta(seconds=delta_interval)).strftime("%Y-%m-%dT%H:%M:%SZ")
+                    calculated_date_deep_search = \
+                        (parse(date) - datetime.timedelta(seconds=delta_interval)).strftime("%Y-%m-%dT%H:%M:%SZ")
                     deep_search_in_hour = (parse(date) - parse(calculated_date_deep_search)).total_seconds() / 3600
 
                 delta = 2  # Строим запрос на 2 секунды раньше
@@ -1251,16 +1315,19 @@ def get_signals_data(types_list: List[str], selection_tag: str,
                         delta += constants.STEP_OF_BACK_SEARCH
                         # Если больше 1 года
                         if delta > deep_search_in_hour:
-                            logger.info(f"За заданный период поиска в часах ({deep_search_in_hour}) в архиве ничего не нашлось: {element[0]}->{element[1]}")
+                            logger.info(f"За заданный период поиска в часах ({deep_search_in_hour}) "
+                                        f"в архиве ничего не нашлось: {element[0]}->{element[1]}")
                             socketio.emit("setUpdateSignalsRequestStatus",
-                                          {"message": f"За заданный период поиска в часах ({deep_search_in_hour}) в архиве ничего не нашлось: {element[0]}->{element[1]}\n"},
+                                          {"message": f"За заданный период поиска в часах ({deep_search_in_hour}) "
+                                                      f"в архиве ничего не нашлось: {element[0]}->{element[1]}\n"},
                                           to=sid)
                             error_flag = True
                             break
                     except OverflowError:
                         error_flag = True
                         logger.info(f'OverflowError: {element[0]}->{element[1]}')
-                        logger.info(f'begin_time = {command_datetime_begin_time}; end_time = {command_datetime_end_time}')
+                        logger.info(f'begin_time = {command_datetime_begin_time}; '
+                                    f'end_time = {command_datetime_end_time}')
                         socketio.emit("setUpdateSignalsRequestStatus",
                                       {
                                           "message": f"OverflowError: {element[0]}->{element[1]}\n"
@@ -1273,7 +1340,8 @@ def get_signals_data(types_list: List[str], selection_tag: str,
             if not error_flag:
                 con_common_data = sqlite3.connect(constants.CLIENT_COMMON_DATA)
                 logger.info(con_common_data)
-                df_sqlite.to_sql(f'{constants.CLIENT_COMMON_DATA_TABLE}', con_common_data, if_exists='append', index=False)
+                df_sqlite.to_sql(f'{constants.CLIENT_COMMON_DATA_TABLE}', con_common_data,
+                                 if_exists='append', index=False)
                 con_common_data.close()
                 logger.info(f'Успешно завершено: {element[0]}->{element[1]}')
                 socketio.emit("setUpdateSignalsRequestStatus",
@@ -1324,7 +1392,7 @@ def get_signals_data(types_list: List[str], selection_tag: str,
         socketio.emit("setProgressBarSignals", {"count": 90}, to=sid)
         socketio.emit("setUpdateSignalsRequestStatus", {"message": f"Формирование отчета\n"}, to=sid)
         slice = json.loads(df_report.to_json(orient='records'))
-        render_slice(slice)
+        render_slice(slice, url=f"https://{args_parsed.host}:{args_parsed.port}/")
         socketio.emit("setUpdateSignalsRequestStatus", {"message": f"Отчет сформирован\n"}, to=sid)
 
         socketio.emit("setProgressBarSignals", {"count": 95}, to=sid)
@@ -1417,7 +1485,7 @@ def get_signals_data(types_list: List[str], selection_tag: str,
         socketio.emit("setProgressBarSignals", {"count": 90}, to=sid)
         socketio.emit("setUpdateSignalsRequestStatus", {"message": f"Формирование отчета\n"}, to=sid)
         slice = json.loads(df_report.to_json(orient='records'))
-        render_slice(slice)
+        render_slice(slice, url=f"https://{args_parsed.host}:{args_parsed.port}/")
         socketio.emit("setUpdateSignalsRequestStatus", {"message": f"Отчет сформирован\n"}, to=sid)
 
         socketio.emit("setProgressBarSignals", {"count": 95}, to=sid)
@@ -1445,7 +1513,8 @@ def get_signals_data(types_list: List[str], selection_tag: str,
                                  last_value_checked, interval_or_date_checked, interval, dimension, date_deep_search)
 
     if CLIENT_MODE == 'CH':
-        signals_greenlet = spawn(get_signals_from_ch_data_spawn, types_list, selection_tag, mask_list, kks_list, quality, date,
+        signals_greenlet = spawn(get_signals_from_ch_data_spawn,
+                                 types_list, selection_tag, mask_list, kks_list, quality, date,
                                  last_value_checked, interval_or_date_checked, interval, dimension, date_deep_search)
 
     gevent.joinall([signals_greenlet])
@@ -1636,7 +1705,8 @@ def get_grid_data(kks: List[str], date_begin: str, date_end: str,
         }
 
         render_grid(code, grid_separated_json_list, status_separated_json_list,
-                    grid_separated_json_list_single, status_separated_json_list_single, parameters_of_request)
+                    grid_separated_json_list_single, status_separated_json_list_single, parameters_of_request,
+                    url=f"https://{args_parsed.host}:{args_parsed.port}/")
         socketio.emit("setUpdateGridRequestStatus", {"message": f"Отчет сформирован\n"}, to=sid)
 
         socketio.emit("setProgressBarGrid", {"count": 95}, to=sid)
@@ -1669,20 +1739,23 @@ def get_grid_data(kks: List[str], date_begin: str, date_end: str,
         socketio.emit("setUpdateGridRequestStatus", {"message": f"Формирование запроса sql к БД Clickhouse\n"}, to=sid)
         socketio.emit("setProgressBarGrid", {"count": 10}, to=sid)
 
-        query_drop, query_create, query_value, query_status = operations.fill_grid_queries_value(kks, date_begin, date_end, interval, dimension)
+        query_drop, query_create, query_value, query_status = \
+            operations.fill_grid_queries_value(kks, date_begin, date_end, interval, dimension)
 
         socketio.emit("setProgressBarGrid", {"count": 20}, to=sid)
 
         ip, port, username, password = operations.read_clickhouse_server_conf()
         try:
-            socketio.emit("setUpdateGridRequestStatus", {"message": f"Запрос к БД Clickhouse (получение значений)\n"}, to=sid)
+            socketio.emit("setUpdateGridRequestStatus",
+                          {"message": f"Запрос к БД Clickhouse (получение значений)\n"}, to=sid)
             socketio.emit("setProgressBarGrid", {"count": 40}, to=sid)
             client = operations.create_client(ip, port, username, password)
             logger.info("Clickhouse connected")
             client.command(query_drop)
             client.command(query_create)
             df_slice_csv = client.query_df(query_value)
-            socketio.emit("setUpdateGridRequestStatus", {"message": f"Запрос к БД Clickhouse (получение кодов качества)\n"},
+            socketio.emit("setUpdateGridRequestStatus",
+                          {"message": f"Запрос к БД Clickhouse (получение кодов качества)\n"},
                           to=sid)
             df_slice_status_csv = client.query_df(query_status)
             socketio.emit("setProgressBarGrid", {"count": 50}, to=sid)
@@ -1699,7 +1772,8 @@ def get_grid_data(kks: List[str], date_begin: str, date_end: str,
             df_report = pd.DataFrame(df_slice_csv['grid'])
         except KeyError as error:
             logger.error(error)
-            socketio.emit("setUpdateGridRequestStatus", {"message": f"Ошибка: Клиент Clickhouse ничего не нашел\n"}, to=sid)
+            socketio.emit("setUpdateGridRequestStatus",
+                          {"message": f"Ошибка: Клиент Clickhouse ничего не нашел\n"}, to=sid)
             return "Ошибка: Клиент Clickhouse ничего не нашел"
         df_report.rename(columns={'grid': 'Метка времени'}, inplace=True)
 
@@ -1759,7 +1833,8 @@ def get_grid_data(kks: List[str], date_begin: str, date_end: str,
         }
 
         render_grid(code, grid_separated_json_list, status_separated_json_list,
-                    grid_separated_json_list_single, status_separated_json_list_single, parameters_of_request)
+                    grid_separated_json_list_single, status_separated_json_list_single, parameters_of_request,
+                    url=f"https://{args_parsed.host}:{args_parsed.port}/")
         socketio.emit("setUpdateGridRequestStatus", {"message": f"Отчет сформирован\n"}, to=sid)
 
         socketio.emit("setProgressBarGrid", {"count": 95}, to=sid)
@@ -2052,7 +2127,8 @@ def get_bounce_signals_data(kks: List[str], date: str, interval: int,
 
         # Формирование команд для запуска бинарника historian
         delta_interval = interval * constants.DELTA_INTERVAL_IN_SECONDS[dimension]
-        command_datetime_begin_time = (parse(date) - datetime.timedelta(seconds=delta_interval)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        command_datetime_begin_time = (parse(date) -
+                                       datetime.timedelta(seconds=delta_interval)).strftime("%Y-%m-%dT%H:%M:%SZ")
         command_datetime_end_time = parse(date).strftime("%Y-%m-%dT%H:%M:%SZ")
 
         command_string = f"cd client && ./client -b {command_datetime_begin_time} -e " \
@@ -2127,7 +2203,7 @@ def get_bounce_signals_data(kks: List[str], date: str, interval: int,
         }
 
         bounce = json.loads(df_counts[:int(top)].to_json(orient='records'))
-        render_bounce(bounce, parameters_of_request)
+        render_bounce(bounce, parameters_of_request, url=f"https://{args_parsed.host}:{args_parsed.port}/")
         socketio.emit("setUpdateBounceRequestStatus", {"message": f"Отчет сформирован\n"}, to=sid)
 
         socketio.emit("setProgressBarBounceSignals", {"count": 95}, to=sid)
@@ -2209,7 +2285,7 @@ def get_bounce_signals_data(kks: List[str], date: str, interval: int,
         }
 
         bounce = json.loads(df_counts[:int(top)].to_json(orient='records'))
-        render_bounce(bounce, parameters_of_request)
+        render_bounce(bounce, parameters_of_request, url=f"https://{args_parsed.host}:{args_parsed.port}/")
         socketio.emit("setUpdateBounceRequestStatus", {"message": f"Отчет сформирован\n"}, to=sid)
 
         socketio.emit("setProgressBarBounceSignals", {"count": 95}, to=sid)
@@ -2283,12 +2359,12 @@ def parse_args():
 
 if __name__ == '__main__':
     try:
-        args = parse_args()
+        args_parsed = parse_args()
     except SystemExit:
         logger.info(f'{VERSION} flask socket io + vue 3 web-application version')
         exit(0)
 
-    if args.config:
+    if args_parsed.config:
         logger.info("Создание шаблона для заполнения конфигурационного файла ./data/config.json")
         check_correct_application_structure()
         with open(constants.CONFIG, 'w') as write_default:
@@ -2297,7 +2373,7 @@ if __name__ == '__main__':
         logger.info("Создан шаблон конфигурационного файла ./data/config.json")
         exit(0)
 
-    if args.structure:
+    if args_parsed.structure:
         logger.info("Создание структуры веб-приложения")
         check_correct_application_structure()
         logger.info("Структура создана")
@@ -2343,46 +2419,13 @@ if __name__ == '__main__':
         KKS_ALL = pd.DataFrame()
         KKS_ALL_BACK = pd.DataFrame()
 
-    # Заполнение шаблонов под указанный в параметрах ip адрес и порт
-    header = None
-    with open(constants.JINJA_TEMPLATE_SOURCE_HEADER, 'r') as fp:
-        header = bs(fp.read(), 'html.parser')
-        for link in header.find_all('link', href=True):
-            href = link['href']
-            replacement_string = href[href.find('https://')+len('https://'):href.find('/bootstrap')]
-            link['href'] = href.replace(replacement_string, f'{args.host}:{args.port}')
-
-        for script in header.find_all('script', {"src":True}):
-            src = script['src']
-            replacement_string = src[src.find('https://') + len('https://'):src.find('/bootstrap')] if 'bootstrap' in src \
-                else src[src.find('https://') + len('https://'):src.find('/plotly.js-dist-min')]
-            script['src'] = src.replace(replacement_string, f'{args.host}:{args.port}')
-
-    with open(constants.JINJA_TEMPLATE_SOURCE_HEADER, 'w') as fp:
-        fp.write(str(header))
-
-    logger.info(f"template {constants.JINJA_TEMPLATE_SOURCE_HEADER} has been modified")
-
-    # Патч обезьяны для запуска сокета с клиента дистрибутивной версии веб-приложения
-    asset = None
-
-    asset_file = [filename for filename in os.listdir(constants.WEB_DIR_ASSETS_INDEX_JS)
-                  if os.path.isfile(os.path.join(constants.WEB_DIR_ASSETS_INDEX_JS, filename))
-                  and filename.startswith("index") and filename.endswith(".js")][0]
-    logger.info(asset_file)
-    asset_file = os.path.join(constants.WEB_DIR_ASSETS_INDEX_JS, asset_file)
-    logger.info(asset_file)
-
-    with open(asset_file, 'r') as fp:
-        asset = fp.read()
-        replacement_string = asset[asset.find("const RC=\"https://") + len("const RC=\"https://"):
-                                   asset.find("\",Ge=As(RC)")]
-        asset = asset.replace(replacement_string, f'{args.host}:{args.port}')
-        # fp.write(asset)
-    with open(asset_file, 'w') as fp:
-        fp.write(str(asset))
-        # const cS="https://10.23.23.31:8004",Ye=Os(cS)
-    logger.info(f"asset {asset_file} has been modified by monkey path")
+    # Перезаполняем в bundle версии файл api_urls.js для настройки проксирования
+    with open(constants.WEB_API_URLS_JS, 'r') as read_file:
+        api_file = read_file.read()
+        replacement_string = re.search("\'(.*)\'", api_file).group()
+        api_file = api_file.replace(replacement_string, f"'https://{args_parsed.host}:{args_parsed.port}/'")
+    with open(constants.WEB_API_URLS_JS, 'w') as write_file:
+        write_file.write(str(api_file))
 
     REPORT_DF = None
     REPORT_DF_STATUS = None
@@ -2398,4 +2441,5 @@ if __name__ == '__main__':
     }
 
     logger.info(f"starting...")
-    socketio.run(app, host=args.host, port=args.port, keyfile=constants.SSL_KEY, certfile=constants.SSL_CERT)
+    socketio.run(app, host=args_parsed.host, port=args_parsed.port,
+                 keyfile=constants.SSL_KEY, certfile=constants.SSL_CERT)

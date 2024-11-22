@@ -27,8 +27,7 @@ CSV_CODE = f'{REPORTS_DIRECTORY}code.csv'
 CSV_TAGS = f'{REPORTS_DIRECTORY}tags.csv'
 
 WEB_DIR = f'web{os.sep}'
-WEB_DIR_ASSETS = f'{WEB_DIR}assets{os.sep}'
-WEB_DIR_ASSETS_INDEX_JS = f'{WEB_DIR_ASSETS}js{os.sep}'
+WEB_API_URLS_JS = f'{WEB_DIR}api_urls.js'
 
 CLIENT_DIR = f'client{os.sep}'
 CLIENT_COMMON_DATA = f'{CLIENT_DIR}common_data.sqlite'

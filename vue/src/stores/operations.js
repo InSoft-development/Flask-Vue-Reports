@@ -1,7 +1,4 @@
-import { Mutex } from 'async-mutex'
 import { socket } from '../socket'
-
-const mutex = new Mutex()
 
 /***
  * Процедура запуска обновления файла тегов kks_all.csv
