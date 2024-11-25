@@ -1,5 +1,9 @@
 """
-Модуль содержит функции рутинных операций (чтение конфигов из файлов, запись конфигов в файлы)
+Модуль содержит функции рутинных операций:  чтение конфигов из файлов,
+                                            запись конфигов в файлы,
+                                            валидация конфигов,
+                                            подготовка тез запросов к БД,
+                                            подготовка данных
 """
 
 import clickhouse_connect
@@ -17,11 +21,154 @@ import ipaddress
 import re
 
 import utils.constants_and_paths as constants
+import utils.client_operations as client_operations
 
 from loguru import logger
 
 from typing import Dict, List, Tuple, Union
 from flask_socketio import SocketIO
+
+
+def get_kks_opc_ua(kks_all: pd.DataFrame,
+                   types_list: List[str], mask_list: List[str], kks_list: List[str],
+                   selection_tag: str = None) -> List[str]:
+    """
+    Функция возвращает массив kks датчиков из файла тегов kks_all.csv по маске шаблона.
+    Используется при выполнеии запросов на бэкенде
+    :param kks_all: pandas фрейм файла тегов kks_all.csv
+    :param types_list: массив выбранных пользователем типов данных
+    :param mask_list: массив маск шаблонов поиска regex
+    :param kks_list: массив kks напрямую, указанные пользователем
+    :param selection_tag: выбранный вид отбора тегов
+    :return: массив строк kks датчиков для выполнения запроса
+    """
+    kks_requested_list = []
+    kks_descr_list = []
+    kks_mask_list = []
+
+    if selection_tag is None:
+        selection_tag = "sequential"
+
+    # Отбор тегов kks по типу данных и маске
+    kks = kks_all.copy(deep=True)
+    kks = kks[kks[1].isin(types_list)]
+
+    list_kks = kks[0].tolist()
+    set_list_kks = list(set(kks[0].tolist()))
+
+    # Проверка на дубликаты kks, образовывающиеся при поиске по маске и вручную указанным пользователем
+    try:
+        assert len(list_kks) == len(set_list_kks)
+    except AssertionError:
+        logger.warning("В найденных тегах есть дубликаты")
+
+    # Отбор тегов по указанным маскам (полследовательный или с объединением найденных тегов)
+    try:
+        if mask_list:
+            if selection_tag == "sequential":
+                for mask in mask_list:
+                    kks = kks[kks[0].str.contains(mask, regex=True)]
+                kks_mask_list = kks[0].tolist()
+
+            if selection_tag == "union":
+                kks_mask_set = set()
+                for mask in mask_list:
+                    template_kks_set = set(kks[kks[0].str.contains(mask, regex=True)][0].tolist())
+                    kks_mask_set = kks_mask_set.union(template_kks_set)
+                kks_mask_list = list(kks_mask_set)
+
+        # Отбор тегов,указанных вручную с их объединением
+        if kks_list:
+            kks_requested_list = [kks for kks in kks_list if kks not in kks_mask_list]
+
+        kks_requested_list += kks_mask_list
+        kks_descr_list = kks[kks[0].isin(kks_requested_list)][2].tolist()
+        logger.info(len(kks_requested_list))
+    except re.error as regular_expression_except:
+        logger.info(mask)
+        logger.error(f"Неверный синтаксис регулярного выражения {regular_expression_except} в {mask}")
+        return ['', mask]
+    finally:
+        tags_df = pd.DataFrame(columns=['Наименование тега', 'Описание тега'],
+                               data={'Наименование тега': kks_requested_list,
+                                     'Описание тега': kks_descr_list})
+        tags_df.to_csv(constants.CSV_TAGS)
+    logger.info(f'Датафрейм {constants.WEB_DIR}tags.csv доступен для выкачки')
+
+    return kks_requested_list
+
+
+def get_kks_ch(types_list: List[str], mask_list: List[str], kks_list: List[str], selection_tag: str = None) -> List[str]:
+    """
+    Функция возвращает массив kks датчиков из файла тегов kks_all.csv по маске шаблона.
+    Используется при выполнеии запросов на бэкенде
+    :param types_list: массив выбранных пользователем типов данных
+    :param mask_list: массив маск шаблонов поиска regex
+    :param kks_list: массив kks напрямую, указанные пользователем
+    :param selection_tag: выбранный вид отбора тегов
+    :return: массив строк kks датчиков для выполнения запроса
+    """
+    kks_requested_list = []
+    kks_descr_list = []
+    kks_mask_list = []
+
+    if selection_tag is None:
+        selection_tag = "sequential"
+
+    ip, port, username, password = client_operations.read_clickhouse_server_conf()
+    try:
+        client = client_operations.create_client(ip, port, username, password)
+        logger.info("Clickhouse connected")
+
+        # Отбор тегов по указанным маскам (полследовательный или с объединением найденных тегов)
+        if selection_tag == "sequential":
+            kks = client.query_df(f"WITH {mask_list} AS arr_reg, {types_list} AS arr_type "
+                                  f"SELECT item_name FROM archive.v_static_data "
+                                  f"WHERE data_type_name in arr_type AND "
+                                  f"length(multiMatchAllIndices(item_name, arr_reg)) = length(arr_reg)")
+
+            kks_mask_list = kks['item_name'].tolist()
+
+        if selection_tag == "union":
+            kks = client.query_df(f"WITH {mask_list} AS arr_reg , {types_list} AS arr_type "
+                                  f"SELECT item_name FROM archive.v_static_data "
+                                  f"WHERE data_type_name in arr_type AND "
+                                  f"multiMatchAny(item_name, arr_reg)")
+
+            kks_mask_list = kks['item_name'].tolist()
+
+        # Отбор тегов,указанных вручную с их объединением
+        if kks_list:
+            kks_requested_list = [kks for kks in kks_list if kks not in kks_mask_list]
+
+        kks_requested_list += kks_mask_list
+        kks = client.query_df(f"WITH {kks_requested_list} AS arr_kks , {types_list} AS arr_type "
+                              f"SELECT item_name, item_descr FROM archive.v_static_data "
+                              f"WHERE data_type_name in arr_type AND item_name in arr_kks")
+        kks_requested_list = kks['item_name'].tolist()
+        kks_descr_list = kks['item_descr'].tolist()
+        logger.info(len(kks_requested_list))
+        client.close()
+        logger.info("Clickhouse disconnected")
+    except clickhouse_exceptions.DatabaseError as pattern_error:
+        logger.error(pattern_error)
+        mask_error = [mask for mask in mask_list if mask in str(pattern_error)]
+        logger.info(mask_error)
+        if not mask_error:
+            logger.error(pattern_error)
+            return ['', str(pattern_error)]
+        logger.error(f"Неверный синтаксис регулярного выражения {pattern_error} в {mask_error[0]}")
+        return ['', mask_error[0]]
+    except clickhouse_exceptions.Error as error:
+        logger.error(error)
+    finally:
+        tags_df = pd.DataFrame(columns=['Наименование тега', 'Описание тега'],
+                               data={'Наименование тега': kks_requested_list,
+                                     'Описание тега': kks_descr_list})
+        tags_df.to_csv(constants.CSV_TAGS)
+
+    logger.info(f'Датафрейм {constants.WEB_DIR}tags.csv доступен для выкачки')
+    return kks_requested_list
 
 
 def validate_ip_address(ip: str) -> bool:
@@ -61,14 +208,17 @@ def validate_imported_config(config: dict) -> Tuple[bool, str]:
 
     # Проверка соединения с БД Clickhouse по ip и порту
     try:
-        client = create_client(config["clickhouse"]["ip"], config["clickhouse"]["port"],
-                               config["clickhouse"]["username"], config["clickhouse"]["password"])
+        client = client_operations.create_client(config["clickhouse"]["ip"], config["clickhouse"]["port"],
+                                                 config["clickhouse"]["username"], config["clickhouse"]["password"])
         logger.info("Clickhouse connected")
         client.close()
         logger.info("Clickhouse disconnected")
     except clickhouse_exceptions.Error as error:
         logger.error(error)
-        return False, "Ошибка конфигурации клиента БД Clickhouse"
+        if config["mode"] == "CH":
+            return False, "Ошибка конфигурации клиента БД Clickhouse"
+        if config["mode"] == "OPC":
+            pass
 
     # Валидация регулярных выражений
     try:
@@ -112,69 +262,6 @@ def validate_imported_config(config: dict) -> Tuple[bool, str]:
                      f"\n{'OPC:' + str(opc_uncorrect) if opc_uncorrect else ''} " \
                      f"\n{'CH:' + str(ch_uncorrect) if ch_uncorrect else ''}"
     return True, ""
-
-
-def read_clickhouse_server_conf() -> Tuple[str, int, str, str]:
-    """
-    Функция чтения конфигурации клиента Clickhouse
-    :return: ip: IPv4 адрес клиента Clickhouse,
-             port: порт клиента Clickhouse
-             username: имя пользователя клиента Clickhouse
-             password: пароль клиента Clickhouse
-    """
-    logger.info(f"read_clickhouse_server_conf()")
-
-    with open(constants.CONFIG, "r") as read_config:
-        config = json.load(read_config)
-        server_config = config["clickhouse"]
-        ip, port = server_config["ip"], server_config["port"]
-        username, password = server_config["username"], server_config["password"]
-
-    return ip, port, username, password
-
-
-def get_client(sid: int, socketio: SocketIO, ip: str, port: int, username: str, password: str) -> \
-        Union[str, clickhouse_connect.driver.HttpClient]:
-    """
-    Функция инициализации и проверки клиента Clickhouse
-    :param sid: идентификатор сокета
-    :param socketio: объект сокета
-    :param ip: IPv4 адрес клиента Clickhouse
-    :param port: порт клиента Clickhouse
-    :param username: имя пользователя клиента Clickhouse
-    :param password: пароль клиента Clickhouse
-    :return: объект клиента Clickhouse или строка ошибки
-    """
-    logger.info(f"get_client({sid}, {socketio}, {ip}, {port}, {username})")
-    try:
-        client = create_client(ip, port, username, password)
-        return client
-    except clickhouse_exceptions.DatabaseError as error:
-        logger.error(error)
-        socketio.emit("setUpdateStatus",
-                      {"statusString": f"{error}\n", "serviceFlag": False},
-                      to=sid)
-        if "AUTHENTICATION_FAILED" in str(error):
-            socketio.emit("setUpdateStatus",
-                          {"statusString": f"Неверное имя пользователя или пароль\n", "serviceFlag": True},
-                          to=sid)
-        else:
-            socketio.emit("setUpdateStatus",
-                          {"statusString": f"Неверно указан IP адрес Clickhouse или порт\n", "serviceFlag": True},
-                          to=sid)
-        return f"Ошибка конфигурации клиента Clickhouse"
-
-
-def create_client(ip: str, port: int, username: str, password: str) -> clickhouse_connect.driver.HttpClient:
-    """
-    Функция инициализации клиента Clickhouse
-    :param ip: IPv4 адрес клиента Clickhouse
-    :param port: порт клиента Clickhouse
-    :param username: имя пользователя клиента Clickhouse
-    :param password: пароль клиента Clickhouse
-    :return:
-    """
-    return clickhouse_connect.get_client(host=ip, port=port, username=username, password=password)
 
 
 def fill_signals_query(kks_requested_list: List[str], quality: List[str], date: str,

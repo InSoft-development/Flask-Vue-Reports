@@ -167,7 +167,6 @@ INTERVAL_TO_LOCALE = {
     'second': 'секунда'
 }
 
-BACK_SEARCH_TIME_IN_HOUR = 8760  # Предельное время поиска в глубину в часах
 STEP_OF_BACK_SEARCH = 720  # Глубина поиска в архивах
 
 COUNT_OF_RETURNED_KKS = 10000  # Число возвращаемых тегов kks при фильтрации

@@ -1,5 +1,6 @@
 # Патч обезьяны для функционирования импортируемых модулей python асинхронно
 import gevent.monkey
+
 gevent.monkey.patch_all()
 
 from flask import Flask, request, send_from_directory, send_file
@@ -21,9 +22,7 @@ import pandas as pd
 import datetime
 from dateutil.parser import parse
 
-from bs4 import BeautifulSoup as bs
 import json
-import itertools
 import re
 import shutil
 import time
@@ -31,6 +30,8 @@ import time
 from utils.correct_start import check_correct_application_structure
 import utils.constants_and_paths as constants
 import utils.routine_operations as operations
+import utils.client_operations as client_operations
+import utils.create_dataframe_reports as create_reports
 
 from jinja.pylib.get_template import render_slice, render_grid, render_bounce
 
@@ -61,15 +62,6 @@ signals_greenlet = None
 grid_greenlet = None
 # Переменная под объект гринлета выполнения запроса дребезга
 bounce_greenlet = None
-
-
-# @app.route('/')
-# def hello():
-#     """
-#     Функция для проверки работы веб-сервера Flask
-#     :return: Возвращает заголовок при запросе URL на порт Flask
-#     """
-#     return "<h1> HELLO WORLD </h1>"
 
 
 @app.route("/", defaults={"path": ""})
@@ -199,9 +191,9 @@ def get_file_checked() -> Tuple[bool, str, bool]:
     global CLIENT_MODE
 
     client_status = False
-    ip, port, username, password = operations.read_clickhouse_server_conf()
+    ip, port, username, password = client_operations.read_clickhouse_server_conf()
     try:
-        client = operations.create_client(ip, port, username, password)
+        client = client_operations.create_client(ip, port, username, password)
         logger.info("Clickhouse connected")
         client_status = True
         client.close()
@@ -275,10 +267,10 @@ def get_server_config() -> Tuple[str, bool]:
         return f'Текущая конфигурация клиента OPC UA: {server_config}', os.path.isfile(constants.DATA_KKS_ALL)
 
     if CLIENT_MODE == 'CH':
-        ip, port, username, password = operations.read_clickhouse_server_conf()
+        ip, port, username, password = client_operations.read_clickhouse_server_conf()
         host = f"{ip}:{port}"
 
-        client = operations.get_client(sid, socketio, ip, port, username, password)
+        client = client_operations.get_client(sid, socketio, ip, port, username, password)
         try:
             check = client.command("CHECK TABLE archive.static_data")
             client.close()
@@ -316,9 +308,9 @@ def get_last_update_file_kks() -> str:
         return str(datetime.datetime.fromtimestamp(os.path.getmtime(current_path)).strftime('%Y-%m-%d %H:%M:%S'))
 
     if CLIENT_MODE == 'CH':
-        ip, port, username, password = operations.read_clickhouse_server_conf()
+        ip, port, username, password = client_operations.read_clickhouse_server_conf()
 
-        client = operations.get_client(sid, socketio, ip, port, username, password)
+        client = client_operations.get_client(sid, socketio, ip, port, username, password)
         try:
             logger.info("Clickhouse connected")
             modify_time = client.command("SELECT table, metadata_modification_time FROM system.tables "
@@ -353,7 +345,7 @@ def get_ip_port_config() -> Tuple[str, int, str, int, str, str]:
 
     ip, port = opc_config["ip"], opc_config["port"]
 
-    ip_ch, port_ch, username, password = operations.read_clickhouse_server_conf()
+    ip_ch, port_ch, username, password = client_operations.read_clickhouse_server_conf()
     return ip, port, ip_ch, port_ch, username, password
 
 
@@ -468,7 +460,7 @@ def change_ch_server_config(ip: str, port: int, username: str, password: str) ->
     with open(constants.CONFIG, "w") as write_config:
         json.dump(config, write_config, indent=4)
 
-    ip_ch, port_ch, active_user, password_ch = operations.read_clickhouse_server_conf()
+    ip_ch, port_ch, active_user, password_ch = client_operations.read_clickhouse_server_conf()
     host = f"{ip_ch}:{port_ch}"
     socketio.emit("setUpdateStatus", {"statusString": f"Конфигурация клиента Clickhouse обновлена на: "
                                                       f"{host}, пользователь: {active_user}\n",
@@ -567,9 +559,9 @@ def get_types_of_sensors() -> List[str]:
         return KKS_ALL[1].dropna().unique().tolist()
 
     if CLIENT_MODE == 'CH':
-        ip, port, username, password = operations.read_clickhouse_server_conf()
+        ip, port, username, password = client_operations.read_clickhouse_server_conf()
         try:
-            client = operations.create_client(ip, port, username, password)
+            client = client_operations.create_client(ip, port, username, password)
             logger.info("Clickhouse connected")
             types = client.query_df("SELECT DISTINCT data_type_name FROM archive.v_static_data")
             logger.info(types)
@@ -596,9 +588,9 @@ def get_kks_tag_exist(kks_tag: str) -> bool:
     if CLIENT_MODE == 'OPC':
         return kks_tag in KKS_ALL[0].values
     elif CLIENT_MODE == 'CH':
-        ip, port, username, password = operations.read_clickhouse_server_conf()
+        ip, port, username, password = client_operations.read_clickhouse_server_conf()
         try:
-            client = operations.create_client(ip, port, username, password)
+            client = client_operations.create_client(ip, port, username, password)
             logger.info("Clickhouse connected")
 
             exist = client.command(f"WITH '{kks_tag}' as i_kks SELECT "
@@ -647,9 +639,9 @@ def get_kks_by_masks(types_list: List[str], mask_list: List[str]) -> List[Union[
         return kks[0].tolist()[:constants.COUNT_OF_RETURNED_KKS]
 
     elif CLIENT_MODE == 'CH':
-        ip, port, username, password = operations.read_clickhouse_server_conf()
+        ip, port, username, password = client_operations.read_clickhouse_server_conf()
         try:
-            client = operations.create_client(ip, port, username, password)
+            client = client_operations.create_client(ip, port, username, password)
             logger.info("Clickhouse connected")
 
             kks = client.query_df(f"WITH {mask_list} AS arr_reg , {types_list} AS arr_type "
@@ -681,114 +673,10 @@ def get_kks(types_list: List[str], mask_list: List[str], kks_list: List[str], se
 
     global CLIENT_MODE
 
-    kks_requested_list = []
-    kks_descr_list = []
-    kks_mask_list = []
-
-    if selection_tag is None:
-        selection_tag = "sequential"
-
     if CLIENT_MODE == 'OPC':
-        # Отбор тегов kks по типу данных и маске
-        kks = KKS_ALL.copy(deep=True)
-        kks = kks[kks[1].isin(types_list)]
-
-        list_kks = kks[0].tolist()
-        set_list_kks = list(set(kks[0].tolist()))
-
-        # Проверка на дубликаты kks, образовывающиеся при поиске по маске и вручную указанным пользователем
-
-        try:
-            assert len(list_kks) == len(set_list_kks)
-        except AssertionError:
-            logger.warning("В найденных тегах есть дубликаты")
-
-        # Отбор тегов по указанным маскам (полследовательный или с объединением найденных тегов)
-        try:
-            if mask_list:
-                if selection_tag == "sequential":
-                    for mask in mask_list:
-                        kks = kks[kks[0].str.contains(mask, regex=True)]
-                    kks_mask_list = kks[0].tolist()
-
-                if selection_tag == "union":
-                    kks_mask_set = set()
-                    for mask in mask_list:
-                        template_kks_set = set(kks[kks[0].str.contains(mask, regex=True)][0].tolist())
-                        kks_mask_set = kks_mask_set.union(template_kks_set)
-                    kks_mask_list = list(kks_mask_set)
-
-            # Отбор тегов,указанных вручную с их объединением
-            if kks_list:
-                kks_requested_list = [kks for kks in kks_list if kks not in kks_mask_list]
-
-            kks_requested_list += kks_mask_list
-            kks_descr_list = kks[kks[0].isin(kks_requested_list)][2].tolist()
-            logger.info(len(kks_requested_list))
-        except re.error as regular_expression_except:
-            logger.info(mask)
-            logger.error(f"Неверный синтаксис регулярного выражения {regular_expression_except} в {mask}")
-            return ['', mask]
-        finally:
-            tags_df = pd.DataFrame(columns=['Наименование тега', 'Описание тега'],
-                                   data={'Наименование тега': kks_requested_list,
-                                         'Описание тега': kks_descr_list})
-            tags_df.to_csv(constants.CSV_TAGS)
+        return operations.get_kks_opc_ua(KKS_ALL, types_list, mask_list, kks_list, selection_tag)
     elif CLIENT_MODE == 'CH':
-        ip, port, username, password = operations.read_clickhouse_server_conf()
-        try:
-            client = operations.create_client(ip, port, username, password)
-            logger.info("Clickhouse connected")
-
-            # Отбор тегов по указанным маскам (полследовательный или с объединением найденных тегов)
-            if selection_tag == "sequential":
-                kks = client.query_df(f"WITH {mask_list} AS arr_reg, {types_list} AS arr_type "
-                                      f"SELECT item_name FROM archive.v_static_data "
-                                      f"WHERE data_type_name in arr_type AND "
-                                      f"length(multiMatchAllIndices(item_name, arr_reg)) = length(arr_reg)")
-
-                kks_mask_list = kks['item_name'].tolist()
-
-            if selection_tag == "union":
-                kks = client.query_df(f"WITH {mask_list} AS arr_reg , {types_list} AS arr_type "
-                                      f"SELECT item_name FROM archive.v_static_data "
-                                      f"WHERE data_type_name in arr_type AND "
-                                      f"multiMatchAny(item_name, arr_reg)")
-
-                kks_mask_list = kks['item_name'].tolist()
-
-            # Отбор тегов,указанных вручную с их объединением
-            if kks_list:
-                kks_requested_list = [kks for kks in kks_list if kks not in kks_mask_list]
-
-            kks_requested_list += kks_mask_list
-            kks = client.query_df(f"WITH {kks_requested_list} AS arr_kks , {types_list} AS arr_type "
-                                  f"SELECT item_name, item_descr FROM archive.v_static_data "
-                                  f"WHERE data_type_name in arr_type AND item_name in arr_kks")
-            kks_requested_list = kks['item_name'].tolist()
-            kks_descr_list = kks['item_descr'].tolist()
-            logger.info(len(kks_requested_list))
-            client.close()
-            logger.info("Clickhouse disconnected")
-        except clickhouse_exceptions.DatabaseError as pattern_error:
-            logger.error(pattern_error)
-            mask_error = [mask for mask in mask_list if mask in str(pattern_error)]
-            logger.info(mask_error)
-            if not mask_error:
-                logger.error(pattern_error)
-                return ['', str(pattern_error)]
-            logger.error(f"Неверный синтаксис регулярного выражения {pattern_error} в {mask_error[0]}")
-            return ['', mask_error[0]]
-        except clickhouse_exceptions.Error as error:
-            logger.error(error)
-        finally:
-            tags_df = pd.DataFrame(columns=['Наименование тега', 'Описание тега'],
-                                   data={'Наименование тега': kks_requested_list,
-                                         'Описание тега': kks_descr_list})
-            tags_df.to_csv(constants.CSV_TAGS)
-    logger.info(f'Датафрейм {constants.WEB_DIR}tags.csv доступен для выкачки')
-
-    return kks_requested_list
+        return operations.get_kks_ch(types_list, mask_list, kks_list, selection_tag)
 
 
 @socketio.on("update_kks_all")
@@ -836,8 +724,7 @@ def update_kks_all(mode: str, root_directory: str, exception_directories: List[s
             out = open(f'client{os.sep}out.log', 'w')
             err = open(f'client{os.sep}err.log', 'w')
             p_kks_all = subprocess.Popen(args, stdout=out, preexec_fn=os.setsid,
-                                         stderr=err, cwd=f"{os.getcwd()}{os.sep}client{os.sep}",
-                                         env={'LD_LIBRARY_PATH': '/home/spa/opt/openssl-1.1.1o'})
+                                         stderr=err, cwd=f"{os.getcwd()}{os.sep}client{os.sep}")
             socketio.sleep(10)  # даем небольшое время на наполнение временного файла тегов kks.csv
 
             # Если процесс завершается сразу, то скорее всего произошла ошибка
@@ -960,12 +847,12 @@ def update_kks_all(mode: str, root_directory: str, exception_directories: List[s
         global sid_proc
         sid_proc = sid
 
-        ip, port, username, password = operations.read_clickhouse_server_conf()
+        ip, port, username, password = client_operations.read_clickhouse_server_conf()
 
         socketio.emit("setUpdateStatus",
                       {"statusString": f"соединение с Clickhouse...\n", "serviceFlag": True},
                       to=sid)
-        client = operations.get_client(sid, socketio, ip, port, username, password)
+        client = client_operations.get_client(sid, socketio, ip, port, username, password)
         try:
             logger.info("Clickhouse connected")
             socketio.emit("setUpdateStatus",
@@ -1002,8 +889,9 @@ def update_kks_all(mode: str, root_directory: str, exception_directories: List[s
             except re.error as regular_expression_except:
                 logger.error(f"Неверный синтаксис регулярного выражения {regular_expression_except}")
                 socketio.emit("setUpdateStatus",
-                              {"statusString": f"Неверный синтаксис регулярного выражения {regular_expression_except}\n",
-                               "serviceFlag": True},
+                              {
+                                  "statusString": f"Неверный синтаксис регулярного выражения {regular_expression_except}\n",
+                                  "serviceFlag": True},
                               to=sid)
                 return
         update_greenlet = spawn(update_kks_all_spawn, mode, root_directory, exception_directories, exception_expert)
@@ -1176,218 +1064,17 @@ def get_signals_data(types_list: List[str], selection_tag: str,
         global sid_proc
         sid_proc = sid
 
-        error_flag = False  # флаг ошибки поиска в архивах
-
-        socketio.emit("setUpdateSignalsRequestStatus", {"message": f"Формирование списка kks сигналов\n"}, to=sid)
-        kks_requested_list = get_kks(types_list, mask_list, kks_list, selection_tag)
-        socketio.emit("setUpdateSignalsRequestStatus", {"message": f"Список kks сигналов успешно сформирован\n"},
-                      to=sid)
-
-        # Подготовка к выполнению запроса
-        # Формирование списка выбранных кодов качества
-        correct_quality_list = list(map(lambda x: constants.QUALITY_CODE_DICT[x], quality))
-
-        # Формирование декартового произведения
-        decart_list = [kks_requested_list, correct_quality_list]
-        decart_product = []
-
-        for element in itertools.product(*decart_list):
-            decart_product.append(element)
-
-        # Сбрасываем обобщенную таблицу
-        con_common_data = sqlite3.connect(constants.CLIENT_COMMON_DATA)
-        cursor = con_common_data.cursor()
-        cursor.execute(f'DROP TABLE IF EXISTS {constants.CLIENT_COMMON_DATA_TABLE}')
-        con_common_data.commit()
-        con_common_data.close()
-
-        for i, element in enumerate(decart_product):
-            # Сохранение датчика с KKS
-            csv_tag_KKS = pd.DataFrame(data=[element[0]])
-            csv_tag_KKS.to_csv(constants.CLIENT_KKS, index=False, header=None)
-
-            # Формирование команды для запуска бинарника historian
-            command_datetime_begin_time = (parse(date) - datetime.timedelta(seconds=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
-            command_datetime_end_time = parse(date).strftime("%Y-%m-%dT%H:%M:%SZ")
-            command_string = f"cd client && ./client -b {command_datetime_begin_time} -e " \
-                             f"{command_datetime_end_time} -p 100 -t 10000 -r -xw"
-
-            logger.info(f'Получение по OPC UA: {element[0]}->{element[1]}')
-            logger.info(command_string)
-
-            socketio.emit("setUpdateSignalsRequestStatus",
-                          {"message": f"Получение по OPC UA: {element[0]}->{element[1]}\n"}, to=sid)
-
-            args = ["./client", "-b", f"{command_datetime_begin_time}", "-e", f"{command_datetime_end_time}",
-                    "-p", "100", "-t", "10000", "-r", "-xw"]
-
-            try:
-                subprocess.run(args, capture_output=True, cwd=f"{os.getcwd()}{os.sep}client{os.sep}", check=True,
-                               env={'LD_LIBRARY_PATH': '/home/spa/opt/openssl-1.1.1o'})
-            except subprocess.CalledProcessError as subprocess_exception:
-                # Если произошла ошибка во время вызова клиента, то ловим и выводим исключение
-                logger.error(subprocess_exception)
-                return f"Произошла ошибка {str(subprocess_exception)}"
-            except RuntimeError as run_time_exception:
-                # Если произошла ошибка во время выполнении процесса, то ловим и выводим исключение
-                logger.error(run_time_exception)
-                socketio.emit("setUpdateSignalsRequestStatus", {"message": f"Ошибка: {run_time_exception}\n"},
-                              to=sid)
-                return
-
-            # Достаем фрейм из sqlite
-            con_current_data = sqlite3.connect(constants.CLIENT_DATA)
-
-            # query_string = f"SELECT * from {constants.CLIENT_DYNAMIC_TABLE} WHERE id='{element[0]}' " \
-            #                f"AND status='{element[-1]}' AND t <= '{parse(date).strftime('%Y-%m-%d %H:%M:%S')}' " \
-            #                f"ORDER BY t DESC LIMIT 1"
-            query_string = f"SELECT {constants.CLIENT_DYNAMIC_TABLE}.*, {constants.CLIENT_STATIC_TABLE}.name AS name " \
-                           f"FROM {constants.CLIENT_DYNAMIC_TABLE} " \
-                           f"JOIN {constants.CLIENT_STATIC_TABLE} ON " \
-                           f"{constants.CLIENT_DYNAMIC_TABLE}.id = {constants.CLIENT_STATIC_TABLE}.id " \
-                           f"WHERE name='{element[0]}' AND status='{element[-1]}' " \
-                           f"AND t <= '{parse(date).strftime('%Y-%m-%d %H:%M:%S')}' " \
-                           f"ORDER BY t DESC LIMIT 1"
-            logger.info(query_string)
-
-            df_sqlite = pd.read_sql_query(
-                query_string,
-                con_current_data, parse_dates=['t'])
-            con_current_data.close()
-            logger.info(df_sqlite)
-            # Если не нашли, то расширяем поиск:
-            if df_sqlite.empty:
-                logger.info(f"{constants.CLIENT_DATA} пуст")
-                socketio.emit("setUpdateSignalsRequestStatus", {"message": f"Расширение поиска в архивах...\n"},
-                              to=sid)
-
-                # Получаем предельное время в часах для поиска в глубину в архивах
-                if interval_or_date_checked:
-                    deep_search_in_hour = (parse(date) - parse(date_deep_search)).total_seconds() / 3600
-                else:
-                    delta_interval = interval * constants.DELTA_INTERVAL_IN_SECONDS[dimension]
-                    calculated_date_deep_search = \
-                        (parse(date) - datetime.timedelta(seconds=delta_interval)).strftime("%Y-%m-%dT%H:%M:%SZ")
-                    deep_search_in_hour = (parse(date) - parse(calculated_date_deep_search)).total_seconds() / 3600
-
-                delta = 2  # Строим запрос на 2 секунды раньше
-                delta_prev = 0  # Формирование окна просмотра архива посредстовом сохранения предыдущего datetime
-                while df_sqlite.empty:
-                    logger.info(df_sqlite)
-                    try:
-                        # Формирование повторной команды с расширенной выборкой
-                        command_datetime_begin_time = (parse(date) - datetime.timedelta(hours=delta)).strftime(
-                            "%Y-%m-%dT%H:%M:%SZ")
-                        command_datetime_end_time = (parse(date) - datetime.timedelta(hours=delta_prev)).strftime(
-                            "%Y-%m-%dT%H:%M:%SZ")
-
-                        command_string = f"cd client && ./client -b {command_datetime_begin_time} -e " \
-                                         f"{command_datetime_end_time} -p 100 -t 10000 -xw"
-                        logger.info(f'Получение по OPC UA: {element[0]}->{element[1]}')
-                        logger.info(command_string)
-
-                        args = ["./client", "-b", f"{command_datetime_begin_time}", "-e",
-                                f"{command_datetime_end_time}",
-                                "-p", "100", "-t", "10000", "-xw"]
-
-                        try:
-                            subprocess.run(args, capture_output=True,
-                                           cwd=f"{os.getcwd()}{os.sep}client{os.sep}", check=True,
-                                           env={'LD_LIBRARY_PATH': '/home/spa/opt/openssl-1.1.1o'})
-                        except subprocess.CalledProcessError as subprocess_exception:
-                            # Если произошла ошибка во время вызова клиента, то ловим и выводим исключение
-                            logger.error(subprocess_exception)
-                            return f"Произошла ошибка {str(subprocess_exception)}"
-                        except RuntimeError as run_time_exception:
-                            # Если произошла ошибка во время выполнении процесса, то ловим и выводим исключение
-                            logger.error(run_time_exception)
-                            socketio.emit("setUpdateSignalsRequestStatus",
-                                          {"message": f"Ошибка: {run_time_exception}\n"},
-                                          to=sid)
-                            return
-
-                        con_current_data = sqlite3.connect(constants.CLIENT_DATA)
-                        df_sqlite = pd.read_sql_query(
-                            query_string,
-                            con_current_data, parse_dates=['t'])
-                        con_current_data.close()
-                        delta_prev = delta
-                        delta += constants.STEP_OF_BACK_SEARCH
-                        # Если больше 1 года
-                        if delta > deep_search_in_hour:
-                            logger.info(f"За заданный период поиска в часах ({deep_search_in_hour}) "
-                                        f"в архиве ничего не нашлось: {element[0]}->{element[1]}")
-                            socketio.emit("setUpdateSignalsRequestStatus",
-                                          {"message": f"За заданный период поиска в часах ({deep_search_in_hour}) "
-                                                      f"в архиве ничего не нашлось: {element[0]}->{element[1]}\n"},
-                                          to=sid)
-                            error_flag = True
-                            break
-                    except OverflowError:
-                        error_flag = True
-                        logger.info(f'OverflowError: {element[0]}->{element[1]}')
-                        logger.info(f'begin_time = {command_datetime_begin_time}; '
-                                    f'end_time = {command_datetime_end_time}')
-                        socketio.emit("setUpdateSignalsRequestStatus",
-                                      {
-                                          "message": f"OverflowError: {element[0]}->{element[1]}\n"
-                                                          f"begin_time = {command_datetime_begin_time}; "
-                                                          f"end_time = {command_datetime_end_time}\n"
-                                      },
-                                      to=sid)
-                        break
-
-            if not error_flag:
-                con_common_data = sqlite3.connect(constants.CLIENT_COMMON_DATA)
-                logger.info(con_common_data)
-                df_sqlite.to_sql(f'{constants.CLIENT_COMMON_DATA_TABLE}', con_common_data,
-                                 if_exists='append', index=False)
-                con_common_data.close()
-                logger.info(f'Успешно завершено: {element[0]}->{element[1]}')
-                socketio.emit("setUpdateSignalsRequestStatus",
-                              {"message": f"Успешно завершено: {element[0]}->{element[1]}\n"}, to=sid)
-            error_flag = False
-
-            socketio.emit("setProgressBarSignals", {"count": int((i+1)/len(decart_product) * 100 * 0.9)},
-                          to=sid)  # 0.9 для масштабирования max в 90%
-
-        try:
-            con_common_data = sqlite3.connect(constants.CLIENT_COMMON_DATA)
-
-            df_sqlite = pd.read_sql_query(
-                f"SELECT * from {constants.CLIENT_COMMON_DATA_TABLE}",
-                con_common_data, parse_dates=['t'])
-        except Exception as e:
-            # Если произошла ошибка с sqlite, то ловим и выводим исключение
-            logger.error(f"{constants.CLIENT_COMMON_DATA_TABLE} is empty: {e}")
-            socketio.emit("setUpdateSignalsRequestStatus",
-                          {"message": f"Никаких данных не нашлось\n"}, to=sid)
-            return f"Никаких данных не нашлось"
-        finally:
-            con_common_data.close()
-
-        df_report = pd.DataFrame(
-            columns=['Код сигнала (KKS)', 'Дата и время измерения', 'Значение', 'Качество',
-                     'Код качества'],
-            data={'Код сигнала (KKS)': df_sqlite['name'],
-                  'Дата и время измерения': df_sqlite['t'],
-                  'Значение': df_sqlite['val'],
-                  'Качество': df_sqlite['status'],
-                  'Код качества': list(map(lambda x: constants.QUALITY_DICT[x], df_sqlite['status'].to_list()))})
-        df_report.fillna("NaN", inplace=True)
-
-        # Отбираем последние по времени значения
-        if last_value_checked:
-            grouped = df_report.groupby(by='Код сигнала (KKS)')
-            df_report = df_report.loc[grouped['Дата и время измерения'].idxmax()]
-            logger.info(df_report)
-
-        df_report.to_csv(constants.CSV_SIGNALS, index=False, encoding='utf-8')
-        logger.info("Датафрейм сформирован")
-        logger.info("Датафрейм доступен для выкачки")
-        df_report['Дата и время измерения'] = df_report['Дата и время измерения'].dt.strftime('%Y-%m-%d %H:%M:%S')
-        socketio.emit("setUpdateSignalsRequestStatus",
-                      {"message": f"Запрос успешно завершен\n"}, to=sid)
+        df_report = create_reports.create_signals_opc_ua_dataframe(socketio, sid, KKS_ALL,
+                                                                   types_list, selection_tag,
+                                                                   mask_list, kks_list, quality,
+                                                                   date,
+                                                                   last_value_checked, interval_or_date_checked,
+                                                                   interval, dimension, date_deep_search)
+        # Если ошибка или не нашлось ни одного значения, то придет строка
+        if type(df_report) is str:
+            return df_report
+        elif df_report is None:
+            return
 
         socketio.emit("setProgressBarSignals", {"count": 90}, to=sid)
         socketio.emit("setUpdateSignalsRequestStatus", {"message": f"Формирование отчета\n"}, to=sid)
@@ -1427,60 +1114,16 @@ def get_signals_data(types_list: List[str], selection_tag: str,
         global sid_proc
         sid_proc = sid
 
-        socketio.emit("setUpdateSignalsRequestStatus", {"message": f"Формирование списка kks сигналов\n"}, to=sid)
-        kks_requested_list = get_kks(types_list, mask_list, kks_list, selection_tag)
-        socketio.emit("setUpdateSignalsRequestStatus", {"message": f"Список kks сигналов успешно сформирован\n"},
-                      to=sid)
-        socketio.emit("setProgressBarSignals", {"count": 10}, to=sid)
-
-        # Формирование запроса sql к Clickhouse
-        socketio.emit("setUpdateSignalsRequestStatus", {"message": f"Формирование запроса к БД Clickhouse\n"},
-                      to=sid)
-        query_string = operations.fill_signals_query(kks_requested_list, quality, date, last_value_checked,
-                                                     interval_or_date_checked, interval, dimension, date_deep_search)
-        logger.info(query_string)
-        socketio.emit("setProgressBarSignals", {"count": 20}, to=sid)
-
-        ip, port, username, password = operations.read_clickhouse_server_conf()
         try:
-            socketio.emit("setUpdateSignalsRequestStatus", {"message": f"Запрос к БД Clickhouse\n"},
-                          to=sid)
-            socketio.emit("setProgressBarSignals", {"count": 50}, to=sid)
-            client = operations.create_client(ip, port, username, password)
-            logger.info("Clickhouse connected")
-
-            df_signals = client.query_df(query_string)
-            logger.info(df_signals)
-
-            socketio.emit("setUpdateSignalsRequestStatus", {"message": f"Запрос к БД Clickhouse выполнен успешно\n"},
-                          to=sid)
-
-            client.close()
-            logger.info("Clickhouse disconnected")
+            df_report = create_reports.create_signals_ch_dataframe(socketio, sid, types_list, selection_tag,
+                                                                   mask_list, kks_list, quality, date,
+                                                                   last_value_checked, interval_or_date_checked,
+                                                                   interval, dimension, date_deep_search)
         except clickhouse_exceptions.Error as error:
             logger.error(error)
             socketio.emit("setUpdateSignalsRequestStatus",
                           {"message": f"Никаких данных не нашлось\n"}, to=sid)
             return f"Никаких данных не нашлось"
-        logger.warning(df_signals)
-        df_report = pd.DataFrame(
-            columns=['Код сигнала (KKS)', 'Дата и время измерения', 'Значение', 'Качество',
-                     'Код качества'],
-            data={'Код сигнала (KKS)': df_signals['kks'],
-                  'Дата и время измерения': df_signals['timestamp'],
-                  'Значение': df_signals['val'],
-                  'Качество': df_signals['q_name'],
-                  'Код качества': df_signals['quality']})
-        df_report.fillna("NaN", inplace=True)
-
-        logger.info(df_report)
-
-        df_report.to_csv(constants.CSV_SIGNALS, index=False, encoding='utf-8')
-        logger.info("Датафрейм сформирован")
-        logger.info("Датафрейм доступен для выкачки")
-        df_report['Дата и время измерения'] = df_report['Дата и время измерения'].dt.strftime('%Y-%m-%d %H:%M:%S')
-        socketio.emit("setUpdateSignalsRequestStatus",
-                      {"message": f"Запрос успешно завершен\n"}, to=sid)
 
         socketio.emit("setProgressBarSignals", {"count": 90}, to=sid)
         socketio.emit("setUpdateSignalsRequestStatus", {"message": f"Формирование отчета\n"}, to=sid)
@@ -1489,8 +1132,7 @@ def get_signals_data(types_list: List[str], selection_tag: str,
         socketio.emit("setUpdateSignalsRequestStatus", {"message": f"Отчет сформирован\n"}, to=sid)
 
         socketio.emit("setProgressBarSignals", {"count": 95}, to=sid)
-        socketio.emit("setUpdateSignalsRequestStatus", {"message": f"Передача данных в веб-приложение...\n"},
-                      to=sid)
+        socketio.emit("setUpdateSignalsRequestStatus", {"message": f"Передача данных в веб-приложение...\n"}, to=sid)
 
         return slice
 
@@ -1580,100 +1222,23 @@ def get_grid_data(kks: List[str], date_begin: str, date_end: str,
         global REPORT_DF_STATUS
         sid_proc = sid
 
-        # Сохранение датчика с KKS
-        socketio.emit("setUpdateGridRequestStatus", {"message": f"Сохранение датчиков KKS\n"}, to=sid)
-        csv_tag_KKS = pd.DataFrame(data=kks)
-        csv_tag_KKS.to_csv(constants.CLIENT_KKS, index=False, header=None)
-
-        # Формирование команд для запуска бинарника historian и скрипта slices.py
-        command_datetime_begin_time = parse(date_begin).strftime("%Y-%m-%d %H:%M:%S")
-        command_datetime_end_time = parse(date_end).strftime("%Y-%m-%d %H:%M:%S")
-
-        command_datetime_begin_time_binary = parse(date_begin).strftime("%Y-%m-%dT%H:%M:%SZ")
-        command_datetime_end_time_binary = parse(date_end).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-        command_string_binary = f"cd client && ./client -b {command_datetime_begin_time_binary} -e " \
-                                f"{command_datetime_end_time_binary} -p 100 -t 10000 -rxw"
-
-        delta_interval = interval * constants.DELTA_INTERVAL_IN_SECONDS[dimension]
-        command_string = f'cd client && python ./slicer.py -d {delta_interval} ' \
-                         f'-t \"{command_datetime_begin_time}\" \"{command_datetime_end_time}\"'
-
-        logger.info("Получение по OPC UA")
-        logger.info(command_string_binary)
-
-        socketio.emit("setUpdateGridRequestStatus", {"message": f"Получение по OPC UA валидных тегов\n"}, to=sid)
-
-        socketio.emit("setProgressBarGrid", {"count": 5}, to=sid)
-
-        args = ["./client", "-b", f"{command_datetime_begin_time_binary}", "-e",
-                f"{command_datetime_end_time_binary}", "-p", "100", "-t", "10000" "-rxw"]
-
         try:
-            subprocess.run(args, capture_output=True, cwd=f"{os.getcwd()}{os.sep}client{os.sep}", check=True,
-                           env={'LD_LIBRARY_PATH': '/home/spa/opt/openssl-1.1.1o'})
-            socketio.emit("setProgressBarGrid", {"count": 10}, to=sid)
+            df_report, df_report_slice, code = create_reports.create_grid_opc_ua_dataframe(socketio, sid, kks,
+                                                                                           date_begin, date_end,
+                                                                                           interval, dimension)
         except subprocess.CalledProcessError as subprocess_exception:
             # Если произошла ошибка во время вызова клиента, то ловим и выводим исключение
             logger.error(subprocess_exception)
+            if "ValueError: sampling_period is greater than the duration between start and end" \
+                    in str(subprocess_exception):
+                logger.error("интервал больше, чем дата начала и конца")
+                return f"интервал больше, чем дата начала и конца"
             return f"Произошла ошибка {str(subprocess_exception)}"
         except RuntimeError as run_time_exception:
             # Если произошла ошибка во время выполнении процесса, то ловим и выводим исключение
             logger.error(run_time_exception)
             socketio.emit("setUpdateGridRequestStatus", {"message": f"Ошибка: {run_time_exception}\n"}, to=sid)
             return
-
-        logger.info("Получение срезов")
-        logger.info(command_string)
-
-        socketio.emit("setUpdateGridRequestStatus", {"message": f"Получение срезов\n"}, to=sid)
-
-        args = ["python", "./slicer.py", "-d", f"{delta_interval}",
-                "-t", f"{command_datetime_begin_time}", f"{command_datetime_end_time}"]
-        try:
-            socketio.emit("setProgressBarGrid", {"count": 40}, to=sid)
-            subprocess.run(args, capture_output=True, cwd=f"{os.getcwd()}{os.sep}client{os.sep}", check=True)
-            socketio.emit("setProgressBarGrid", {"count": 50}, to=sid)
-        except subprocess.CalledProcessError as subprocess_exception:
-            # Если произошла ошибка во время вызова клиента, то ловим и выводим исключение
-            logger.error(subprocess_exception)
-            if "ValueError: sampling_period is greater than the duration between start and end"\
-                    in str(subprocess_exception):
-                logger.error("интервал больше, чем дата начала и конца")
-                return f"интервал больше, чем дата начала и конца"
-        except RuntimeError as run_time_exception:
-            # Если произошла ошибка во время выполнении процесса, то ловим и выводим исключение
-            logger.error(run_time_exception)
-            socketio.emit("setUpdateGridRequestStatus", {"message": f"Ошибка: {run_time_exception}\n"}, to=sid)
-            return
-
-        socketio.emit("setUpdateGridRequestStatus", {"message": f"Формирование таблиц отчета\n"}, to=sid)
-
-        df_slice_csv = pd.read_csv(constants.CLIENT_SLICES)
-        df_slice_status_csv = pd.read_csv(constants.CLIENT_SLICES_STATUS)
-
-        df_report = pd.DataFrame(df_slice_csv['timestamp'])
-        df_report.rename(columns={'timestamp': 'Метка времени'}, inplace=True)
-
-        df_report_slice = pd.DataFrame(df_slice_status_csv['timestamp'])
-        df_report_slice.rename(columns={'timestamp': 'Метка времени'}, inplace=True)
-
-        for index, kks in enumerate(df_slice_csv.columns.tolist()[1:]):
-            df_report[index] = df_slice_csv[kks]
-            df_report_slice[index] = df_slice_status_csv[kks]
-
-        df_report.fillna("NaN", inplace=True)
-        df_report_slice.fillna("NaN", inplace=True)
-
-        socketio.emit("setProgressBarGrid", {"count": 70}, to=sid)
-
-        logger.info(df_report)
-        logger.info(df_report_slice)
-
-        socketio.emit("setUpdateGridRequestStatus", {"message": f"Сохранение таблиц отчета\n"}, to=sid)
-        code = pd.DataFrame(data={
-            '№': [i for i in range(len(df_slice_csv.columns.tolist()[1:]))],
-            'Обозначение сигнала': [kks for kks in df_slice_csv.columns.tolist()[1:]]})
 
         REPORT_DF = df_report.copy(deep=True)
         REPORT_DF_STATUS = df_report_slice.copy(deep=True)
@@ -1682,11 +1247,11 @@ def get_grid_data(kks: List[str], date_begin: str, date_end: str,
         df_report.to_csv(constants.CSV_GRID, index=False, encoding='utf-8')
         df_report_slice.to_csv(constants.CSV_GRID_STATUS, index=False, encoding='utf-8')
 
-        REPORT_DF = pd.read_csv(constants.CSV_GRID)
-        REPORT_DF_STATUS = pd.read_csv(constants.CSV_GRID_STATUS)
-
         logger.info("Датафреймы сформированы")
         logger.info("Датафреймы доступны для выкачки")
+
+        REPORT_DF = pd.read_csv(constants.CSV_GRID)
+        REPORT_DF_STATUS = pd.read_csv(constants.CSV_GRID_STATUS)
 
         socketio.emit("setProgressBarGrid", {"count": 90}, to=sid)
         socketio.emit("setUpdateGridRequestStatus", {"message": f"Формирование отчета\n"}, to=sid)
@@ -1712,8 +1277,8 @@ def get_grid_data(kks: List[str], date_begin: str, date_end: str,
         socketio.emit("setProgressBarGrid", {"count": 95}, to=sid)
         socketio.emit("setUpdateGridRequestStatus", {"message": f"Передача данных в веб-приложение...\n"}, to=sid)
 
-        return json.loads(df_report[constants.FIRST:constants.LAST].to_json(orient='records')),\
-               json.loads(df_report_slice[constants.FIRST:constants.LAST].to_json(orient='records')),\
+        return json.loads(df_report[constants.FIRST:constants.LAST].to_json(orient='records')), \
+               json.loads(df_report_slice[constants.FIRST:constants.LAST].to_json(orient='records')), \
                len(df_report)
 
     def get_grid_from_ch_data_spawn(kks: List[str], date_begin: str, date_end: str,
@@ -1735,86 +1300,22 @@ def get_grid_data(kks: List[str], date_begin: str, date_end: str,
         global REPORT_DF_STATUS
         sid_proc = sid
 
-        # Формирование запроса sql к Clickhouse
-        socketio.emit("setUpdateGridRequestStatus", {"message": f"Формирование запроса sql к БД Clickhouse\n"}, to=sid)
-        socketio.emit("setProgressBarGrid", {"count": 10}, to=sid)
-
-        query_drop, query_create, query_value, query_status = \
-            operations.fill_grid_queries_value(kks, date_begin, date_end, interval, dimension)
-
-        socketio.emit("setProgressBarGrid", {"count": 20}, to=sid)
-
-        ip, port, username, password = operations.read_clickhouse_server_conf()
         try:
-            socketio.emit("setUpdateGridRequestStatus",
-                          {"message": f"Запрос к БД Clickhouse (получение значений)\n"}, to=sid)
-            socketio.emit("setProgressBarGrid", {"count": 40}, to=sid)
-            client = operations.create_client(ip, port, username, password)
-            logger.info("Clickhouse connected")
-            client.command(query_drop)
-            client.command(query_create)
-            df_slice_csv = client.query_df(query_value)
-            socketio.emit("setUpdateGridRequestStatus",
-                          {"message": f"Запрос к БД Clickhouse (получение кодов качества)\n"},
-                          to=sid)
-            df_slice_status_csv = client.query_df(query_status)
-            socketio.emit("setProgressBarGrid", {"count": 50}, to=sid)
-            client.close()
-            logger.info("Clickhouse disconnected")
+            df_report, df_report_slice, code = create_reports.create_grid_ch_dataframe(socketio, sid, kks,
+                                                                                       date_begin, date_end,
+                                                                                       interval, dimension)
         except clickhouse_exceptions.Error as error:
             logger.error(error)
             socketio.emit("setUpdateGridRequestStatus", {"message": f"Ошибка: {error}\n"}, to=sid)
             return str(error)
-
-        socketio.emit("setUpdateGridRequestStatus", {"message": f"Формирование таблиц отчета\n"}, to=sid)
-
-        try:
-            df_report = pd.DataFrame(df_slice_csv['grid'])
         except KeyError as error:
             logger.error(error)
             socketio.emit("setUpdateGridRequestStatus",
                           {"message": f"Ошибка: Клиент Clickhouse ничего не нашел\n"}, to=sid)
             return "Ошибка: Клиент Clickhouse ничего не нашел"
-        df_report.rename(columns={'grid': 'Метка времени'}, inplace=True)
-
-        df_report_slice = pd.DataFrame(df_slice_status_csv['grid'])
-        df_report_slice.rename(columns={'grid': 'Метка времени'}, inplace=True)
-
-        for index, kks in enumerate(df_slice_csv.columns.tolist()[1:]):
-            df_report[index] = df_slice_csv[kks]
-            df_report_slice[index] = df_slice_status_csv[kks]
-
-        df_report.fillna(0, inplace=True)
-        df_report.fillna("NaN", inplace=True)
-
-        df_report_slice = df_report_slice.astype(str)
-        df_report_slice.replace({"<NA>": "missed"}, inplace=True)
-
-        for k in df_report_slice.columns.tolist()[1:]:
-            df_report_slice[k] = df_report_slice[k].map(constants.QUALITY_DICT_REVERSE)
-
-        socketio.emit("setProgressBarGrid", {"count": 70}, to=sid)
-
-        logger.info(df_report)
-        logger.info(df_report_slice)
-
-        socketio.emit("setUpdateGridRequestStatus", {"message": f"Сохранение таблиц отчета\n"}, to=sid)
-        code = pd.DataFrame(data={
-            '№': [i for i in range(len(df_slice_csv.columns.tolist()[1:]))],
-            'Обозначение сигнала': [kks for kks in df_slice_csv.columns.tolist()[1:]]})
-
-        REPORT_DF = df_report.copy(deep=True)
-        REPORT_DF_STATUS = df_report_slice.copy(deep=True)
-
-        code.to_csv(constants.CSV_CODE, index=False, encoding='utf-8')
-        df_report.to_csv(constants.CSV_GRID, index=False, encoding='utf-8')
-        df_report_slice.to_csv(constants.CSV_GRID_STATUS, index=False, encoding='utf-8')
 
         REPORT_DF = pd.read_csv(constants.CSV_GRID)
         REPORT_DF_STATUS = pd.read_csv(constants.CSV_GRID_STATUS)
-
-        logger.info("Датафреймы сформированы")
-        logger.info("Датафреймы доступны для выкачки")
 
         socketio.emit("setProgressBarGrid", {"count": 90}, to=sid)
         socketio.emit("setUpdateGridRequestStatus", {"message": f"Формирование отчета\n"}, to=sid)
@@ -1881,7 +1382,7 @@ def get_grid_part_data(first: int, last: int) -> Tuple[dict, dict]:
     global REPORT_DF
     global REPORT_DF_STATUS
 
-    return json.loads(REPORT_DF.iloc[first:last].to_json(orient='records')),\
+    return json.loads(REPORT_DF.iloc[first:last].to_json(orient='records')), \
            json.loads(REPORT_DF_STATUS.iloc[first:last].to_json(orient='records'))
 
 
@@ -1927,7 +1428,7 @@ def get_grid_sorted_and_filtered_data(params: dict) -> Tuple[dict, dict, int]:
                               inplace=True)
         REPORT_DF_STATUS = REPORT_DF_STATUS.reindex(REPORT_DF.index)
 
-    return json.loads(REPORT_DF.iloc[constants.FIRST:constants.LAST].to_json(orient='records')),\
+    return json.loads(REPORT_DF.iloc[constants.FIRST:constants.LAST].to_json(orient='records')), \
            json.loads(REPORT_DF_STATUS.iloc[constants.FIRST:constants.LAST].to_json(orient='records')), \
            len(REPORT_DF)
 
@@ -2120,33 +1621,12 @@ def get_bounce_signals_data(kks: List[str], date: str, interval: int,
         global sid_proc
         sid_proc = sid
 
-        # Сохранение датчика с KKS
-        socketio.emit("setUpdateBounceRequestStatus", {"message": f"Сохранение датчиков KKS\n"}, to=sid)
-        csv_tag_KKS = pd.DataFrame(data=kks)
-        csv_tag_KKS.to_csv(constants.CLIENT_KKS, index=False, header=None)
-
-        # Формирование команд для запуска бинарника historian
-        delta_interval = interval * constants.DELTA_INTERVAL_IN_SECONDS[dimension]
-        command_datetime_begin_time = (parse(date) -
-                                       datetime.timedelta(seconds=delta_interval)).strftime("%Y-%m-%dT%H:%M:%SZ")
-        command_datetime_end_time = parse(date).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-        command_string = f"cd client && ./client -b {command_datetime_begin_time} -e " \
-                         f"{command_datetime_end_time} -p 100 -t 1 -xw"
-
-        logger.info("get OPC_UA")
-        logger.info(command_string)
-
-        socketio.emit("setUpdateBounceRequestStatus", {"message": f"Получение срезов\n"}, to=sid)
-        socketio.emit("setProgressBarBounceSignals", {"count": 20}, to=sid)
-
-        args = ["./client", "-b", f"{command_datetime_begin_time}",
-                "-e", f"{command_datetime_end_time}", "-p", "100", "-t", "1", "-xw"]
-
         try:
-            subprocess.run(args, capture_output=True, cwd=f"{os.getcwd()}{os.sep}client{os.sep}", check=True,
-                           env={'LD_LIBRARY_PATH': '/home/spa/opt/openssl-1.1.1o'})
-            socketio.emit("setProgressBarBounceSignals", {"count": 50}, to=sid)
+            df_counts = create_reports.create_bounce_opc_ua_dataframe(socketio, sid, kks, date, interval, dimension)
+            # Если не нашлось ни одного значения из выбранных датчиков, то придет строка
+            if type(df_counts) is str:
+                return df_counts
+
         except subprocess.CalledProcessError as subprocess_exception:
             logger.error(subprocess_exception)
             return f"Произошла ошибка {str(subprocess_exception)}"
@@ -2155,42 +1635,6 @@ def get_bounce_signals_data(kks: List[str], date: str, interval: int,
             logger.error(run_time_exception)
             socketio.emit("setUpdateBounceRequestStatus", {"message": f"Ошибка: {run_time_exception}\n"}, to=sid)
             return
-
-        logger.info(f'client finished')
-
-        # Достаем фрейм из sqlite
-        socketio.emit("setUpdateBounceRequestStatus", {"message": f"Формирование таблиц отчета\n"}, to=sid)
-        con_current_data = sqlite3.connect(constants.CLIENT_DATA)
-        query_string_data = f"SELECT * from {constants.CLIENT_DYNAMIC_TABLE}"
-        query_string_kks = f"SELECT  * FROM {constants.CLIENT_STATIC_TABLE}"
-
-        df_sqlite = pd.read_sql_query(
-            query_string_data,
-            con_current_data, parse_dates=['t'])
-
-        df_sqlite_kks = pd.read_sql_query(
-            query_string_kks,
-            con_current_data)
-
-        con_current_data.close()
-
-        if df_sqlite.empty:
-            msg = "Не нашлось ни одного значения из выбранных датчиков. Возможно интервал слишком мал."
-            logger.info(msg)
-            socketio.emit("setUpdateBounceRequestStatus", {"message": f"{msg}\n"}, to=sid)
-            return msg
-
-        df_counts = pd.DataFrame()
-        df_counts['Частота'] = df_sqlite['id'].value_counts()
-        df_counts.index.name = 'Наименование датчика'
-        df_counts['Наименование датчика'] = [df_sqlite_kks.loc[df_sqlite_kks['id'] == id]['name'].values[0]
-                                             for id in df_counts.index.values.tolist()]
-
-        socketio.emit("setProgressBarBounceSignals", {"count": 80}, to=sid)
-        socketio.emit("setUpdateBounceRequestStatus", {"message": f"Сохранение таблиц отчета\n"}, to=sid)
-        df_counts.to_csv(constants.CSV_BOUNCE, index=False, encoding='utf-8')
-        logger.info("Датафрейм сформирован")
-        logger.info("Датафрейм доступен для выкачки")
 
         socketio.emit("setProgressBarBounceSignals", {"count": 90}, to=sid)
         socketio.emit("setUpdateBounceRequestStatus", {"message": f"Формирование отчета\n"}, to=sid)
@@ -2228,51 +1672,15 @@ def get_bounce_signals_data(kks: List[str], date: str, interval: int,
         global sid_proc
         sid_proc = sid
 
-        # Формирование запроса sql к Clickhouse
-
-        socketio.emit("setUpdateBounceRequestStatus", {"message": f"Формирование запроса sql к Clickhouse\n"}, to=sid)
-        socketio.emit("setProgressBarBounceSignals", {"count": 10}, to=sid)
-
-        query_string = operations.fill_bounce_query(kks, date, interval, dimension, top)
-
-        socketio.emit("setProgressBarBounceSignals", {"count": 20}, to=sid)
-
-        ip, port, username, password = operations.read_clickhouse_server_conf()
         try:
-            socketio.emit("setUpdateBounceRequestStatus", {"message": f"Запрос к БД Clickhouse (получение значений)\n"},
-                          to=sid)
-            socketio.emit("setProgressBarBounceSignals", {"count": 40}, to=sid)
-            client = operations.create_client(ip, port, username, password)
-            logger.info("Clickhouse connected")
-            df_bounce = client.query_df(query_string)
-            socketio.emit("setProgressBarBounceSignals", {"count": 50}, to=sid)
-            client.close()
-            logger.info("Clickhouse disconnected")
+            df_counts = create_reports.create_bounce_ch_dataframe(socketio, sid, kks, date, interval, dimension, top)
+            # Если не нашлось ни одного значения из выбранных датчиков, то придет строка
+            if type(df_counts) is str:
+                return df_counts
         except clickhouse_exceptions.Error as error:
             logger.error(error)
             socketio.emit("setUpdateGridRequestStatus", {"message": f"Ошибка: {error}\n"}, to=sid)
             return f'{error}'
-
-        logger.info(df_bounce)
-
-        if df_bounce.empty:
-            msg = "Не нашлось ни одного значения из выбранных датчиков. Возможно интервал слишком мал."
-            logger.info(msg)
-            socketio.emit("setUpdateBounceRequestStatus", {"message": f"{msg}\n"}, to=sid)
-            return msg
-
-        socketio.emit("setUpdateBounceRequestStatus", {"message": f"Формирование таблиц отчета\n"}, to=sid)
-
-        df_counts = pd.DataFrame()
-        df_counts['Частота'] = df_bounce['count_change']
-        df_counts.index.name = 'Наименование датчика'
-        df_counts['Наименование датчика'] = df_bounce['kks']
-
-        socketio.emit("setProgressBarBounceSignals", {"count": 80}, to=sid)
-        socketio.emit("setUpdateBounceRequestStatus", {"message": f"Сохранение таблиц отчета\n"}, to=sid)
-        df_counts.to_csv(constants.CSV_BOUNCE, index=False, encoding='utf-8')
-        logger.info("Датафрейм сформирован")
-        logger.info("Датафрейм доступен для выкачки")
 
         socketio.emit("setProgressBarBounceSignals", {"count": 90}, to=sid)
         socketio.emit("setUpdateBounceRequestStatus", {"message": f"Формирование отчета\n"}, to=sid)
