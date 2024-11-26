@@ -29,6 +29,247 @@ from typing import Dict, List, Tuple, Union
 from flask_socketio import SocketIO
 
 
+def file_checked_status() -> bool:
+    """
+    Функция возвращает результат проверки существования файла тегов kks_all.csv или верность настройки клиента Clickhouse
+    :return: True/False результат проверки существования файла тегов kks_all.csv
+    """
+    client_status = False
+    ip, port, username, password = client_operations.read_clickhouse_server_conf()
+    try:
+        client = client_operations.create_client(ip, port, username, password)
+        logger.info("Clickhouse connected")
+        client_status = True
+        client.close()
+        logger.info("Clickhouse disconnected")
+    except clickhouse_exceptions.Error as error:
+        logger.error(error)
+
+    return client_status
+
+
+def last_update_file_kks(socketio: SocketIO, sid: int, mode: str) -> str:
+    """
+    Функция возвращает дату последнего обновления файла тегов kks_all.csv или таблицы clickhouse
+    :param socketio: объект сокета socketio
+    :param sid: идентификатор сокетного соединения, сделавшего запрос
+    :param mode: выбранный клиент
+    :return: строка даты последнего обновления файла тегов kks_all.csv или таблицы clickhouse
+    """
+    if mode == 'OPC':
+        current_path = constants.DATA_KKS_ALL
+
+        if not os.path.isfile(current_path):
+            return f"Файл {current_path} не найден"
+        logger.info(str(datetime.datetime.fromtimestamp(os.path.getmtime(current_path)).strftime('%Y-%m-%d %H:%M:%S')))
+        return str(datetime.datetime.fromtimestamp(os.path.getmtime(current_path)).strftime('%Y-%m-%d %H:%M:%S'))
+
+    if mode == 'CH':
+        ip, port, username, password = client_operations.read_clickhouse_server_conf()
+
+        client = client_operations.get_client(sid, socketio, ip, port, username, password)
+        try:
+            logger.info("Clickhouse connected")
+            modify_time = client.command("SELECT table, metadata_modification_time FROM system.tables "
+                                         "WHERE table = 'static_data'")
+            logger.info(modify_time[1])
+            client.close()
+            logger.info("Clickhouse disconnected")
+            return modify_time[1]
+        except AttributeError as attr_error:
+            logger.error(attr_error)
+            return client
+        except clickhouse_exceptions.Error as error:
+            logger.error(error)
+            socketio.emit("setUpdateStatus",
+                          {"statusString": f"{error}\n", "serviceFlag": False},
+                          to=sid)
+
+    return 'Ошибка конфигурации клиента'
+
+
+def default_fields_read(mode: str) -> Union[str, Dict[str, Union[str, int, bool, List[str]]]]:
+    """
+    Функция возвращает конфигурацию вводимых полей для запроса по умолчанию
+    :param mode: выбранный клиент
+    :return: json объект полей по умочанию
+    """
+    try:
+        f = open(constants.CONFIG)
+    except FileNotFoundError as file_not_found_error_exception:
+        logger.error(file_not_found_error_exception)
+        default_config_error = f"Файл {constants.CONFIG} не найден. " \
+                               f"Установите параметры по умолчанию в конфигураторе"
+        return default_config_error
+    else:
+        with f:
+            default_config = json.load(f)
+            if not default_config["fields"]:
+                default_fields_error = f"Параметры по умолчанию пусты. Установите и сохраните " \
+                                       f"параметры по умолчанию в конфигураторе"
+                return default_fields_error
+            default_fields = default_config["fields"]
+
+    return default_fields[mode]
+
+
+def default_fields_write(mode: str, default_fields: dict) -> str:
+    """
+    Процедура сохраняет конфигурацию вводимых полей для запроса по умолчанию в конфиг json
+    :param mode: выбранный клиент
+    :param default_fields: json объект полей по умолчанию
+    :return:
+    """
+
+    # Приводим строку даты глубины поиска к формату без timezone
+    default_fields["dateDeepOfSearch"] = default_fields["dateDeepOfSearch"][:-5]
+    logger.info(default_fields)
+
+    with open(constants.CONFIG, "r") as read_config:
+        config = json.load(read_config)
+
+    config["fields"][mode] = default_fields
+
+    with open(constants.CONFIG, "w") as write_config:
+        json.dump(config, write_config, indent=4)
+
+    logger.info(f"Файл {constants.CONFIG} был успешно сохранен")
+    return ""
+
+
+def upload_config_process(file: dict) -> str:
+    """
+    Функция импортирует пользовательский конфиг
+    :param file: json файл конфига
+    :return: Строка сообщения об успехе импорта или ошибке
+    """
+    try:
+        config = json.loads(file.decode('utf-8'))
+    except json.JSONDecodeError as json_error:
+        logger.error(json_error)
+        return f"Ошибка считывания конфига: {json_error}"
+    logger.info(config)
+
+    # Валидация пользовательского конфигурационного файла
+    valid_flag, msg = validate_imported_config(config)
+    if not valid_flag:
+        return f"Ошибка валидации пользовательского конфига: {msg}. Отмена импорта."
+
+    with open(constants.CONFIG, "w") as write_config:
+        json.dump(config, write_config, indent=4)
+
+    logger.warning(config)
+
+    return f"Конфиг импортирован. {msg}"
+
+
+def types_of_sensors(mode: str, kks_all: pd.DataFrame) -> List[str]:
+    """
+    Функция возвращает все типы данных тегов kks, найденных в файле тегов kks_all.csv или в таблице CH
+    :param mode: выбранный клиент
+    :param kks_all: pandas фрейм файла тегов kks_all.csv
+    :return: массив строк типов данных
+    """
+    if mode == 'OPC':
+        logger.info(kks_all[1].dropna().unique().tolist())
+        return kks_all[1].dropna().unique().tolist()
+
+    if mode == 'CH':
+        ip, port, username, password = client_operations.read_clickhouse_server_conf()
+        try:
+            client = client_operations.create_client(ip, port, username, password)
+            logger.info("Clickhouse connected")
+            types = client.query_df("SELECT DISTINCT data_type_name FROM archive.v_static_data")
+            logger.info(types)
+            client.close()
+            logger.info("Clickhouse disconnected")
+            return types['data_type_name'].tolist()
+        except clickhouse_exceptions.Error as error:
+            logger.error(error)
+            return ['Ошибка конфигурации клиента']
+    return ['Ошибка конфигурации клиента']
+
+
+def get_kks_tag_exist(mode: str, kks_all: pd.DataFrame, kks_tag: str) -> bool:
+    """
+    Функция возвращает результат проверки наличия тега в файле тегов kks_all.csv или в Clickhouse
+    :param mode: выбранный клиент
+    :param kks_all: pandas фрейм файла тегов kks_all.csv
+    :param kks_tag: проверяемый тег kks
+    :return: True - тег в файле тегов kks_all.csv; False - тега не найден в файле тегов kks_all.csv или это шаблон маски
+    """
+    if mode == 'OPC':
+        return kks_tag in kks_all[0].values
+    elif mode == 'CH':
+        ip, port, username, password = client_operations.read_clickhouse_server_conf()
+        try:
+            client = client_operations.create_client(ip, port, username, password)
+            logger.info("Clickhouse connected")
+
+            exist = client.command(f"WITH '{kks_tag}' as i_kks SELECT "
+                                   f"EXISTS( SELECT 1 FROM archive.v_static_data "
+                                   f"WHERE item_name = i_kks)::bool as EXIST")
+
+            client.close()
+            logger.info("Clickhouse disconnected")
+
+            return exist
+        except clickhouse_exceptions.Error as error:
+            logger.error(error)
+            return False
+    else:
+        return False
+
+
+def kks_by_masks(mode: str, kks_all: pd.DataFrame, types_list: List[str], mask_list: List[str]) -> List[Union[str, None]]:
+    """
+    Функция возвращает массив kks датчиков из файла тегов kks_all.csv или из Clickhouse по маске шаблона при поиске kks
+    :param mode: выбранный клиент
+    :param kks_all: pandas фрейм файла тегов kks_all.csv
+    :param types_list: массив выбранных пользователем типов данных
+    :param mask_list: массив маск шаблонов поиска regex
+    :return: массив строк kks датчиков (чтобы не перегружать форму 10000)
+    """
+
+    # Если маска пустая, то вовзвращаем пустой массив
+    if not mask_list:
+        return []
+
+    # Если ведем в веб-приложении поиск тегов и очищаем всю строку поиска, то вовзвращаем пустой массив
+    if mask_list[0] == '':
+        return []
+
+    if mode == 'OPC':
+        kks = kks_all.copy(deep=True)
+
+        kks = kks[kks[1].isin(types_list)]
+
+        for mask in mask_list:
+            kks = kks[kks[0].str.contains(mask, regex=True)]
+
+        logger.info(len(kks[0].tolist()))
+        return kks[0].tolist()[:constants.COUNT_OF_RETURNED_KKS]
+
+    elif mode == 'CH':
+        ip, port, username, password = client_operations.read_clickhouse_server_conf()
+        try:
+            client = client_operations.create_client(ip, port, username, password)
+            logger.info("Clickhouse connected")
+
+            kks = client.query_df(f"WITH {mask_list} AS arr_reg , {types_list} AS arr_type "
+                                  f"SELECT item_name  FROM archive.v_static_data "
+                                  f"WHERE data_type_name in arr_type AND "
+                                  f"length(multiMatchAllIndices(item_name, arr_reg)) = length(arr_reg)")
+
+            client.close()
+            logger.info("Clickhouse disconnected")
+
+            return kks['item_name'].tolist()
+        except clickhouse_exceptions.Error as error:
+            logger.error(error)
+    return []
+
+
 def get_kks_opc_ua(kks_all: pd.DataFrame,
                    types_list: List[str], mask_list: List[str], kks_list: List[str],
                    selection_tag: str = None) -> List[str]:
@@ -171,6 +412,43 @@ def get_kks_ch(types_list: List[str], mask_list: List[str], kks_list: List[str],
     return kks_requested_list
 
 
+def kks_all_define(mode: str, exception_directories: List[str]) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Функция определяет фреймы pandas файла тегов kks_all.csv и его резервной копии kks_all_back.csv
+    :param mode: выбранный режим фильтрации обновления тегов
+    :param exception_directories: список исключений
+    :return: pandas фреймы kks_all и kks_all_back
+    """
+    kks_all = pd.read_csv(constants.DATA_KKS_ALL, header=None, sep=';')
+    kks_all_back = pd.read_csv(constants.DATA_KKS_ALL_BACK, header=None, sep=';')
+    if mode == "exception":
+        for exception_directory in exception_directories:
+            kks_all = kks_all[~kks_all[0].str.contains(exception_directory, regex=True)]
+        kks_all.to_csv(constants.DATA_KKS_ALL, header=None, sep=';', index=False)
+        kks_all = pd.read_csv(constants.DATA_KKS_ALL, header=None, sep=';')
+
+    return kks_all, kks_all_back
+
+
+def kks_all_change_update(kks_all_back: pd.DataFrame, root_directory: str,
+                          exception_directories: List[str]) -> pd.DataFrame:
+    """
+    Функция применения списка исключений к обновленному файлу тегов
+    :param kks_all_back: pandas фрейм резервного файла тегов kks_all_back.csv
+    :param root_directory: корневая папка
+    :param exception_directories: список исключений
+    :return: pandas фрейм файла kks_all.csv
+    """
+    kks_all = kks_all_back.copy(deep=True)
+    kks_all = kks_all[kks_all[0].str.contains(root_directory, regex=True)]
+    for exception_directory in exception_directories:
+        kks_all = kks_all[~kks_all[0].str.contains(exception_directory, regex=True)]
+    kks_all.to_csv(constants.DATA_KKS_ALL, header=None, sep=';', index=False)
+    kks_all = pd.read_csv(constants.DATA_KKS_ALL, header=None, sep=';')
+
+    return kks_all
+
+
 def validate_ip_address(ip: str) -> bool:
     """
     Функция валидации IPv4 адреса
@@ -262,6 +540,30 @@ def validate_imported_config(config: dict) -> Tuple[bool, str]:
                      f"\n{'OPC:' + str(opc_uncorrect) if opc_uncorrect else ''} " \
                      f"\n{'CH:' + str(ch_uncorrect) if ch_uncorrect else ''}"
     return True, ""
+
+
+def validate_exception_directories(socketio: SocketIO, sid: int, mode: str) -> bool:
+    """
+    Процедура валидации масок списка исключений
+    :param socketio: объект сокета
+    :param sid: идентификатор сокета
+    :param mode: выбранный режим фильтрации обновления тегов
+    :return: None
+    """
+    # Валидация регулярных выражений
+    if mode == "exception":
+        try:
+            for directory in exception_directories:
+                re.compile(directory)
+        except re.error as regular_expression_except:
+            logger.error(f"Неверный синтаксис регулярного выражения {regular_expression_except}")
+            socketio.emit("setUpdateStatus",
+                          {
+                              "statusString": f"Неверный синтаксис регулярного выражения {regular_expression_except}\n",
+                              "serviceFlag": True},
+                          to=sid)
+            return False
+    return True
 
 
 def fill_signals_query(kks_requested_list: List[str], quality: List[str], date: str,
