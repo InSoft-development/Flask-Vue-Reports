@@ -341,8 +341,8 @@ def get_kks_opc_ua(kks_all: pd.DataFrame,
 
 def get_kks_ch(types_list: List[str], mask_list: List[str], kks_list: List[str], selection_tag: str = None) -> List[str]:
     """
-    Функция возвращает массив kks датчиков из файла тегов kks_all.csv по маске шаблона.
-    Используется при выполнеии запросов на бэкенде
+    Функция возвращает массив kks датчиков из clickhouse по маске шаблона.
+    Используется при выполнении запросов на бэкенде
     :param types_list: массив выбранных пользователем типов данных
     :param mask_list: массив маск шаблонов поиска regex
     :param kks_list: массив kks напрямую, указанные пользователем
@@ -367,16 +367,16 @@ def get_kks_ch(types_list: List[str], mask_list: List[str], kks_list: List[str],
                                   f"SELECT item_name FROM archive.v_static_data "
                                   f"WHERE data_type_name in arr_type AND "
                                   f"length(multiMatchAllIndices(item_name, arr_reg)) = length(arr_reg)")
-
-            kks_mask_list = kks['item_name'].tolist()
+            if not kks.empty:
+                kks_mask_list = kks['item_name'].tolist()
 
         if selection_tag == "union":
             kks = client.query_df(f"WITH {mask_list} AS arr_reg , {types_list} AS arr_type "
                                   f"SELECT item_name FROM archive.v_static_data "
                                   f"WHERE data_type_name in arr_type AND "
                                   f"multiMatchAny(item_name, arr_reg)")
-
-            kks_mask_list = kks['item_name'].tolist()
+            if not kks.empty:
+                kks_mask_list = kks['item_name'].tolist()
 
         # Отбор тегов,указанных вручную с их объединением
         if kks_list:
@@ -386,11 +386,13 @@ def get_kks_ch(types_list: List[str], mask_list: List[str], kks_list: List[str],
         kks = client.query_df(f"WITH {kks_requested_list} AS arr_kks , {types_list} AS arr_type "
                               f"SELECT item_name, item_descr FROM archive.v_static_data "
                               f"WHERE data_type_name in arr_type AND item_name in arr_kks")
+        client.close()
+        logger.info("Clickhouse disconnected")
+        if kks.empty:
+            return kks_requested_list
         kks_requested_list = kks['item_name'].tolist()
         kks_descr_list = kks['item_descr'].tolist()
         logger.info(len(kks_requested_list))
-        client.close()
-        logger.info("Clickhouse disconnected")
     except clickhouse_exceptions.DatabaseError as pattern_error:
         logger.error(pattern_error)
         mask_error = [mask for mask in mask_list if mask in str(pattern_error)]
@@ -617,7 +619,7 @@ def fill_signals_query(kks_requested_list: List[str], quality: List[str], date: 
                     f"WHERE v_f != val " \
                     f"GROUP BY id, quality" \
                     f") mq1 " \
-                    f"LEFT ANY JOIN archive.t_quality_dict_ljoin sq ON mq1.q_m = sq.id " \
+                    f"LEFT ANY JOIN archive.t_quality_dict sq ON mq1.q_m = sq.id " \
                     f"LEFT ANY JOIN tt_id sid ON mq1.id = sid.id " \
                     f"ORDER BY id, timestamp"
 

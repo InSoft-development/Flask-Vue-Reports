@@ -749,6 +749,10 @@ def get_signals_data(types_list: List[str], selection_tag: str,
                           {"message": f"Никаких данных не нашлось\n"}, to=sid)
             return f"Никаких данных не нашлось"
 
+        # Если ошибка или не нашлось ни одного значения, то придет строка
+        if type(df_report) is str:
+            return df_report
+
         socketio.emit("setProgressBarSignals", {"count": 90}, to=sid)
         socketio.emit("setUpdateSignalsRequestStatus", {"message": f"Формирование отчета\n"}, to=sid)
         slice = json.loads(df_report.to_json(orient='records'))

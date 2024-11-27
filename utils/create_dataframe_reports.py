@@ -250,7 +250,7 @@ def create_signals_ch_dataframe(socketio: SocketIO, sid: int,
                                 types_list: List[str], selection_tag: str,
                                 mask_list: List[str], kks_list: List[str], quality: List[str],
                                 date: str, last_value_checked: bool, interval_or_date_checked: bool,
-                                interval: int, dimension: str, date_deep_search: str) -> pd.DataFrame:
+                                interval: int, dimension: str, date_deep_search: str) -> Union[str, pd.DataFrame]:
     socketio.emit("setUpdateSignalsRequestStatus", {"message": f"Формирование списка kks сигналов\n"}, to=sid)
     kks_requested_list = operations.get_kks_ch(types_list, mask_list, kks_list, selection_tag)
     socketio.emit("setUpdateSignalsRequestStatus", {"message": f"Список kks сигналов успешно сформирован\n"}, to=sid)
@@ -279,6 +279,14 @@ def create_signals_ch_dataframe(socketio: SocketIO, sid: int,
 
     client.close()
     logger.info("Clickhouse disconnected")
+
+    if df_signals.empty:
+        # Если датафрейм пуст
+        logger.warning(df_signals)
+        socketio.emit("setUpdateSignalsRequestStatus",
+                      {"message": f"Никаких данных не нашлось\n"}, to=sid)
+        return f"Никаких данных не нашлось"
+
     df_report = pd.DataFrame(
         columns=['Код сигнала (KKS)', 'Дата и время измерения', 'Значение', 'Качество',
                  'Код качества'],
