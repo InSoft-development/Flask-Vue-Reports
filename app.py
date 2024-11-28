@@ -27,6 +27,8 @@ import re
 import shutil
 import time
 
+from utils.control import AppControl, DataControl, Task
+
 from utils.correct_start import check_correct_application_structure
 import utils.constants_and_paths as constants
 import utils.routine_operations as operations
@@ -39,29 +41,11 @@ from loguru import logger
 
 from typing import Dict, List, Tuple, Union
 
-VERSION = '1.0.3'
-
-clients = {}
+VERSION = '1.0.4'
 
 app = Flask(__name__, static_folder="./web", template_folder="./web", static_url_path="")
 CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
-
-# Переменная под идентификатор сокета (sid), вызывающего процесс
-sid_proc = None
-
-# Переменная под объект гринлета обновления тегов
-update_greenlet = None
-# Переменная под объект гринлета изменения обновлененного файла тегов на основе списка исключений
-change_update_greenlet = None
-# Переменная под объект модуля subprocess процесса обновления тегов
-p_kks_all = None
-# Переменная под объект гринлета выполнения запроса по срезам тегов
-signals_greenlet = None
-# Переменная под объект гринлета выполнения запроса сетки
-grid_greenlet = None
-# Переменная под объект гринлета выполнения запроса дребезга
-bounce_greenlet = None
 
 
 @app.route("/", defaults={"path": ""})
@@ -169,9 +153,7 @@ def connect():
     Процедура регистрирует присоединение нового клиента и открытие сокета
     :return:
     """
-    clients[request.sid] = request.sid
-    logger.info("connect")
-    logger.info(request.sid)
+    app_control.set_clients(request.sid)
 
 
 @socketio.on("disconnect")
@@ -180,9 +162,7 @@ def disconnect():
     Процедура регистрирует разъединение клиента и закрытие сокета
     :return:
     """
-    del clients[request.sid]
-    logger.info("disconnect")
-    logger.info(request.sid)
+    app_control.set_clients(request.sid, remove=True)
 
 
 @socketio.on("get_file_checked")
@@ -222,14 +202,8 @@ def change_client_mode(client_mode: str) -> Union[None, str]:
     """
     logger.info(f"change_client_mode()")
 
-    global signals_greenlet
-    global grid_greenlet
-    global bounce_greenlet
-    global update_greenlet
-    global change_update_greenlet
-    started_greenlet = [update_greenlet, change_update_greenlet, signals_greenlet, grid_greenlet, bounce_greenlet]
-    if any(started_greenlet):
-        logger.warning(f"started_greenlet is running")
+    if app_control.active_greenlet:
+        logger.warning(f"{app_control.active_greenlet} гринлет выполняется; задача {app_control.active_task}")
         return f"Выполняется запрос для другого клиента. Изменение режима клиента временно невозможно"
 
     client_operations.change_client_mode_to_config(client_mode)
@@ -297,14 +271,8 @@ def change_opc_server_config(ip: str, port: int) -> Tuple[bool, str]:
 
     sid = request.sid
 
-    global signals_greenlet
-    global grid_greenlet
-    global bounce_greenlet
-    global update_greenlet
-    global change_update_greenlet
-    started_greenlet = [update_greenlet, change_update_greenlet, signals_greenlet, grid_greenlet, bounce_greenlet]
-    if any(started_greenlet):
-        logger.warning(f"started_greenlet is running")
+    if app_control.active_greenlet:
+        logger.warning(f"{app_control.active_greenlet} гринлет выполняется; задача {app_control.active_task}")
         return True, f"Выполняется запрос для другого клиента. " \
                      f"Сохранение конфигурации клиента OPC UA временно невозможно"
 
@@ -324,14 +292,8 @@ def change_ch_server_config(ip: str, port: int, username: str, password: str) ->
 
     sid = request.sid
 
-    global signals_greenlet
-    global grid_greenlet
-    global bounce_greenlet
-    global update_greenlet
-    global change_update_greenlet
-    started_greenlet = [update_greenlet, change_update_greenlet, signals_greenlet, grid_greenlet, bounce_greenlet]
-    if any(started_greenlet):
-        logger.warning(f"started_greenlet is running")
+    if app_control.active_greenlet:
+        logger.warning(f"{app_control.active_greenlet} гринлет выполняется; задача {app_control.active_task}")
         return True, f"Выполняется запрос для другого клиента. " \
                      f"Сохранение конфигурации клиента Clickhouse временно невозможно"
 
@@ -347,14 +309,8 @@ def change_default_fields(default_fields: dict) -> str:
     """
     logger.info(f"change_default_fields({default_fields})")
 
-    global signals_greenlet
-    global grid_greenlet
-    global bounce_greenlet
-    global update_greenlet
-    global change_update_greenlet
-    started_greenlet = [update_greenlet, change_update_greenlet, signals_greenlet, grid_greenlet, bounce_greenlet]
-    if any(started_greenlet):
-        logger.warning(f"started_greenlet is running")
+    if app_control.active_greenlet:
+        logger.warning(f"{app_control.active_greenlet} гринлет выполняется; задача {app_control.active_task}")
         return f"Выполняется запрос для другого клиента. Сохранение параметров временно невозможно"
 
     global CLIENT_MODE
@@ -371,14 +327,8 @@ def upload_config(file: dict) -> str:
     """
     logger.info(file)
 
-    global signals_greenlet
-    global grid_greenlet
-    global bounce_greenlet
-    global update_greenlet
-    global change_update_greenlet
-    started_greenlet = [update_greenlet, change_update_greenlet, signals_greenlet, grid_greenlet, bounce_greenlet]
-    if any(started_greenlet):
-        logger.warning(f"started_greenlet is running")
+    if app_control.active_greenlet:
+        logger.warning(f"{app_control.active_greenlet} гринлет выполняется; задача {app_control.active_task}")
         return f"Выполняется запрос для другого клиента. Импорт конфига временно невозможен"
 
     return operations.upload_config_process(file)
@@ -470,8 +420,7 @@ def update_kks_all(mode: str, root_directory: str, exception_directories: List[s
         logger.info(f"update_kks_all_spawn({mode}, {root_directory}, {exception_directories}, {exception_expert})")
 
         logger.info(sid)
-        global sid_proc
-        sid_proc = sid
+        app_control.sid_proc = sid
 
         update_kks_status = client_operations.update_kks_opc_ua(socketio, sid, mode, root_directory)
         if update_kks_status != "success":
@@ -501,21 +450,19 @@ def update_kks_all(mode: str, root_directory: str, exception_directories: List[s
         logger.info(f"update_from_ch_kks_all_spawn()")
 
         logger.info(sid)
-        global sid_proc
-        sid_proc = sid
+        app_control.sid_proc = sid
 
         return client_operations.update_kks_ch(socketio, sid)
 
     sid = request.sid
     # Запуск гринлета обновления тегов
-    global update_greenlet
-    global sid_proc
     global CLIENT_MODE
     # Если обновление уже идет, выводим в веб-приложении
-    if update_greenlet:
-        logger.warning(f"update_greenlet is running")
+    if app_control.active_greenlet:
+        logger.warning(f"{app_control.active_greenlet} гринлет выполняется; задача {app_control.active_task}")
         socketio.emit("setUpdateStatus",
-                      {"statusString": f"Обновление тегов уже было начато на сервере\n", "serviceFlag": True},
+                      {"statusString": f"На сервере выполняется задача {app_control.active_task}. "
+                                       f"Обновление тегов временно невозможно\n", "serviceFlag": True},
                       to=sid)
         return
 
@@ -523,14 +470,17 @@ def update_kks_all(mode: str, root_directory: str, exception_directories: List[s
     if CLIENT_MODE == 'OPC':
         if not operations.validate_exception_directories(socketio, sid, mode):
             return
-        update_greenlet = spawn(update_kks_all_spawn, mode, root_directory, exception_directories, exception_expert)
+        app_control.active_task = Task.update.value
+        app_control.active_greenlet = spawn(update_kks_all_spawn, mode,
+                                            root_directory, exception_directories, exception_expert)
 
     if CLIENT_MODE == 'CH':
-        update_greenlet = spawn(update_from_ch_kks_all_spawn)
+        app_control.active_task = Task.update.value
+        app_control.active_greenlet = spawn(update_from_ch_kks_all_spawn)
 
-    gevent.joinall([update_greenlet])
+    gevent.joinall([app_control.active_greenlet])
 
-    sid_proc = None
+    app_control.sid_proc = None
 
 
 @socketio.on("update_cancel")
@@ -541,30 +491,33 @@ def update_cancel() -> None:
     logger.info(f"update_cancel()")
 
     # Проверка, что отмена запроса пришла от вызвавшего его клиента
-    if sid_proc != request.sid:
+    if app_control.sid_proc != request.sid:
         return
 
-    global update_greenlet
-    global change_update_greenlet
-    global p_kks_all
-    if update_greenlet:
+    if app_control.active_greenlet:
         proc_pid = client_operations.get_p_kks_all()
         if proc_pid is not None:
             os.killpg(os.getpgid(proc_pid.pid), signal.SIGINT)
-        gevent.killall([update_greenlet])
-        logger.info(f"update_greenlet убит")
-        socketio.emit("setUpdateStatus",
-                      {"statusString": f"Обновление тегов прервано пользователем\n", "serviceFlag": True},
-                      to=request.sid)
-        update_greenlet = None
 
-    if change_update_greenlet:
-        gevent.killall([change_update_greenlet])
-        logger.info(f"change_update_greenlet убит")
-        socketio.emit("setUpdateStatus",
-                      {"statusString": f"Применение списка исключений прервано пользователем\n", "serviceFlag": True},
-                      to=request.sid)
-        change_update_greenlet = None
+        if app_control.active_task == Task.update.value:
+            gevent.killall([app_control.active_greenlet])
+            logger.warning(f"Гринлет обновления тегов убит")
+            socketio.emit("setUpdateStatus",
+                          {"statusString": f"Обновление тегов прервано пользователем\n", "serviceFlag": True},
+                          to=request.sid)
+
+            app_control.active_task = None
+            app_control.active_greenlet = None
+
+        if app_control.active_task == Task.change_update.value:
+            gevent.killall([app_control.active_greenlet])
+            logger.warning(f"Гринлет применения списка исключений тегов убит")
+            socketio.emit("setUpdateStatus",
+                          {"statusString": f"Применение списка исключений прервано пользователем\n",
+                           "serviceFlag": True},
+                          to=request.sid)
+            app_control.active_task = None
+            app_control.active_greenlet = None
 
 
 @socketio.on("change_update_kks_all")
@@ -588,8 +541,7 @@ def change_update_kks_all(root_directory: str, exception_directories: List[str],
         logger.info(f"change_update_kks_all_spawn({root_directory}, {exception_directories}, {exception_expert})")
 
         logger.info(sid)
-        global sid_proc
-        sid_proc = sid
+        app_control.sid_proc = sid
 
         socketio.emit("setUpdateStatus",
                       {"statusString": f"Применение списка исключений к уже обновленному файлу тегов\n",
@@ -621,22 +573,20 @@ def change_update_kks_all(root_directory: str, exception_directories: List[str],
 
     sid = request.sid
 
-    # Запуск гринлета обновления тегов
-    global change_update_greenlet
-    global sid_proc
-    # Если обновление уже идет, выводим в веб-приложении
-    if change_update_greenlet:
-        logger.warning(f"change_update_greenlet is running")
+    if app_control.active_greenlet:
+        logger.warning(f"{app_control.active_greenlet} гринлет выполняется; задача {app_control.active_task}")
         socketio.emit("setUpdateStatus",
                       {"statusString": f"Обновление тегов уже было начато на сервере\n", "serviceFlag": True},
                       to=sid)
         return
 
     # Запуск изменения обновленного файла тегов на основе списка исключений через gevent
-    change_update_greenlet = spawn(change_update_kks_all_spawn, root_directory, exception_directories, exception_expert)
-    gevent.joinall([change_update_greenlet])
+    app_control.active_task = Task.change_update.value
+    app_control.active_greenlet = spawn(change_update_kks_all_spawn, root_directory,
+                                        exception_directories, exception_expert)
+    gevent.joinall([app_control.active_greenlet])
 
-    sid_proc = None
+    app_control.sid_proc = None
 
 
 @socketio.on("get_signals_data")
@@ -685,8 +635,7 @@ def get_signals_data(types_list: List[str], selection_tag: str,
                     f"{last_value_checked}, {interval_or_date_checked}, {interval}, {dimension}, {date_deep_search})")
 
         logger.info(sid)
-        global sid_proc
-        sid_proc = sid
+        app_control.sid_proc = sid
 
         df_report = create_reports.create_signals_opc_ua_dataframe(socketio, sid, KKS_ALL,
                                                                    types_list, selection_tag,
@@ -735,8 +684,7 @@ def get_signals_data(types_list: List[str], selection_tag: str,
             f"{last_value_checked}, {interval_or_date_checked}, {interval}, {dimension}, {date_deep_search})")
 
         logger.info(sid)
-        global sid_proc
-        sid_proc = sid
+        app_control.sid_proc = sid
 
         try:
             df_report = create_reports.create_signals_ch_dataframe(socketio, sid, types_list, selection_tag,
@@ -766,30 +714,26 @@ def get_signals_data(types_list: List[str], selection_tag: str,
 
     sid = request.sid
 
-    global signals_greenlet
-    global grid_greenlet
-    global bounce_greenlet
-    global update_greenlet
-    global change_update_greenlet
-    global sid_proc
-    global CLIENT_MODE
-    started_greenlet = [update_greenlet, change_update_greenlet, signals_greenlet, grid_greenlet, bounce_greenlet]
-    if any(started_greenlet):
-        logger.warning(f"signals_greenlet is running")
+    if app_control.active_greenlet:
+        logger.warning(f"{app_control.active_greenlet} гринлет выполняется; задача {app_control.active_task}")
         return f"Запрос уже выполняется для другого клиента. Попробуйте выполнить запрос позже"
     # Запуск запроса срезов через gevent в зависимости от режима
+    app_control.active_task = Task.signals.value
     if CLIENT_MODE == 'OPC':
-        signals_greenlet = spawn(get_signals_data_spawn, types_list, selection_tag, mask_list, kks_list, quality, date,
-                                 last_value_checked, interval_or_date_checked, interval, dimension, date_deep_search)
+        app_control.active_greenlet = spawn(get_signals_data_spawn, types_list, selection_tag,
+                                            mask_list, kks_list, quality, date,
+                                            last_value_checked, interval_or_date_checked,
+                                            interval, dimension, date_deep_search)
 
     if CLIENT_MODE == 'CH':
-        signals_greenlet = spawn(get_signals_from_ch_data_spawn,
-                                 types_list, selection_tag, mask_list, kks_list, quality, date,
-                                 last_value_checked, interval_or_date_checked, interval, dimension, date_deep_search)
+        app_control.active_greenlet = spawn(get_signals_from_ch_data_spawn,
+                                            types_list, selection_tag, mask_list, kks_list, quality, date,
+                                            last_value_checked, interval_or_date_checked,
+                                            interval, dimension, date_deep_search)
 
-    gevent.joinall([signals_greenlet])
-    sid_proc = None
-    return signals_greenlet.value
+    gevent.joinall([app_control.active_greenlet])
+    app_control.sid_proc = None
+    return app_control.active_greenlet.value
 
 
 @socketio.on("signals_data_cancel")
@@ -800,13 +744,13 @@ def signals_data_cancel() -> None:
     logger.info(f"signals_data_cancel()")
 
     # Проверка, что отмена запроса пришла от вызвавшего его клиента
-    if sid_proc != request.sid:
+    if app_control.sid_proc != request.sid:
         return
 
-    global signals_greenlet
-    if signals_greenlet:
-        gevent.killall([signals_greenlet])
-        signals_greenlet = None
+    if app_control.active_greenlet:
+        gevent.killall([app_control.active_greenlet])
+        app_control.active_task = None
+        app_control.active_greenlet = None
 
         try:
             wkhtmltopdf_pid = check_output(["pidof", "-s", "wkhtmltopdf"])
@@ -845,10 +789,9 @@ def get_grid_data(kks: List[str], date_begin: str, date_end: str,
         logger.info(f"get_grid_data_spawn({kks}, {date_begin}, {date_end}, {interval}, {dimension})")
 
         logger.info(sid)
-        global sid_proc
         global REPORT_DF
         global REPORT_DF_STATUS
-        sid_proc = sid
+        app_control.sid_proc = sid
 
         try:
             df_report, df_report_slice, code = create_reports.create_grid_opc_ua_dataframe(socketio, sid, kks,
@@ -923,10 +866,9 @@ def get_grid_data(kks: List[str], date_begin: str, date_end: str,
         logger.info(f"get_grid_from_ch_data_spawn({kks}, {date_begin}, {date_end}, {interval}, {dimension})")
 
         logger.info(sid)
-        global sid_proc
         global REPORT_DF
         global REPORT_DF_STATUS
-        sid_proc = sid
+        app_control.sid_proc = sid
 
         try:
             df_report, df_report_slice, code = create_reports.create_grid_ch_dataframe(socketio, sid, kks,
@@ -975,27 +917,20 @@ def get_grid_data(kks: List[str], date_begin: str, date_end: str,
 
     sid = request.sid
 
-    global signals_greenlet
-    global grid_greenlet
-    global bounce_greenlet
-    global update_greenlet
-    global change_update_greenlet
-    global sid_proc
-    global CLIENT_MODE
-    started_greenlet = [update_greenlet, change_update_greenlet, signals_greenlet, grid_greenlet, bounce_greenlet]
-    if any(started_greenlet):
-        logger.warning(f"grid_greenlet is running")
+    if app_control.active_greenlet:
+        logger.warning(f"{app_control.active_greenlet} гринлет выполняется; задача {app_control.active_task}")
         return f"Запрос уже выполняется для другого клиента. Попробуйте выполнить запрос позже"
     # Запуск запроса срезов через gevent в зависимости от режима
+    app_control.active_task = Task.grid.value
     if CLIENT_MODE == 'OPC':
-        grid_greenlet = spawn(get_grid_data_spawn, kks, date_begin, date_end, interval, dimension)
+        app_control.active_greenlet = spawn(get_grid_data_spawn, kks, date_begin, date_end, interval, dimension)
 
     if CLIENT_MODE == 'CH':
-        grid_greenlet = spawn(get_grid_from_ch_data_spawn, kks, date_begin, date_end, interval, dimension)
+        app_control.active_greenlet = spawn(get_grid_from_ch_data_spawn, kks, date_begin, date_end, interval, dimension)
 
-    gevent.joinall([grid_greenlet])
-    sid_proc = None
-    return grid_greenlet.value
+    gevent.joinall([app_control.active_greenlet])
+    app_control.sid_proc = None
+    return app_control.active_greenlet.value
 
 
 @socketio.on("get_grid_part_data")
@@ -1201,13 +1136,13 @@ def grid_data_cancel() -> None:
     logger.info(f"grid_data_cancel()")
 
     # Проверка, что отмена запроса пришла от вызвавшего его клиента
-    if sid_proc != request.sid:
+    if app_control.sid_proc != request.sid:
         return
 
-    global grid_greenlet
-    if grid_greenlet:
-        gevent.killall([grid_greenlet])
-        grid_greenlet = None
+    if app_control.active_greenlet:
+        gevent.killall([app_control.active_greenlet])
+        app_control.active_task = None
+        app_control.active_greenlet = None
 
         try:
             wkhtmltopdf_pid = check_output(["pidof", "-s", "wkhtmltopdf"])
@@ -1246,8 +1181,7 @@ def get_bounce_signals_data(kks: List[str], date: str, interval: int,
         logger.info(f"get_bounce_signals_data_spawn({kks}, {date}, {interval}, {dimension}, {top})")
 
         logger.info(sid)
-        global sid_proc
-        sid_proc = sid
+        app_control.sid_proc = sid
 
         try:
             df_counts = create_reports.create_bounce_opc_ua_dataframe(socketio, sid, kks, date, interval, dimension)
@@ -1297,8 +1231,7 @@ def get_bounce_signals_data(kks: List[str], date: str, interval: int,
         logger.info(f"get_bounce_from_ch_signals_data_spawn({kks}, {date}, {interval}, {dimension}, {top})")
 
         logger.info(sid)
-        global sid_proc
-        sid_proc = sid
+        app_control.sid_proc = sid
 
         try:
             df_counts = create_reports.create_bounce_ch_dataframe(socketio, sid, kks, date, interval, dimension, top)
@@ -1331,28 +1264,21 @@ def get_bounce_signals_data(kks: List[str], date: str, interval: int,
 
     sid = request.sid
 
-    global signals_greenlet
-    global grid_greenlet
-    global bounce_greenlet
-    global update_greenlet
-    global change_update_greenlet
-    global sid_proc
-    global CLIENT_MODE
-    started_greenlet = [update_greenlet, change_update_greenlet, signals_greenlet, grid_greenlet, bounce_greenlet]
-    if any(started_greenlet):
-        logger.warning(f"bounce_greenlet is running")
+    if app_control.active_greenlet:
+        logger.warning(f"{app_control.active_greenlet} гринлет выполняется; задача {app_control.active_task}")
         return f"Запрос уже выполняется для другого клиента. Попробуйте выполнить запрос позже"
 
     # Запуск запроса дребезга через gevent в зависимости от режима
+    app_control.active_task = Task.bounce.value
     if CLIENT_MODE == 'OPC':
-        bounce_greenlet = spawn(get_bounce_signals_data_spawn, kks, date, interval, dimension, top)
+        app_control.active_greenlet = spawn(get_bounce_signals_data_spawn, kks, date, interval, dimension, top)
 
     if CLIENT_MODE == 'CH':
-        bounce_greenlet = spawn(get_bounce_from_ch_signals_data_spawn, kks, date, interval, dimension, top)
+        app_control.active_greenlet = spawn(get_bounce_from_ch_signals_data_spawn, kks, date, interval, dimension, top)
 
-    gevent.joinall([bounce_greenlet])
-    sid_proc = None
-    return bounce_greenlet.value
+    gevent.joinall([app_control.active_greenlet])
+    app_control.sid_proc = None
+    return app_control.active_greenlet.value
 
 
 @socketio.on("bounce_data_cancel")
@@ -1364,13 +1290,13 @@ def bounce_data_cancel() -> None:
     logger.info(f"bounce_data_cancel()")
 
     # Проверка, что отмена запроса пришла от вызвавшего его клиента
-    if sid_proc != request.sid:
+    if app_control.sid_proc != request.sid:
         return
 
-    global bounce_greenlet
-    if bounce_greenlet:
-        gevent.killall([bounce_greenlet])
-        bounce_greenlet = None
+    if app_control.active_greenlet:
+        gevent.killall([app_control.active_greenlet])
+        app_control.active_task = None
+        app_control.active_greenlet = None
 
         try:
             wkhtmltopdf_pid = check_output(["pidof", "-s", "wkhtmltopdf"])
@@ -1475,6 +1401,10 @@ if __name__ == '__main__':
         "notEquals": not_equals,
         "noFilter": no_filter
     }
+
+    # Инициализируем объекты управления гринлеттами и данными веб-приложения
+    app_control = AppControl()
+    data_control = DataControl()
 
     logger.info(f"starting...")
     socketio.run(app, host=args_parsed.host, port=args_parsed.port,
