@@ -173,10 +173,8 @@ def get_file_checked() -> Tuple[bool, str, bool]:
     """
     logger.info(f"get_file_checked()")
 
-    global CLIENT_MODE
-
     client_status = operations.file_checked_status()
-    return os.path.isfile(constants.DATA_KKS_ALL), CLIENT_MODE, client_status
+    return os.path.isfile(constants.DATA_KKS_ALL), data_control.client_mode, client_status
 
 
 @socketio.on("get_client_mode")
@@ -186,11 +184,10 @@ def get_client_mode() -> str:
     :return: строка ('OPC'/'CH') наименования выбранного режима клиента
     """
     logger.info(f"get_client_mode()")
-    global CLIENT_MODE
 
-    CLIENT_MODE = client_operations.client_mode()
+    data_control.client_mode = client_operations.client_mode()
 
-    return CLIENT_MODE
+    return data_control.client_mode
 
 
 @socketio.on("change_client_mode")
@@ -216,10 +213,10 @@ def get_server_config() -> Tuple[str, bool]:
     :return: строка конфигурации клиента OPC UA, True/False результат проверки существования файла тегов kks_all.csv
     """
     logger.info(f"get_server_config()")
-    global CLIENT_MODE
+
     sid = request.sid
 
-    return client_operations.server_config(socketio, sid, CLIENT_MODE)
+    return client_operations.server_config(socketio, sid, data_control.client_mode)
 
 
 @socketio.on("get_last_update_file_kks")
@@ -230,10 +227,9 @@ def get_last_update_file_kks() -> str:
     """
     logger.info(f"get_last_update_file_kks()")
 
-    global CLIENT_MODE
     sid = request.sid
 
-    return operations.last_update_file_kks(socketio, sid, CLIENT_MODE)
+    return operations.last_update_file_kks(socketio, sid, data_control.client_mode)
 
 
 @socketio.on("get_ip_port_config")
@@ -255,9 +251,7 @@ def get_default_fields() -> Union[Dict[str, Union[str, int, bool, List[str]]], s
     """
     logger.info(f"get_default_fields()")
 
-    global CLIENT_MODE
-
-    return operations.default_fields_read(CLIENT_MODE)
+    return operations.default_fields_read(data_control.client_mode)
 
 
 @socketio.on("change_opc_server_config")
@@ -313,9 +307,7 @@ def change_default_fields(default_fields: dict) -> str:
         logger.warning(f"{app_control.active_greenlet} гринлет выполняется; задача {app_control.active_task}")
         return f"Выполняется запрос для другого клиента. Сохранение параметров временно невозможно"
 
-    global CLIENT_MODE
-
-    return operations.default_fields_write(CLIENT_MODE, default_fields)
+    return operations.default_fields_write(data_control.client_mode, default_fields)
 
 
 @socketio.on("upload_config")
@@ -342,9 +334,7 @@ def get_types_of_sensors() -> List[str]:
     """
     logger.info(f"get_types_of_sensors()")
 
-    global CLIENT_MODE
-
-    return operations.types_of_sensors(CLIENT_MODE, KKS_ALL)
+    return operations.types_of_sensors(data_control.client_mode, data_control.kks_all)
 
 
 @socketio.on("get_kks_tag_exist")
@@ -356,9 +346,7 @@ def get_kks_tag_exist(kks_tag: str) -> bool:
     """
     logger.info(f"get_kks_tag_exist({kks_tag})")
 
-    global CLIENT_MODE
-
-    return operations.get_kks_tag_exist(CLIENT_MODE, KKS_ALL, kks_tag)
+    return operations.get_kks_tag_exist(data_control.client_mode, data_control.kks_all, kks_tag)
 
 
 @socketio.on("get_kks_by_masks")
@@ -371,9 +359,7 @@ def get_kks_by_masks(types_list: List[str], mask_list: List[str]) -> List[Union[
     """
     logger.info(f"get_kks_by_masks({types_list}, {mask_list})")
 
-    global CLIENT_MODE
-
-    return operations.kks_by_masks(CLIENT_MODE, KKS_ALL, types_list, mask_list)
+    return operations.kks_by_masks(data_control.client_mode, data_control.kks_all, types_list, mask_list)
 
 
 @socketio.on("get_kks")
@@ -389,11 +375,9 @@ def get_kks(types_list: List[str], mask_list: List[str], kks_list: List[str], se
     """
     logger.info(f"get_kks({types_list} ,{mask_list}, {kks_list}, {selection_tag})")
 
-    global CLIENT_MODE
-
-    if CLIENT_MODE == 'OPC':
-        return operations.get_kks_opc_ua(KKS_ALL, types_list, mask_list, kks_list, selection_tag)
-    elif CLIENT_MODE == 'CH':
+    if data_control.client_mode == 'OPC':
+        return operations.get_kks_opc_ua(data_control.kks_all, types_list, mask_list, kks_list, selection_tag)
+    elif data_control.client_mode == 'CH':
         return operations.get_kks_ch(types_list, mask_list, kks_list, selection_tag)
 
 
@@ -426,12 +410,9 @@ def update_kks_all(mode: str, root_directory: str, exception_directories: List[s
         if update_kks_status != "success":
             return update_kks_status
 
-        global KKS_ALL
-        global KKS_ALL_BACK
-
         # Пытаемся загрузить kks_all.csv, если он существует в переменную
         try:
-            KKS_ALL, KKS_ALL_BACK = operations.kks_all_define(mode, exception_directories)
+            data_control.kks_all, data_control.kks_all_back = operations.kks_all_define(mode, exception_directories)
         except FileNotFoundError as csv_exception:
             logger.error(csv_exception)
             socketio.emit("setUpdateStatus",
@@ -456,7 +437,6 @@ def update_kks_all(mode: str, root_directory: str, exception_directories: List[s
 
     sid = request.sid
     # Запуск гринлета обновления тегов
-    global CLIENT_MODE
     # Если обновление уже идет, выводим в веб-приложении
     if app_control.active_greenlet:
         logger.warning(f"{app_control.active_greenlet} гринлет выполняется; задача {app_control.active_task}")
@@ -467,14 +447,14 @@ def update_kks_all(mode: str, root_directory: str, exception_directories: List[s
         return
 
     # Запуск процесса обновления тегов через gevent в зависимости от режима
-    if CLIENT_MODE == 'OPC':
+    if data_control.client_mode == 'OPC':
         if not operations.validate_exception_directories(socketio, sid, mode):
             return
         app_control.active_task = Task.update.value
         app_control.active_greenlet = spawn(update_kks_all_spawn, mode,
                                             root_directory, exception_directories, exception_expert)
 
-    if CLIENT_MODE == 'CH':
+    if data_control.client_mode == 'CH':
         app_control.active_task = Task.update.value
         app_control.active_greenlet = spawn(update_from_ch_kks_all_spawn)
 
@@ -547,11 +527,8 @@ def change_update_kks_all(root_directory: str, exception_directories: List[str],
                       {"statusString": f"Применение списка исключений к уже обновленному файлу тегов\n",
                        "serviceFlag": False}, to=sid)
 
-        global KKS_ALL
-        global KKS_ALL_BACK
-
         try:
-            KKS_ALL = operations.kks_all_change_update(KKS_ALL_BACK, root_directory, exception_directories)
+            data_control.kks_all = operations.kks_all_change_update(data_control.kks_all_back, root_directory, exception_directories)
         except re.error as regular_expression_except:
             logger.error(f"Неверный синтаксис регулярного выражения {regular_expression_except}")
             socketio.emit("setUpdateStatus",
@@ -559,7 +536,7 @@ def change_update_kks_all(root_directory: str, exception_directories: List[str],
                                            f"Отмена операции\n",
                            "serviceFlag": True},
                           to=sid)
-            KKS_ALL = KKS_ALL_BACK.copy(deep=True)
+            data_control.kks_all = data_control.kks_all_back.copy(deep=True)
             return f'{regular_expression_except}'
         except FileNotFoundError as csv_exception:
             logger.error(csv_exception)
@@ -637,7 +614,7 @@ def get_signals_data(types_list: List[str], selection_tag: str,
         logger.info(sid)
         app_control.sid_proc = sid
 
-        df_report = create_reports.create_signals_opc_ua_dataframe(socketio, sid, KKS_ALL,
+        df_report = create_reports.create_signals_opc_ua_dataframe(socketio, sid, data_control.kks_all,
                                                                    types_list, selection_tag,
                                                                    mask_list, kks_list, quality,
                                                                    date,
@@ -719,13 +696,13 @@ def get_signals_data(types_list: List[str], selection_tag: str,
         return f"Запрос уже выполняется для другого клиента. Попробуйте выполнить запрос позже"
     # Запуск запроса срезов через gevent в зависимости от режима
     app_control.active_task = Task.signals.value
-    if CLIENT_MODE == 'OPC':
+    if data_control.client_mode == 'OPC':
         app_control.active_greenlet = spawn(get_signals_data_spawn, types_list, selection_tag,
                                             mask_list, kks_list, quality, date,
                                             last_value_checked, interval_or_date_checked,
                                             interval, dimension, date_deep_search)
 
-    if CLIENT_MODE == 'CH':
+    if data_control.client_mode == 'CH':
         app_control.active_greenlet = spawn(get_signals_from_ch_data_spawn,
                                             types_list, selection_tag, mask_list, kks_list, quality, date,
                                             last_value_checked, interval_or_date_checked,
@@ -789,8 +766,7 @@ def get_grid_data(kks: List[str], date_begin: str, date_end: str,
         logger.info(f"get_grid_data_spawn({kks}, {date_begin}, {date_end}, {interval}, {dimension})")
 
         logger.info(sid)
-        global REPORT_DF
-        global REPORT_DF_STATUS
+
         app_control.sid_proc = sid
 
         try:
@@ -811,8 +787,8 @@ def get_grid_data(kks: List[str], date_begin: str, date_end: str,
             socketio.emit("setUpdateGridRequestStatus", {"message": f"Ошибка: {run_time_exception}\n"}, to=sid)
             return
 
-        REPORT_DF = df_report.copy(deep=True)
-        REPORT_DF_STATUS = df_report_slice.copy(deep=True)
+        data_control.report_df = df_report.copy(deep=True)
+        data_control.report_status = df_report_slice.copy(deep=True)
 
         code.to_csv(constants.CSV_CODE, index=False, encoding='utf-8')
         df_report.to_csv(constants.CSV_GRID, index=False, encoding='utf-8')
@@ -821,8 +797,8 @@ def get_grid_data(kks: List[str], date_begin: str, date_end: str,
         logger.info("Датафреймы сформированы")
         logger.info("Датафреймы доступны для выкачки")
 
-        REPORT_DF = pd.read_csv(constants.CSV_GRID)
-        REPORT_DF_STATUS = pd.read_csv(constants.CSV_GRID_STATUS)
+        data_control.report_df = pd.read_csv(constants.CSV_GRID)
+        data_control.report_status = pd.read_csv(constants.CSV_GRID_STATUS)
 
         socketio.emit("setProgressBarGrid", {"count": 90}, to=sid)
         socketio.emit("setUpdateGridRequestStatus", {"message": f"Формирование отчета\n"}, to=sid)
@@ -866,8 +842,7 @@ def get_grid_data(kks: List[str], date_begin: str, date_end: str,
         logger.info(f"get_grid_from_ch_data_spawn({kks}, {date_begin}, {date_end}, {interval}, {dimension})")
 
         logger.info(sid)
-        global REPORT_DF
-        global REPORT_DF_STATUS
+
         app_control.sid_proc = sid
 
         try:
@@ -884,8 +859,8 @@ def get_grid_data(kks: List[str], date_begin: str, date_end: str,
                           {"message": f"Ошибка: Клиент Clickhouse ничего не нашел\n"}, to=sid)
             return "Ошибка: Клиент Clickhouse ничего не нашел"
 
-        REPORT_DF = pd.read_csv(constants.CSV_GRID)
-        REPORT_DF_STATUS = pd.read_csv(constants.CSV_GRID_STATUS)
+        data_control.report_df = pd.read_csv(constants.CSV_GRID)
+        data_control.report_status = pd.read_csv(constants.CSV_GRID_STATUS)
 
         socketio.emit("setProgressBarGrid", {"count": 90}, to=sid)
         socketio.emit("setUpdateGridRequestStatus", {"message": f"Формирование отчета\n"}, to=sid)
@@ -922,10 +897,10 @@ def get_grid_data(kks: List[str], date_begin: str, date_end: str,
         return f"Запрос уже выполняется для другого клиента. Попробуйте выполнить запрос позже"
     # Запуск запроса срезов через gevent в зависимости от режима
     app_control.active_task = Task.grid.value
-    if CLIENT_MODE == 'OPC':
+    if data_control.client_mode == 'OPC':
         app_control.active_greenlet = spawn(get_grid_data_spawn, kks, date_begin, date_end, interval, dimension)
 
-    if CLIENT_MODE == 'CH':
+    if data_control.client_mode == 'CH':
         app_control.active_greenlet = spawn(get_grid_from_ch_data_spawn, kks, date_begin, date_end, interval, dimension)
 
     gevent.joinall([app_control.active_greenlet])
@@ -942,189 +917,25 @@ def get_grid_part_data(first: int, last: int) -> Tuple[dict, dict]:
     :return: json объекты для заполнения таблицы сетки
     """
     logger.info(f"get_grid_part_data({first}, {last})")
-    global REPORT_DF
-    global REPORT_DF_STATUS
 
-    return json.loads(REPORT_DF.iloc[first:last].to_json(orient='records')), \
-           json.loads(REPORT_DF_STATUS.iloc[first:last].to_json(orient='records'))
-
-
-def apply_filters(filters: dict) -> None:
-    """
-    Процедура применения фильтров по столбцов
-    :param filters: объект фильтра таблицы сетки
-    :return:
-    """
-    logger.info(f"apply_filters({filters})")
-
-    for key, value in filters.items():
-        if value["value"] is None:
-            continue
-
-        if value["value"].isspace():
-            continue
-
-        FILTERS_OPERATIONS[value["matchMode"]](key, value["value"])
+    return data_control.get_part_data(first, last)
 
 
 @socketio.on("get_grid_sorted_and_filtered_data")
-def get_grid_sorted_and_filtered_data(params: dict) -> Tuple[dict, dict, int]:
+def get_grid_sorted_and_filtered_data(params: str) -> Tuple[dict, dict, int]:
     """
     Функция фильтрации по столбцам таблицы сетки
     :param params: объект сортировки и фильтра таблицы сетки
     :return: json объекты для заполнения осортированной таблицы сетки и размер получившегося датафрейма
     """
     logger.info(f"get_grid_sorted_and_filtered_data({params})")
-    global REPORT_DF
-    global REPORT_DF_STATUS
 
-    REPORT_DF = pd.read_csv(constants.CSV_GRID)
-    REPORT_DF_STATUS = pd.read_csv(constants.CSV_GRID_STATUS)
+    data_control.report_df = pd.read_csv(constants.CSV_GRID)
+    data_control.report_status = pd.read_csv(constants.CSV_GRID_STATUS)
 
     params = json.loads(params)
 
-    apply_filters(params["filters"])
-
-    if (params["sortField"] is not None) and (params["sortOrder"] is not None):
-        REPORT_DF.sort_values(by=[params["sortField"]],
-                              ascending=[False if params["sortOrder"] == -1 else True],
-                              inplace=True)
-        REPORT_DF_STATUS = REPORT_DF_STATUS.reindex(REPORT_DF.index)
-
-    return json.loads(REPORT_DF.iloc[constants.FIRST:constants.LAST].to_json(orient='records')), \
-           json.loads(REPORT_DF_STATUS.iloc[constants.FIRST:constants.LAST].to_json(orient='records')), \
-           len(REPORT_DF)
-
-
-def starts_with(col: str, val: str) -> None:
-    """
-    Процедура фильтрации колонки датафрейма по началу значения
-    :param col: наименование колонки
-    :param val: значение поля фильтрации
-    :return:
-    """
-    logger.info(f"starts_with({col}, {val})")
-    global REPORT_DF
-    global REPORT_DF_STATUS
-
-    REPORT_DF[col] = REPORT_DF[col].astype(str)
-
-    REPORT_DF = REPORT_DF.loc[REPORT_DF[col].str.startswith(val, na=False)]
-    REPORT_DF_STATUS = REPORT_DF_STATUS.loc[REPORT_DF_STATUS['Метка времени'].isin(REPORT_DF['Метка времени'])]
-
-    if col != 'Метка времени':
-        REPORT_DF[col] = REPORT_DF[col].astype(float)
-
-
-def contains(col: str, val: str) -> None:
-    """
-    Процедура фильтрации колонки датафрейма по содержимому значения
-    :param col: наименование колонки
-    :param val: значение поля фильтрации
-    :return:
-    """
-    logger.info(f"contains({col}, {val})")
-    global REPORT_DF
-    global REPORT_DF_STATUS
-
-    REPORT_DF[col] = REPORT_DF[col].astype(str)
-
-    REPORT_DF = REPORT_DF.loc[REPORT_DF[col].str.contains(val, na=False, regex=True)]
-    REPORT_DF_STATUS = REPORT_DF_STATUS.loc[REPORT_DF_STATUS['Метка времени'].isin(REPORT_DF['Метка времени'])]
-
-    if col != 'Метка времени':
-        REPORT_DF[col] = REPORT_DF[col].astype(float)
-
-
-def not_contains(col: str, val: str) -> None:
-    """
-    Процедура фильтрации колонки датафрейма по отсутсвию содержания значения
-    :param col: наименование колонки
-    :param val: значение поля фильтрации
-    :return:
-    """
-    logger.info(f"not_contains({col}, {val})")
-    global REPORT_DF
-    global REPORT_DF_STATUS
-
-    REPORT_DF[col] = REPORT_DF[col].astype(str)
-
-    REPORT_DF = REPORT_DF.loc[~REPORT_DF[col].str.contains(val, na=False, regex=True)]
-    REPORT_DF_STATUS = REPORT_DF_STATUS.loc[REPORT_DF_STATUS['Метка времени'].isin(REPORT_DF['Метка времени'])]
-
-    if col != 'Метка времени':
-        REPORT_DF[col] = REPORT_DF[col].astype(float)
-
-
-def ends_with(col: str, val: str) -> None:
-    """
-    Процедура фильтрации колонки датафрейма по окончанию значения
-    :param col: наименование колонки
-    :param val: значение поля фильтрации
-    :return:
-    """
-    logger.info(f"ends_with({col}, {val})")
-    global REPORT_DF
-    global REPORT_DF_STATUS
-
-    REPORT_DF[col] = REPORT_DF[col].astype(str)
-
-    REPORT_DF = REPORT_DF.loc[REPORT_DF[col].str.endswith(val, na=False)]
-    REPORT_DF_STATUS = REPORT_DF_STATUS.loc[REPORT_DF_STATUS['Метка времени'].isin(REPORT_DF['Метка времени'])]
-
-    if col != 'Метка времени':
-        REPORT_DF[col] = REPORT_DF[col].astype(float)
-
-
-def equals(col: str, val: str) -> None:
-    """
-    Процедура фильтрации колонки датафрейма по равенству значения
-    :param col: наименование колонки
-    :param val: значение поля фильтрации
-    :return:
-    """
-    logger.info(f"equals({col}, {val})")
-    global REPORT_DF
-    global REPORT_DF_STATUS
-
-    REPORT_DF[col] = REPORT_DF[col].astype(str)
-
-    REPORT_DF = REPORT_DF.loc[REPORT_DF[col] == val]
-    REPORT_DF_STATUS = REPORT_DF_STATUS.loc[REPORT_DF_STATUS['Метка времени'].isin(REPORT_DF['Метка времени'])]
-
-    if col != 'Метка времени':
-        REPORT_DF[col] = REPORT_DF[col].astype(float)
-
-
-def not_equals(col: str, val: str) -> None:
-    """
-    Процедура фильтрации колонки датафрейма по не равенству значения
-    :param col: наименование колонки
-    :param val: значение поля фильтрации
-    :return:
-    """
-    logger.info(f"not_equals({col}, {val})")
-    global REPORT_DF
-    global REPORT_DF_STATUS
-
-    REPORT_DF[col] = REPORT_DF[col].astype(str)
-
-    REPORT_DF = REPORT_DF.loc[REPORT_DF[col] != val]
-    REPORT_DF_STATUS = REPORT_DF_STATUS.loc[REPORT_DF_STATUS['Метка времени'].isin(REPORT_DF['Метка времени'])]
-
-    if col != 'Метка времени':
-        REPORT_DF[col] = REPORT_DF[col].astype(float)
-
-
-def no_filter(col: str, val: str) -> None:
-    """
-    Процедура сброса фильтра
-    :param col: наименование колонки
-    :param val: значение поля фильтрации
-    :return:
-    """
-    logger.info(f"no_filter({col}, {val})")
-    return
+    return data_control.get_sorted_and_filtered_data(params, constants.FIRST, constants.LAST)
 
 
 @socketio.on("grid_data_cancel")
@@ -1270,10 +1081,10 @@ def get_bounce_signals_data(kks: List[str], date: str, interval: int,
 
     # Запуск запроса дребезга через gevent в зависимости от режима
     app_control.active_task = Task.bounce.value
-    if CLIENT_MODE == 'OPC':
+    if data_control.client_mode == 'OPC':
         app_control.active_greenlet = spawn(get_bounce_signals_data_spawn, kks, date, interval, dimension, top)
 
-    if CLIENT_MODE == 'CH':
+    if data_control.client_mode == 'CH':
         app_control.active_greenlet = spawn(get_bounce_from_ch_signals_data_spawn, kks, date, interval, dimension, top)
 
     gevent.joinall([app_control.active_greenlet])
@@ -1363,23 +1174,27 @@ if __name__ == '__main__':
         logger.error(json_error)
         exit(0)
 
+    # Инициализируем объекты управления гринлеттами и данными веб-приложения
+    app_control = AppControl()
+    data_control = DataControl()
+
     with open(constants.CONFIG, "r") as config_file:
         config = json.load(config_file)
-        CLIENT_MODE = config["mode"]
+        data_control.client_mode = config["mode"]
 
     # Записываем в файл server.conf клиента OPC UA ip адрес и порт из конфига
     with open(constants.CLIENT_SERVER_CONF, "w") as writefile:
         writefile.write(f"opc.tcp://{config['opc']['ip']}:{config['opc']['port']}")
 
     try:
-        KKS_ALL = pd.read_csv(constants.DATA_KKS_ALL, header=None, sep=';')
-        KKS_ALL_BACK = pd.read_csv(constants.DATA_KKS_ALL_BACK, header=None, sep=';')
+        data_control.kks_all = pd.read_csv(constants.DATA_KKS_ALL, header=None, sep=';')
+        data_control.kks_all_back = pd.read_csv(constants.DATA_KKS_ALL_BACK, header=None, sep=';')
         logger.info(f"dataframe {constants.DATA_KKS_ALL} has been loaded")
         logger.info(f"dataframe {constants.DATA_KKS_ALL_BACK} has been loaded")
     except FileNotFoundError as e:
         logger.info(e)
-        KKS_ALL = pd.DataFrame()
-        KKS_ALL_BACK = pd.DataFrame()
+        data_control.kks_all = pd.DataFrame()
+        data_control.kks_all_back = pd.DataFrame()
 
     # Перезаполняем в bundle версии файл api_urls.js для настройки проксирования
     with open(constants.WEB_API_URLS_JS, 'r') as read_file:
@@ -1389,22 +1204,8 @@ if __name__ == '__main__':
     with open(constants.WEB_API_URLS_JS, 'w') as write_file:
         write_file.write(str(api_file))
 
-    REPORT_DF = None
-    REPORT_DF_STATUS = None
-
-    FILTERS_OPERATIONS = {
-        "startsWith": starts_with,
-        "contains": contains,
-        "notContains": not_contains,
-        "endsWith": ends_with,
-        "equals": equals,
-        "notEquals": not_equals,
-        "noFilter": no_filter
-    }
-
-    # Инициализируем объекты управления гринлеттами и данными веб-приложения
-    app_control = AppControl()
-    data_control = DataControl()
+    data_control.report_df = None
+    data_control.report_status = None
 
     logger.info(f"starting...")
     socketio.run(app, host=args_parsed.host, port=args_parsed.port,
