@@ -2,6 +2,8 @@
 import { ref, onMounted, onBeforeUnmount, onUnmounted } from 'vue'
 import { useConfirm } from 'primevue/useconfirm'
 
+import { storeToRefs } from 'pinia'
+
 import Multiselect from '@vueform/multiselect'
 
 import {
@@ -26,6 +28,9 @@ export default {
   components: { Multiselect },
   setup() {
     const applicationStore = useApplicationStore()
+    const { defaultFields, getQualitiesName, getFields, setFields } = applicationStore
+
+    const { qualitiesName } = storeToRefs(applicationStore)
 
     const lastUpdateFileKKS = ref('')
     const configServer = ref('')
@@ -39,7 +44,8 @@ export default {
       await getLastUpdateFileKKS(lastUpdateFileKKS)
       if (!checkFileActive.value) return
       await getTypesOfSensors(defaultTypesOfSensorsDataOptions)
-      await applicationStore.getFields()
+      await getQualitiesName()
+      await getFields()
       fillDefaultField()
     }
 
@@ -120,12 +126,6 @@ export default {
 
     const defaultTemplate = ref('')
 
-    const defaultQualitiesName = ref([
-      {
-        label: 'Выбрать все коды качества сигнала',
-        options: applicationStore.qualitiesName
-      }
-    ])
     const defaultQuality = ref([])
     let defaultChosenQuality = []
 
@@ -195,8 +195,8 @@ export default {
           }
           defaultFields = { ...defaultFields, ...separateTags }
         }
-        await applicationStore.setFields(defaultFields)
-        await applicationStore.getFields()
+        await setFields(defaultFields)
+        await getFields()
         fillDefaultField()
         statusUpdateTextArea.value = 'Параметры по умолчанию сохранены...\n'
         statusUpdateButtonActive.value = false
@@ -204,35 +204,35 @@ export default {
     }
 
     const fillDefaultField = () => {
-      defaultChosenTypesOfSensorsData = applicationStore.defaultFields.typesOfSensors
-      defaultTypesOfSensorsDataValue.value = applicationStore.defaultFields.typesOfSensors
+      defaultChosenTypesOfSensorsData = defaultFields.typesOfSensors
+      defaultTypesOfSensorsDataValue.value = defaultFields.typesOfSensors
 
-      defaultSelectionTagRadio.value = applicationStore.defaultFields.selectionTag
+      defaultSelectionTagRadio.value = defaultFields.selectionTag
 
-      defaultTemplate.value = applicationStore.defaultFields.sensorsAndTemplateValue.join(', ')
+      defaultTemplate.value = defaultFields.sensorsAndTemplateValue.join(', ')
 
-      defaultQuality.value = applicationStore.defaultFields.quality
-      defaultChosenQuality = applicationStore.defaultFields.quality
+      defaultQuality.value = defaultFields.quality
+      defaultChosenQuality = defaultFields.quality
 
-      defaultLastValueChecked.value = applicationStore.defaultFields.lastValueChecked
-      defaultFilterTableChecked.value = applicationStore.defaultFields.filterTableChecked
+      defaultLastValueChecked.value = defaultFields.lastValueChecked
+      defaultFilterTableChecked.value = defaultFields.filterTableChecked
 
-      defaultIntervalDeepOfSearch.value = applicationStore.defaultFields.intervalDeepOfSearch
-      defaultDimensionDeepOfSearch.value = applicationStore.defaultFields.dimensionDeepOfSearch
+      defaultIntervalDeepOfSearch.value = defaultFields.intervalDeepOfSearch
+      defaultDimensionDeepOfSearch.value = defaultFields.dimensionDeepOfSearch
 
-      defaultDateDeepOfSearch.value = applicationStore.defaultFields.dateDeepOfSearch
+      defaultDateDeepOfSearch.value = defaultFields.dateDeepOfSearch
 
-      defaultInterval.value = applicationStore.defaultFields.interval
-      defaultIntervalRadio.value = applicationStore.defaultFields.dimension
+      defaultInterval.value = defaultFields.interval
+      defaultIntervalRadio.value = defaultFields.dimension
 
-      defaultCountShowSensors.value = applicationStore.defaultFields.countShowSensors
+      defaultCountShowSensors.value = defaultFields.countShowSensors
 
       if (modeClientRadio.value === 'OPC') {
-        defaultModeOfFilterRadio.value = applicationStore.defaultFields.modeOfFilter
-        defaultRootDirectory.value = applicationStore.defaultFields.rootDirectory
+        defaultModeOfFilterRadio.value = defaultFields.modeOfFilter
+        defaultRootDirectory.value = defaultFields.rootDirectory
         defaultExceptionDirectories.value =
-          applicationStore.defaultFields.exceptionDirectories.join(', ')
-        defaultExceptionExpertTags.value = applicationStore.defaultFields.exceptionExpertTags
+          defaultFields.exceptionDirectories.join(', ')
+        defaultExceptionExpertTags.value = defaultFields.exceptionExpertTags
       }
     }
 
@@ -257,7 +257,8 @@ export default {
       }
 
       await getTypesOfSensors(defaultTypesOfSensorsDataOptions)
-      await applicationStore.getFields()
+      await getQualitiesName()
+      await getFields()
       fillDefaultField()
       statusUpdateButtonActive.value = false
     })
@@ -388,7 +389,8 @@ export default {
       await getIpAndPortConfig(ipOPC, portOPC, ipCH, portCH, usernameCH, passwordCH)
       await getLastUpdateFileKKS(lastUpdateFileKKS)
       await getTypesOfSensors(defaultTypesOfSensorsDataOptions)
-      await applicationStore.getFields()
+      await getQualitiesName()
+      await getFields()
       fillDefaultField()
       statusUpdateButtonActive.value = false
     }
@@ -423,7 +425,8 @@ export default {
       onDefaultTypesOfSensorsDataChange,
       defaultSelectionTagRadio,
       defaultTemplate,
-      defaultQualitiesName,
+      // defaultQualitiesName,
+      qualitiesName,
       defaultQuality,
       defaultChosenQuality,
       onDefaultMultiselectQualitiesChange,
@@ -836,7 +839,7 @@ export default {
           :searchable="true"
           :create-option="false"
           :groups="true"
-          :options="defaultQualitiesName"
+          :options="qualitiesName"
           placeholder="Выберите код качества сигнала по умолчанию"
           limit="-1"
           @change="onDefaultMultiselectQualitiesChange"

@@ -22,17 +22,18 @@ export default {
   },
   setup(props) {
     const applicationStore = useApplicationStore()
+     const { defaultFields, deltaTimeInSeconds, estimatedBounceRateInHours } = applicationStore
 
-    const typesOfSensorsDataValue = ref(applicationStore.defaultFields.typesOfSensors)
+    const typesOfSensorsDataValue = ref(defaultFields.typesOfSensors)
     const typesOfSensorsDataOptions = ref([
       {
         label: 'Выбрать все типы данных',
-        options: applicationStore.defaultFields.typesOfSensors
+        options: defaultFields.typesOfSensors
       }
     ])
-    let chosenTypesOfSensorsData = applicationStore.defaultFields.typesOfSensors
+    let chosenTypesOfSensorsData = defaultFields.typesOfSensors
 
-    const selectionTagRadio = ref(applicationStore.defaultFields.selectionTag)
+    const selectionTagRadio = ref(defaultFields.selectionTag)
 
     const templates = reactive({
       templatesArray: []
@@ -41,7 +42,7 @@ export default {
     for (const [
       index,
       template
-    ] of applicationStore.defaultFields.sensorsAndTemplateValue.entries()) {
+    ] of defaultFields.sensorsAndTemplateValue.entries()) {
       templates.templatesArray.push({ id: index, templateText: template })
     }
 
@@ -72,18 +73,18 @@ export default {
       isLoadingSensorsAndTemplate.value = !isLoadingSensorsAndTemplate.value
     }
 
-    const sensorsAndTemplateValue = ref(applicationStore.defaultFields.sensorsAndTemplateValue)
+    const sensorsAndTemplateValue = ref(defaultFields.sensorsAndTemplateValue)
     const sensorsAndTemplateOptions = ref([
       {
         label: 'Шаблоны',
-        options: applicationStore.defaultFields.sensorsAndTemplateValue
+        options: defaultFields.sensorsAndTemplateValue
       },
       {
         label: 'Теги KKS сигналов',
         options: []
       }
     ])
-    let chosenSensorsAndTemplate = applicationStore.defaultFields.sensorsAndTemplateValue
+    let chosenSensorsAndTemplate = defaultFields.sensorsAndTemplateValue
     const disabledSensorsAndTemplate = ref(!chosenTypesOfSensorsData.length)
     const isLoadingSensorsAndTemplate = ref(false)
 
@@ -93,8 +94,8 @@ export default {
     const dateTimeBeginReport = ref()
     const dateTimeEndReport = ref()
 
-    const interval = ref(applicationStore.defaultFields.interval)
-    const intervalRadio = ref(applicationStore.defaultFields.dimension)
+    const interval = ref(defaultFields.interval)
+    const intervalRadio = ref(defaultFields.dimension)
 
     const progressBarBounceSignals = ref('0')
     const progressBarBounceSignalsActive = ref(false)
@@ -104,7 +105,7 @@ export default {
       return props.collapsedSidebar ? 115 : 90
     })
 
-    const countShowSensors = ref(applicationStore.defaultFields.countShowSensors)
+    const countShowSensors = ref(defaultFields.countShowSensors)
 
     const currentDateChecked = ref(false)
 
@@ -113,7 +114,7 @@ export default {
     const dataTableStartRequested = ref(false)
 
     const filters = ref(null)
-    const filterTableChecked = ref(applicationStore.defaultFields.filterTableChecked)
+    const filterTableChecked = ref(defaultFields.filterTableChecked)
 
     const estimatedTime = ref(0.0)
     const chosenSensors = ref([])
@@ -212,8 +213,8 @@ export default {
       estimatedTime.value =
         (chosenSensors.value.length *
           interval.value *
-          applicationStore.deltaTimeInSeconds[intervalRadio.value]) /
-        applicationStore.estimatedBounceRateInHours
+          deltaTimeInSeconds[intervalRadio.value]) /
+        estimatedBounceRateInHours
 
       dialogBigRequestActive.value = true
     }

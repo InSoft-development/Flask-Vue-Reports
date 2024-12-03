@@ -17,6 +17,22 @@ export async function getFileChecked(checkFileActive, modeClient, modeClientCHAc
 }
 
 /***
+ * Процедура проверки файла CSV quality.csv и таблицы в БД clickhouse кодов качеств
+ * @param checkQualityFileActive
+ * @param modeClient
+ * @returns {Promise<void>}
+ */
+export async function getQualityChecked(checkQualityFileActive, checkQualityTableActive) {
+  await new Promise((resolve) => {
+    socket.emit('get_quality_file_checked', (checkFile, clickhouseTableStatus) => {
+      checkQualityFileActive.value = checkFile
+      checkQualityTableActive.value = clickhouseTableStatus
+      resolve(checkFile, clickhouseTableStatus)
+    })
+  })
+}
+
+/***
  * Процедура получения выбранного режима клиента
  * @param modeClientRadio
  * @returns {Promise<void>}

@@ -1,8 +1,40 @@
 import { defineStore } from 'pinia'
-import { reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { getDefaultFields, changeDefaultFields } from './index.js'
+import { socket } from '../socket'
 
 export const useApplicationStore = defineStore('ApplicationStore', () => {
+  // const qualitiesName = [
+  //   '8 - (BNC) - ОТКАЗ СВЯЗИ (TIMEOUT)',
+  //   '16 - (BSF) - ОТКАЗ ПАРАМ',
+  //   '24 - (BCF) - ОТКАЗ СВЯЗИ',
+  //   '28 - (BOS) - ОТКАЗ ОБСЛУЖ',
+  //   '88 - (BLC) - ОТКАЗ РАСЧЕТ',
+  //   '192 - (GOD) – ХОРОШ',
+  //   '200 - (GLC) - ХОРОШ РАСЧЕТ',
+  //   '216 - (GFO) - ХОРОШ ИМИТИР',
+  //   '224 - (GLT) - ХОРОШ ЛОКАЛ ВРЕМ'
+  // ]
+
+  // const qualitiesName = ref([
+  //   {
+  //     label: 'Выбрать все коды качества сигнала',
+  //     options: [
+  //       '8 - (BNC) - ОТКАЗ СВЯЗИ (TIMEOUT)',
+  //       '16 - (BSF) - ОТКАЗ ПАРАМ',
+  //       '24 - (BCF) - ОТКАЗ СВЯЗИ',
+  //       '28 - (BOS) - ОТКАЗ ОБСЛУЖ',
+  //       '88 - (BLC) - ОТКАЗ РАСЧЕТ',
+  //       '192 - (GOD) – ХОРОШ',
+  //       '200 - (GLC) - ХОРОШ РАСЧЕТ',
+  //       '216 - (GFO) - ХОРОШ ИМИТИР',
+  //       '224 - (GLT) - ХОРОШ ЛОКАЛ ВРЕМ'
+  //     ]
+  //   }
+  // ])
+
+  const qualitiesName = ref()
+
   const badCode = [
     'BadNoCommunication',
     'BadSensorFailure',
@@ -11,19 +43,19 @@ export const useApplicationStore = defineStore('ApplicationStore', () => {
     'UncertainLastUsableValue'
   ]
 
-  const qualitiesName = [
-    '8 - (BNC) - ОТКАЗ СВЯЗИ (TIMEOUT)',
-    '16 - (BSF) - ОТКАЗ ПАРАМ',
-    '24 - (BCF) - ОТКАЗ СВЯЗИ',
-    '28 - (BOS) - ОТКАЗ ОБСЛУЖ',
-    '88 - (BLC) - ОТКАЗ РАСЧЕТ',
-    '192 - (GOD) – ХОРОШ',
-    '200 - (GLC) - ХОРОШ РАСЧЕТ',
-    '216 - (GFO) - ХОРОШ ИМИТИР',
-    '224 - (GLT) - ХОРОШ ЛОКАЛ ВРЕМ'
-  ]
-
   const badNumericCode = [8, 16, 24, 28, 88]
+
+  const getQualitiesName = async () => {
+    await new Promise((resolve) => {
+      socket.emit('get_qualities_name', (qualitiesNameAnswer) => {
+        qualitiesName.value = [{
+          label: 'Выбрать все коды качества сигнала',
+          options: qualitiesNameAnswer
+        }]
+        resolve(qualitiesNameAnswer)
+      })
+    })
+  }
 
   const deltaTimeInSeconds = {
     day: 86400,
@@ -59,6 +91,8 @@ export const useApplicationStore = defineStore('ApplicationStore', () => {
     badCode,
     qualitiesName,
     badNumericCode,
+    getQualitiesName,
+    getDefaultFields,
     deltaTimeInSeconds,
     estimatedSliceRateInHours,
     estimatedGridRateInHours,

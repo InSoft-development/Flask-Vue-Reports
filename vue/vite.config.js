@@ -28,26 +28,26 @@ export default defineConfig({
     }
   },
   server: {
-    proxy: {
-      '/api': {
-        target: 'https://10.23.23.31:8004',
-        changeOrigin: true,
-        configure: (proxy, options) => {
-          // proxy will be an instance of 'http-proxy'
-          proxy.on('error', (err, _req, _res) => {
-            console.log('proxy error', err);
-          });
-          proxy.on('proxyReq', (proxyReq, req, _res) => {
-            console.log('Sending Request to the Target:', req.method, req.url);
-          });
-          proxy.on('proxyRes', (proxyRes, req, _res) => {
-            console.log('Received Response from the Target:', proxyRes.statusCode, req.url);
-          });
-        },
-      }
-    },
-    host: "10.23.23.31",
-    port: 8005,
+    // proxy: {
+    //   '/api': {
+    //     target: 'https://10.23.36.117:8020',
+    //     changeOrigin: true,
+    //     configure: (proxy, options) => {
+    //       // proxy will be an instance of 'http-proxy'
+    //       proxy.on('error', (err, _req, _res) => {
+    //         console.log('proxy error', err);
+    //       });
+    //       proxy.on('proxyReq', (proxyReq, req, _res) => {
+    //         console.log('Sending Request to the Target:', req.method, req.url);
+    //       });
+    //       proxy.on('proxyRes', (proxyRes, req, _res) => {
+    //         console.log('Received Response from the Target:', proxyRes.statusCode, req.url);
+    //       });
+    //     },
+    //   }
+    // },
+    host: "10.23.36.117",
+    port: 8021,
     strictPort: false,
     https: {
       key: fs.readFileSync('../data/key.pem'),
@@ -55,7 +55,7 @@ export default defineConfig({
     }
   },
   preview: {
-    port: 8005
+    port: 8021
   },
   resolve: {
     alias: {

@@ -131,6 +131,8 @@ class DataControl:
     client_mode: Union[None, str]
     kks_all: Union[None, DataFrame]
     kks_all_back: Union[None, DataFrame]
+    types_of_sensors: Union[None, List[str]]
+    quality: Union[None, DataFrame]
     report_df: Union[None, DataFrame]
     report_status: Union[None, DataFrame]
     filter_operations: Dict[str, Callable[[str, str], None]]
@@ -142,6 +144,8 @@ class DataControl:
         self.__client_mode = None
         self.__kks_all = None
         self.__kks_all_back = None
+        self.__types_of_sensors = None
+        self.__quality = None
         self.__report_df = None
         self.__report_status = None
         self.__filter_operations = {
@@ -204,6 +208,40 @@ class DataControl:
         :return:
         """
         self.__kks_all_back = kks_back_frame
+
+    @property
+    def types_of_sensors(self):
+        """
+        Геттер поля __types_of_sensors
+        :return:
+        """
+        return self.__types_of_sensors
+
+    @types_of_sensors.setter
+    def types_of_sensors(self, types_list: List[str]):
+        """
+        Сеттер поля __types_of_sensors
+        :param types_list:
+        :return:
+        """
+        self.__types_of_sensors = types_list
+
+    @property
+    def quality(self):
+        """
+        Геттер поля __quality
+        :return:
+        """
+        return self.__quality
+
+    @quality.setter
+    def quality(self, quality_frame: DataFrame):
+        """
+        Сеттер поля __quality
+        :param quality_frame:
+        :return:
+        """
+        self.__quality = quality_frame
 
     @property
     def report_df(self):

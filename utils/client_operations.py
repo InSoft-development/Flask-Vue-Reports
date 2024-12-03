@@ -28,6 +28,9 @@ from typing import Dict, List, Tuple, Union
 from flask_socketio import SocketIO
 
 
+p_kks_all = None
+
+
 def client_mode() -> str:
     """
     Функция возвращает выбранный режим работы клиента
@@ -236,9 +239,6 @@ def create_client(ip: str, port: int, username: str, password: str) -> clickhous
     :return: клиент CH
     """
     return clickhouse_connect.get_client(host=ip, port=port, username=username, password=password)
-
-
-p_kks_all = None
 
 
 def get_p_kks_all():

@@ -1,4 +1,5 @@
 <script>
+import { storeToRefs } from 'pinia'
 import { FilterMatchMode } from 'primevue/api'
 import Multiselect from '@vueform/multiselect'
 import { ref, reactive, toRefs, onMounted, onUnmounted, onBeforeUnmount, computed } from 'vue'
@@ -21,16 +22,19 @@ export default {
   },
   setup(props) {
     const applicationStore = useApplicationStore()
+    const { defaultFields, badCode, badNumericCode, estimatedSliceRateInHours } = applicationStore
 
-    const typesOfSensorsDataValue = ref(applicationStore.defaultFields.typesOfSensors)
+    const { qualitiesName } = storeToRefs(applicationStore)
+
+    const typesOfSensorsDataValue = ref(defaultFields.typesOfSensors)
     const typesOfSensorsDataOptions = ref([
       {
         label: 'Выбрать все типы данных',
-        options: applicationStore.defaultFields.typesOfSensors
+        options: defaultFields.typesOfSensors
       }
     ])
-    let chosenTypesOfSensorsData = applicationStore.defaultFields.typesOfSensors
-    const selectionTagRadio = ref(applicationStore.defaultFields.selectionTag)
+    let chosenTypesOfSensorsData = defaultFields.typesOfSensors
+    const selectionTagRadio = ref(defaultFields.selectionTag)
 
     const templates = reactive({
       templatesArray: []
@@ -39,7 +43,7 @@ export default {
     for (const [
       index,
       template
-    ] of applicationStore.defaultFields.sensorsAndTemplateValue.entries()) {
+    ] of defaultFields.sensorsAndTemplateValue.entries()) {
       templates.templatesArray.push({ id: index, templateText: template })
     }
 
@@ -70,39 +74,33 @@ export default {
       isLoadingSensorsAndTemplate.value = !isLoadingSensorsAndTemplate.value
     }
 
-    const sensorsAndTemplateValue = ref(applicationStore.defaultFields.sensorsAndTemplateValue)
+    const sensorsAndTemplateValue = ref(defaultFields.sensorsAndTemplateValue)
     const sensorsAndTemplateOptions = ref([
       {
         label: 'Шаблоны',
-        options: applicationStore.defaultFields.sensorsAndTemplateValue
+        options: defaultFields.sensorsAndTemplateValue
       },
       {
         label: 'Теги KKS сигналов',
         options: []
       }
     ])
-    let chosenSensorsAndTemplate = applicationStore.defaultFields.sensorsAndTemplateValue
+    let chosenSensorsAndTemplate = defaultFields.sensorsAndTemplateValue
     const disabledSensorsAndTemplate = ref(!chosenTypesOfSensorsData.length)
     const isLoadingSensorsAndTemplate = ref(false)
 
-    const qualitiesName = ref([
-      {
-        label: 'Выбрать все коды качества сигнала',
-        options: applicationStore.qualitiesName
-      }
-    ])
-    const quality = ref(applicationStore.defaultFields.quality)
-    let chosenQuality = applicationStore.defaultFields.quality
+    const quality = ref(defaultFields.quality)
+    let chosenQuality = defaultFields.quality
 
     const dateTime = ref(new Date())
 
-    const intervalDeepOfSearch = ref(applicationStore.defaultFields.intervalDeepOfSearch)
-    const intervalDeepOfSearchRadio = ref(applicationStore.defaultFields.dimensionDeepOfSearch)
+    const intervalDeepOfSearch = ref(defaultFields.intervalDeepOfSearch)
+    const intervalDeepOfSearchRadio = ref(defaultFields.dimensionDeepOfSearch)
 
     const intervalOrDateChecked = ref(false)
 
-    const lastValueChecked = ref(applicationStore.defaultFields.lastValueChecked)
-    const dateDeepOfSearch = ref(applicationStore.defaultFields.dateDeepOfSearch)
+    const lastValueChecked = ref(defaultFields.lastValueChecked)
+    const dateDeepOfSearch = ref(defaultFields.dateDeepOfSearch)
     const maxDateTime = ref(new Date())
     const dateTimeBeginReport = ref()
     const dateTimeEndReport = ref()
@@ -112,7 +110,7 @@ export default {
     const dataTableStartRequested = ref(false)
 
     const filters = ref(null)
-    const filterTableChecked = ref(applicationStore.defaultFields.filterTableChecked)
+    const filterTableChecked = ref(defaultFields.filterTableChecked)
 
     const progressBarSignals = ref('0')
     const progressBarSignalsActive = ref(false)
@@ -239,7 +237,7 @@ export default {
 
       estimatedTime.value =
         (chosenSensors.value.length * chosenQuality.length) /
-        applicationStore.estimatedSliceRateInHours
+        estimatedSliceRateInHours
 
       dialogBigRequestActive.value = true
     }
@@ -253,7 +251,7 @@ export default {
     function qualityClass(quality) {
       return [
         {
-          'text-danger': applicationStore.badCode.includes(quality['Качество']),
+          'text-danger': badCode.includes(quality['Качество']),
           'text-warning': quality['Качество'] === '' || quality['Качество'] === 'NaN'
         }
       ]
@@ -262,7 +260,7 @@ export default {
     function codeOfQualityClass(code) {
       return [
         {
-          'text-danger': applicationStore.badNumericCode.includes(code['Код качества']),
+          'text-danger': badNumericCode.includes(code['Код качества']),
           'text-warning': code['Код качества'] === '' || code['Код качества'] === 'NaN'
         }
       ]

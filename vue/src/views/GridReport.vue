@@ -33,17 +33,19 @@ export default {
   },
   setup(props) {
     const applicationStore = useApplicationStore()
+    const { defaultFields, badCode, itemSize,
+      firstRaw, lastRaw, deltaTimeInSeconds, estimatedGridRateInHours } = applicationStore
 
-    const typesOfSensorsDataValue = ref(applicationStore.defaultFields.typesOfSensors)
+    const typesOfSensorsDataValue = ref(defaultFields.typesOfSensors)
     const typesOfSensorsDataOptions = ref([
       {
         label: 'Выбрать все типы данных',
-        options: applicationStore.defaultFields.typesOfSensors
+        options: defaultFields.typesOfSensors
       }
     ])
-    let chosenTypesOfSensorsData = applicationStore.defaultFields.typesOfSensors
+    let chosenTypesOfSensorsData = defaultFields.typesOfSensors
 
-    const selectionTagRadio = ref(applicationStore.defaultFields.selectionTag)
+    const selectionTagRadio = ref(defaultFields.selectionTag)
 
     const templates = reactive({
       templatesArray: []
@@ -52,7 +54,7 @@ export default {
     for (const [
       index,
       template
-    ] of applicationStore.defaultFields.sensorsAndTemplateValue.entries()) {
+    ] of defaultFields.sensorsAndTemplateValue.entries()) {
       templates.templatesArray.push({ id: index, templateText: template })
     }
 
@@ -83,18 +85,18 @@ export default {
       isLoadingSensorsAndTemplate.value = !isLoadingSensorsAndTemplate.value
     }
 
-    const sensorsAndTemplateValue = ref(applicationStore.defaultFields.sensorsAndTemplateValue)
+    const sensorsAndTemplateValue = ref(defaultFields.sensorsAndTemplateValue)
     const sensorsAndTemplateOptions = ref([
       {
         label: 'Шаблоны',
-        options: applicationStore.defaultFields.sensorsAndTemplateValue
+        options: defaultFields.sensorsAndTemplateValue
       },
       {
         label: 'Теги KKS сигналов',
         options: []
       }
     ])
-    let chosenSensorsAndTemplate = applicationStore.defaultFields.sensorsAndTemplateValue
+    let chosenSensorsAndTemplate = defaultFields.sensorsAndTemplateValue
     const disabledSensorsAndTemplate = ref(!chosenTypesOfSensorsData.length)
     const isLoadingSensorsAndTemplate = ref(false)
 
@@ -104,8 +106,8 @@ export default {
     const dateTimeBeginReport = ref()
     const dateTimeEndReport = ref()
 
-    const interval = ref(applicationStore.defaultFields.interval)
-    const intervalRadio = ref(applicationStore.defaultFields.dimension)
+    const interval = ref(defaultFields.interval)
+    const intervalRadio = ref(defaultFields.dimension)
 
     const progressBarGrid = ref('0')
     const progressBarGridActive = ref(false)
@@ -130,7 +132,6 @@ export default {
     const loadedDataStatus = ref([])
     const tempLoadedData = ref()
     const tempLoadedStatus = ref()
-    const itemSize = ref(applicationStore.itemSize)
     const loadDataLazy = (event) => {
       lazyLoading.value = true
 
@@ -167,7 +168,7 @@ export default {
     }
 
     const filters = ref(null)
-    const filterTableChecked = ref(applicationStore.defaultFields.filterTableChecked)
+    const filterTableChecked = ref(defaultFields.filterTableChecked)
     const lazyParams = ref({
       filters: null,
       sortField: null,
@@ -202,8 +203,8 @@ export default {
           lazyParams.value,
           dataTable,
           dataTableStatus,
-          applicationStore.firstRaw,
-          applicationStore.lastRaw
+          firstRaw,
+          lastRaw
         )
         lazyLoading.value = false
       }, 2000)
@@ -330,7 +331,7 @@ export default {
       chosenSensors.value = []
       let differenceInTime = dateTimeEnd.value.getTime() - dateTimeBegin.value.getTime()
       let differenceInDimension = Math.round(
-        differenceInTime / (1000 * applicationStore.deltaTimeInSeconds[intervalRadio.value])
+        differenceInTime / (1000 * deltaTimeInSeconds[intervalRadio.value])
       )
 
       await getKKSByMasksForTable(
@@ -342,7 +343,7 @@ export default {
 
       estimatedTime.value =
         (chosenSensors.value.length * differenceInDimension) /
-        (applicationStore.estimatedGridRateInHours * interval.value)
+        (estimatedGridRateInHours * interval.value)
 
       dialogBigRequestActive.value = true
     }
@@ -406,7 +407,7 @@ export default {
     function statusClass(index, field) {
       return [
         {
-          'text-danger': applicationStore.badCode.includes(
+          'text-danger': badCode.includes(
             dataTableStatus.value[index][String(field)]
           ),
           'text-warning':
@@ -477,8 +478,8 @@ export default {
         dataTable,
         dataTableRequested,
         dataTableStatus,
-        applicationStore.firstRaw,
-        applicationStore.lastRaw
+        firstRaw,
+        lastRaw
       )
 
       // countOfDataTable.value = Math.ceil(chosenSensors.value.length / 5)

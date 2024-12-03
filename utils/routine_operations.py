@@ -9,12 +9,16 @@
 import clickhouse_connect
 from clickhouse_connect.driver import exceptions as clickhouse_exceptions
 
+from gevent import subprocess
+from gevent.subprocess import check_output
+
 import pandas as pd
 
 import json
 import jsonschema
 
 import os
+import signal
 import datetime
 from dateutil.parser import parse
 import ipaddress
@@ -31,8 +35,8 @@ from flask_socketio import SocketIO
 
 def file_checked_status() -> bool:
     """
-    Функция возвращает результат проверки существования файла тегов kks_all.csv или верность настройки клиента Clickhouse
-    :return: True/False результат проверки существования файла тегов kks_all.csv
+    Функция возвращает результат проверки верности настройки клиента Clickhouse
+    :return: True/False результат проверки верности настройки клиента Clickhouse
     """
     client_status = False
     ip, port, username, password = client_operations.read_clickhouse_server_conf()
@@ -46,6 +50,47 @@ def file_checked_status() -> bool:
         logger.error(error)
 
     return client_status
+
+
+def file_quality_checked_status() -> Tuple[bool, bool]:
+    """
+    Функция возвращает результаты проверки существования файла кодов качества quality.csv и
+    существование таблицы в Clickhouse с кодами качества
+    :return: (True/False, True/False) результаты проверок
+    """
+    quality_table_status = False
+    ip, port, username, password = client_operations.read_clickhouse_server_conf()
+    try:
+        client = client_operations.create_client(ip, port, username, password)
+        logger.info("Clickhouse connected")
+        quality_table_status = client.command("CHECK TABLE archive.t_quality")
+        client.close()
+        logger.info("Clickhouse disconnected")
+    except clickhouse_exceptions.Error as error:
+        logger.error(error)
+
+    return os.path.isfile(constants.DATA_QUALITY), quality_table_status
+
+
+def quality_name(mode: str, quality: pd.DataFrame) -> List[str]:
+    if mode == 'OPC':
+        quality['result'] = quality['id'].astype(str) + ' - ' + quality['opc_ua'] + ' - ' + quality['opc_ua_descr']
+        return quality['result'].tolist()
+
+    if mode == 'CH':
+        ip, port, username, password = client_operations.read_clickhouse_server_conf()
+        client = client_operations.create_client(ip, port, username, password)
+        logger.info("Clickhouse connected")
+        df_quality = client.query_df("SELECT id, opc_ua, opc_ua_descr FROM archive.t_quality")
+        client.close()
+        logger.info("Clickhouse disconnected")
+        df_quality['result'] = df_quality['id'].astype(str) + ' - ' + \
+                               df_quality['opc_ua'] + ' - ' + df_quality['opc_ua_descr']
+
+        return df_quality['result'].tolist()
+
+    return []
+
 
 
 def last_update_file_kks(socketio: SocketIO, sid: int, mode: str) -> str:
@@ -531,8 +576,8 @@ def validate_imported_config(config: dict) -> Tuple[bool, str]:
                       f"{ config_clause }"
 
     # Валидация типов данных
-    opc_uncorrect = [t for t in config["fields"]["OPC"]["typesOfSensors"] if t not in constants.OPC_TYPES_OF_SENSORS]
-    ch_uncorrect = [t for t in config["fields"]["CH"]["typesOfSensors"] if t not in constants.CH_TYPES_OF_SENSORS]
+    opc_uncorrect = [t for t in config["fields"]["OPC"]["typesOfSensors"] if t.upper() not in constants.TYPES_OF_SENSORS]
+    ch_uncorrect = [t for t in config["fields"]["CH"]["typesOfSensors"] if t.upper() not in constants.TYPES_OF_SENSORS]
 
     if opc_uncorrect or ch_uncorrect:
         logger.warning(opc_uncorrect)
@@ -603,10 +648,10 @@ def fill_signals_query(kks_requested_list: List[str], quality: List[str], date: 
                        f"{correct_quality_list} AS arr_q, " \
                        f"{kks_requested_list} AS arr_ids, " \
                        f"tt_id AS (SELECT id, item_name FROM archive.static_data where item_name in arr_ids), " \
-                       f"tt_q AS (SELECT id, name FROM archive.t_quality_dict where name in arr_q)"
+                       f"tt_q AS (SELECT id, opc_ua FROM archive.t_quality where opc_ua in arr_q)"
 
     # Тело запроса sql
-    body_of_query = f"SELECT mq1.id id, item_name kks, ts_m timestamp, v_m val, q_m quality, name AS q_name " \
+    body_of_query = f"SELECT mq1.id id, item_name kks, ts_m timestamp, v_m val, q_m quality, opc_ua AS q_name " \
                     f"FROM ( " \
                     f"SELECT id, MAX(timestamp) ts_m, argMax(quality, timestamp) q_m, argMax(val, timestamp) v_m " \
                     f"FROM ( " \
@@ -619,7 +664,7 @@ def fill_signals_query(kks_requested_list: List[str], quality: List[str], date: 
                     f"WHERE v_f != val " \
                     f"GROUP BY id, quality" \
                     f") mq1 " \
-                    f"LEFT ANY JOIN archive.t_quality_dict sq ON mq1.q_m = sq.id " \
+                    f"LEFT ANY JOIN archive.t_quality sq ON mq1.q_m = sq.id " \
                     f"LEFT ANY JOIN tt_id sid ON mq1.id = sid.id " \
                     f"ORDER BY id, timestamp"
 
@@ -819,3 +864,17 @@ def prepare_for_grid_render(df_report: pd.DataFrame, df_report_slice: pd.DataFra
 
     return grid_separated_json_list, status_separated_json_list, grid_separated_json_list_single, \
            status_separated_json_list_single
+
+
+def wkhtmltopdf_interrupt() -> None:
+    """
+    Процудра отмены построения pdf отчетов
+    :return: None
+    """
+    try:
+        wkhtmltopdf_pid = check_output(["pidof", "-s", "wkhtmltopdf"])
+        logger.warning(f"wkhtmltopdf pid = {wkhtmltopdf_pid}")
+        if wkhtmltopdf_pid:
+            os.kill(int(wkhtmltopdf_pid), signal.SIGTERM)
+    except subprocess.CalledProcessError as subprocess_exception:
+        logger.error(subprocess_exception)

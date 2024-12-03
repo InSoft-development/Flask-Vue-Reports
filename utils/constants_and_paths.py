@@ -1,9 +1,10 @@
 """
-Модуль содержит все использеумые в приложении константы
+Модуль содержит все используемые в приложении константы
 """
 import os
 
 DATA_DIRECTORY = f'data{os.sep}'
+DATA_QUALITY = f'{DATA_DIRECTORY}quality.csv'
 DATA_KKS_ALL = f'{DATA_DIRECTORY}kks_all.csv'
 DATA_KKS_ALL_BACK = f'{DATA_DIRECTORY}kks_all_back.csv'
 DATA_DEFAULT_FIELDS_CONFIG = f'{DATA_DIRECTORY}default_fields.json'
@@ -62,31 +63,39 @@ JINJA_TEMPLATE_BOUNCE_TABLE = f'{JINJA_TEMPLATE_BOUNCE}table.html'
 
 JINJA_PYLIB = f'{JINJA}pylib{os.sep}'
 
-OPC_TYPES_OF_SENSORS = [
-    "String",
-    "UInt32",
-    "Boolean",
-    "Int16",
-    "UInt16",
-    "Float",
-    "Double",
-    "UInt64",
-    "Byte",
-    "SByte",
-    "Int32"
+TYPES_OF_SENSORS = [
+    'BOOLEAN',
+    'SBYTE',
+    'BYTE',
+    'INT16',
+    'UINT16',
+    'INT32',
+    'UINT32',
+    'INT64',
+    'UINT64',
+    'FLOAT',
+    'DOUBLE',
+    'STRING',
+    'DATETIME',
+    'GUID',
+    'BYTESTRING',
+    'XMLELEMENT',
+    'NODEID',
+    'EXPANDEDNODEID',
+    'STATUSCODE',
+    'QUALIFIEDNAME',
+    'LOCALIZEDTEXT',
+    'EXTENSIONOBJECT',
+    'DATAVALUE',
+    'VARIANT',
+    'DIAGNOSTICINFO',
+    'DECIMAL',
+    'ENUM',
+    'STRUCTURE',
+    'OPTSTRUCT',
+    'UNION',
+    'BITFIELDCLUSTER'
 ]
-# TODO: Используется в routine_operations.py
-
-CH_TYPES_OF_SENSORS = [
-    "DOUBLE",
-    "SBYTE",
-    "STRING",
-    "INT64",
-    "DATETIME",
-    "UINT16",
-    "UINT32"
-]
-# TODO: Используется в routine_operations.py
 
 QUALITY = [
     "8 - (BNC) - ОТКАЗ СВЯЗИ (TIMEOUT)",

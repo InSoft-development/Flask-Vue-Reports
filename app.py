@@ -177,6 +177,17 @@ def get_file_checked() -> Tuple[bool, str, bool]:
     return os.path.isfile(constants.DATA_KKS_ALL), data_control.client_mode, client_status
 
 
+@socketio.on("get_quality_file_checked")
+def get_quality_file_checked() -> Tuple[bool, bool]:
+    """
+    Функция возвращает результаты проверки существования файла кодов качества quality.csv и
+    существование таблицы в Clickhouse с кодами качества
+    :return: (True/False, True/False) результаты проверок
+    """
+    logger.info(f"get_quality_file_checked()")
+    return operations.file_quality_checked_status()
+
+
 @socketio.on("get_client_mode")
 def get_client_mode() -> str:
     """
@@ -334,7 +345,16 @@ def get_types_of_sensors() -> List[str]:
     """
     logger.info(f"get_types_of_sensors()")
 
-    return operations.types_of_sensors(data_control.client_mode, data_control.kks_all)
+    data_control.types_of_sensors = operations.types_of_sensors(data_control.client_mode, data_control.kks_all)
+
+    return data_control.types_of_sensors
+
+
+@socketio.on("get_qualities_name")
+def get_qualities_name() -> List[str]:
+    logger.info(f"get_qualities_name()")
+
+    return operations.quality_name(data_control.client_mode, data_control.quality)
 
 
 @socketio.on("get_kks_tag_exist")
@@ -729,13 +749,7 @@ def signals_data_cancel() -> None:
         app_control.active_task = None
         app_control.active_greenlet = None
 
-        try:
-            wkhtmltopdf_pid = check_output(["pidof", "-s", "wkhtmltopdf"])
-            logger.warning(f"wkhtmltopdf pid = {wkhtmltopdf_pid}")
-            if wkhtmltopdf_pid:
-                os.kill(int(wkhtmltopdf_pid), signal.SIGTERM)
-        except subprocess.CalledProcessError as subprocess_exception:
-            logger.error(subprocess_exception)
+        operations.wkhtmltopdf_interrupt()
 
 
 @socketio.on("get_grid_data")
@@ -955,13 +969,7 @@ def grid_data_cancel() -> None:
         app_control.active_task = None
         app_control.active_greenlet = None
 
-        try:
-            wkhtmltopdf_pid = check_output(["pidof", "-s", "wkhtmltopdf"])
-            logger.warning(f"wkhtmltopdf pid = {wkhtmltopdf_pid}")
-            if wkhtmltopdf_pid:
-                os.kill(int(wkhtmltopdf_pid), signal.SIGTERM)
-        except subprocess.CalledProcessError as subprocess_exception:
-            logger.error(subprocess_exception)
+        operations.wkhtmltopdf_interrupt()
 
 
 @socketio.on("get_bounce_signals_data")
@@ -1109,13 +1117,7 @@ def bounce_data_cancel() -> None:
         app_control.active_task = None
         app_control.active_greenlet = None
 
-        try:
-            wkhtmltopdf_pid = check_output(["pidof", "-s", "wkhtmltopdf"])
-            logger.warning(f"wkhtmltopdf pid = {wkhtmltopdf_pid}")
-            if wkhtmltopdf_pid:
-                os.kill(int(wkhtmltopdf_pid), signal.SIGTERM)
-        except subprocess.CalledProcessError as subprocess_exception:
-            logger.error(subprocess_exception)
+        operations.wkhtmltopdf_interrupt()
 
 
 def parse_args():
@@ -1188,13 +1190,21 @@ if __name__ == '__main__':
 
     try:
         data_control.kks_all = pd.read_csv(constants.DATA_KKS_ALL, header=None, sep=';')
+        logger.info(f"dataframe {constants.DATA_KKS_ALL} загружен")
         data_control.kks_all_back = pd.read_csv(constants.DATA_KKS_ALL_BACK, header=None, sep=';')
-        logger.info(f"dataframe {constants.DATA_KKS_ALL} has been loaded")
-        logger.info(f"dataframe {constants.DATA_KKS_ALL_BACK} has been loaded")
+        logger.info(f"dataframe {constants.DATA_KKS_ALL_BACK} загружен")
+        data_control.types_of_sensors = operations.types_of_sensors(data_control.client_mode, data_control.kks_all)
     except FileNotFoundError as e:
         logger.info(e)
         data_control.kks_all = pd.DataFrame()
         data_control.kks_all_back = pd.DataFrame()
+        data_control.types_of_sensors = None
+    try:
+        data_control.quality = pd.read_csv(constants.DATA_QUALITY, encoding='utf8')
+        logger.info(f"dataframe {constants.DATA_QUALITY} загружен")
+    except FileNotFoundError as e:
+        logger.info(e)
+        data_control.quality = pd.DataFrame()
 
     # Перезаполняем в bundle версии файл api_urls.js для настройки проксирования
     with open(constants.WEB_API_URLS_JS, 'r') as read_file:

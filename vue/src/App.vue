@@ -4,7 +4,7 @@ import { ref, onMounted, computed, watch } from 'vue'
 
 import Multiselect from '@vueform/multiselect'
 
-import { getFileChecked, cancelUpdate } from './stores'
+import { getFileChecked, getQualityChecked, cancelUpdate } from './stores'
 
 import { useApplicationStore } from './stores/applicationStore'
 
@@ -12,8 +12,10 @@ export default {
   components: { Multiselect },
   setup() {
     const applicationStore = useApplicationStore()
+    const { getFields,  getQualitiesName } = applicationStore
 
-    applicationStore.getFields()
+    getQualitiesName()
+    getFields()
 
     const sidebarMenu = [
       {
@@ -42,6 +44,8 @@ export default {
     const checkFileActive = ref(false)
     const modeClient = ref('')
     const modeClientCHActive = ref(false)
+    const checkQualityFileActive = ref(false)
+    const checkQualityTableActive = ref(false)
 
     const route = useRoute()
     const routePath = computed(() => route.path)
@@ -53,6 +57,11 @@ export default {
         alert('Не найден файл kks_all.csv.\nСконфигурируйте клиент OPC UA и обновите файл тегов')
       if (!modeClientCHActive.value && modeClient.value === 'CH')
         alert('Ошибка конфигурации клиента Clickhouse.\nСконфигурируйте клиент Clickhouse')
+      await getQualityChecked(checkQualityFileActive, checkQualityTableActive)
+      if (!checkQualityFileActive.value && modeClient.value === 'OPC')
+        alert('Не найден файл quality.csv. \nДобавьте файл с кодами качествами через конфигуратор')
+      if (!checkQualityTableActive.value && modeClient.value === 'CH')
+        alert('Ошибка конфигурации Clickhouse.\nТаблица с кодами качествами не найдена')
     })
 
     onMounted(async () => {
@@ -72,6 +81,8 @@ export default {
       checkFileActive,
       modeClient,
       modeClientCHActive,
+      checkQualityFileActive,
+      checkQualityTableActive,
       routePath
     }
   }
@@ -84,23 +95,35 @@ export default {
     <div class="content">
       <div
         class="container"
-        v-if="!checkFileActive && modeClient === 'OPC' && routePath !== '/configurator'"
+        v-if="modeClient === 'OPC' && routePath !== '/configurator'"
       >
-        <h1>Не найден файл kks_all.csv.</h1>
-        <h1>Сконфигурируйте клиент OPC UA и обновите файл тегов на странице "Конфигуратор".</h1>
+        <div v-if="!checkFileActive">
+          <h1>Не найден файл kks_all.csv.</h1>
+          <h1>Сконфигурируйте клиент OPC UA и обновите файл тегов на странице "Конфигуратор".</h1>
+        </div>
+        <div v-if="!checkQualityFileActive">
+          <h1>Не найден файл quality.csv.</h1>
+          <h1>Добавьте файл с кодами качествами через "Конфигуратор".</h1>
+        </div>
       </div>
       <div
         class="container"
         v-if="!modeClientCHActive && modeClient === 'CH' && routePath !== '/configurator'"
       >
-        <h1>Ошибка конфигурации клиента Clickhouse.</h1>
-        <h1>Сконфигурируйте клиент Clickhouse</h1>
+        <div v-if="!modeClientCHActive">
+          <h1>Ошибка конфигурации клиента Clickhouse.</h1>
+          <h1>Сконфигурируйте клиент Clickhouse</h1>
+        </div>
+        <div v-if="!checkQualityTableActive">
+          <h1>Ошибка конфигурации Clickhouse.</h1>
+          <h1>Таблица с кодами качествами не найдена</h1>
+        </div>
       </div>
       <div
         class="container"
         v-if="
-          (checkFileActive && modeClient === 'OPC') ||
-          (modeClientCHActive && modeClient === 'CH') ||
+          (checkFileActive && checkQualityFileActive  && modeClient === 'OPC') ||
+          (modeClientCHActive && checkQualityTableActive && modeClient === 'CH') ||
           routePath === '/configurator'
         "
       >
