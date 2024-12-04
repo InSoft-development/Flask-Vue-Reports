@@ -638,11 +638,18 @@ def validate_imported_quality(quality_df: pd.DataFrame) -> Tuple[bool, str]:
              строка с указанием ошибки валидации, если возвращается False
     """
     logger.info("validate_imported_quality")
+
     try:
         constants.QUALITY_SCHEMA.validate(quality_df, lazy=True)
     except pa.errors.SchemaErrors as err:
         logger.error(err)
         return False, f"Обнаружены следующие ошибки при валидации импортируемго csv кодов качества {err}"
+
+    for unique_field in ['id', 'opc_ua_descr']:
+        if quality_df.duplicated(unique_field).any():
+            return False, f"Обнаружены дупликаты уникальных значений. " \
+                          f"Проверьте столбец '{unique_field}' и повторите импорт файла"
+
     return True, ""
 
 
