@@ -57,6 +57,25 @@ def catch_all(path):
     :param path: любой путь, начинающийся с /
     :return: ./web/index.html
     """
+
+    # try:
+    #     data_control.kks_all = pd.read_csv(constants.DATA_KKS_ALL, header=None, sep=';')
+    #     logger.info(f"dataframe {constants.DATA_KKS_ALL} загружен")
+    #     data_control.kks_all_back = pd.read_csv(constants.DATA_KKS_ALL_BACK, header=None, sep=';')
+    #     logger.info(f"dataframe {constants.DATA_KKS_ALL_BACK} загружен")
+    #     data_control.types_of_sensors = operations.types_of_sensors(data_control.client_mode, data_control.kks_all)
+    # except FileNotFoundError as e:
+    #     logger.info(e)
+    #     data_control.kks_all = pd.DataFrame()
+    #     data_control.kks_all_back = pd.DataFrame()
+    #     data_control.types_of_sensors = None
+    # try:
+    #     data_control.quality = pd.read_csv(constants.DATA_QUALITY, encoding='utf8')
+    #     logger.info(f"dataframe {constants.DATA_QUALITY} загружен")
+    # except FileNotFoundError as e:
+    #     logger.info(e)
+    #     data_control.quality = pd.DataFrame()
+
     return app.send_static_file("index.html")
 
 
@@ -130,6 +149,11 @@ def get_bounce_csv():
 @app.route("/config.json")
 def get_config_json():
     return send_file(constants.CONFIG)
+
+
+@app.route("/quality.csv")
+def get_quality_csv():
+    return send_file(constants.DATA_QUALITY)
 
 
 @app.route("/signals_slice.pdf")
@@ -261,6 +285,7 @@ def get_default_fields() -> Union[Dict[str, Union[str, int, bool, List[str]]], s
     :return: json объект полей по умочанию
     """
     logger.info(f"get_default_fields()")
+    logger.info(data_control.client_mode)
 
     return operations.default_fields_read(data_control.client_mode)
 
@@ -337,6 +362,32 @@ def upload_config(file: dict) -> str:
     return operations.upload_config_process(file)
 
 
+@socketio.on("upload_quality")
+def upload_quality(file: bytes) -> str:
+    """
+    Функция импортирует пользовательский csv кодов качеств
+    :param file: файл в виде последовательности байтов
+    :return: Строка сообщения об успехе импорта или ошибке
+    """
+
+    logger.warning(file)
+
+    if app_control.active_greenlet:
+        logger.warning(f"{app_control.active_greenlet} гринлет выполняется; задача {app_control.active_task}")
+        return f"Выполняется запрос для другого клиента. Импорт конфига временно невозможен"
+
+    status = operations.upload_quality_process(file)
+
+    try:
+        data_control.quality = pd.read_csv(constants.DATA_QUALITY, encoding='utf8')
+        logger.info(f"dataframe {constants.DATA_QUALITY} загружен")
+    except FileNotFoundError as file_not_found_error:
+        logger.info(file_not_found_error)
+        data_control.quality = pd.DataFrame()
+
+    return status
+
+
 @socketio.on("get_types_of_sensors")
 def get_types_of_sensors() -> List[str]:
     """
@@ -352,6 +403,10 @@ def get_types_of_sensors() -> List[str]:
 
 @socketio.on("get_qualities_name")
 def get_qualities_name() -> List[str]:
+    """
+    Функция получения наименований кодов качества для отображения в веб-интерфейсе
+    :return: список кодов качества
+    """
     logger.info(f"get_qualities_name()")
 
     return operations.quality_name(data_control.client_mode, data_control.quality)

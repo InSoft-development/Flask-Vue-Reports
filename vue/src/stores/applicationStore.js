@@ -4,35 +4,6 @@ import { getDefaultFields, changeDefaultFields } from './index.js'
 import { socket } from '../socket'
 
 export const useApplicationStore = defineStore('ApplicationStore', () => {
-  // const qualitiesName = [
-  //   '8 - (BNC) - ОТКАЗ СВЯЗИ (TIMEOUT)',
-  //   '16 - (BSF) - ОТКАЗ ПАРАМ',
-  //   '24 - (BCF) - ОТКАЗ СВЯЗИ',
-  //   '28 - (BOS) - ОТКАЗ ОБСЛУЖ',
-  //   '88 - (BLC) - ОТКАЗ РАСЧЕТ',
-  //   '192 - (GOD) – ХОРОШ',
-  //   '200 - (GLC) - ХОРОШ РАСЧЕТ',
-  //   '216 - (GFO) - ХОРОШ ИМИТИР',
-  //   '224 - (GLT) - ХОРОШ ЛОКАЛ ВРЕМ'
-  // ]
-
-  // const qualitiesName = ref([
-  //   {
-  //     label: 'Выбрать все коды качества сигнала',
-  //     options: [
-  //       '8 - (BNC) - ОТКАЗ СВЯЗИ (TIMEOUT)',
-  //       '16 - (BSF) - ОТКАЗ ПАРАМ',
-  //       '24 - (BCF) - ОТКАЗ СВЯЗИ',
-  //       '28 - (BOS) - ОТКАЗ ОБСЛУЖ',
-  //       '88 - (BLC) - ОТКАЗ РАСЧЕТ',
-  //       '192 - (GOD) – ХОРОШ',
-  //       '200 - (GLC) - ХОРОШ РАСЧЕТ',
-  //       '216 - (GFO) - ХОРОШ ИМИТИР',
-  //       '224 - (GLT) - ХОРОШ ЛОКАЛ ВРЕМ'
-  //     ]
-  //   }
-  // ])
-
   const qualitiesName = ref()
 
   const badCode = [
@@ -72,9 +43,17 @@ export const useApplicationStore = defineStore('ApplicationStore', () => {
   const bounceTimeLimitInHours = 0.5
 
   let defaultFields = reactive({})
+  const sensorsAndTemplateValueShow = ref('')
+  const exceptionDirectoriesShow = ref('')
 
   const getFields = async () => {
     await getDefaultFields(defaultFields)
+
+    if ("sensorsAndTemplateValue" in defaultFields)
+      sensorsAndTemplateValueShow.value = defaultFields.sensorsAndTemplateValue.join(', ')
+
+    if ("exceptionDirectories" in defaultFields)
+      exceptionDirectoriesShow.value = defaultFields.exceptionDirectories.join(', ')
   }
 
   const setFields = async (fields) => {
@@ -101,6 +80,8 @@ export const useApplicationStore = defineStore('ApplicationStore', () => {
     gridTimeLimitInHours,
     bounceTimeLimitInHours,
     defaultFields,
+    sensorsAndTemplateValueShow,
+    exceptionDirectoriesShow,
     getFields,
     setFields,
     firstRaw,

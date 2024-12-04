@@ -46,6 +46,7 @@ def create_signals_opc_ua_dataframe(socketio: SocketIO, sid: int, kks_all: pd.Da
     # Подготовка к выполнению запроса
     # Формирование списка выбранных кодов качества
     correct_quality_list = list(map(lambda x: constants.QUALITY_CODE_DICT[x], quality))
+    logger.warning(correct_quality_list)
 
     # Формирование декартового произведения
     decart_list = [kks_requested_list, correct_quality_list]
@@ -257,16 +258,14 @@ def create_signals_ch_dataframe(socketio: SocketIO, sid: int,
     socketio.emit("setProgressBarSignals", {"count": 10}, to=sid)
 
     # Формирование запроса sql к Clickhouse
-    socketio.emit("setUpdateSignalsRequestStatus", {"message": f"Формирование запроса к БД Clickhouse\n"},
-                  to=sid)
+    socketio.emit("setUpdateSignalsRequestStatus", {"message": f"Формирование запроса к БД Clickhouse\n"}, to=sid)
     query_string = operations.fill_signals_query(kks_requested_list, quality, date, last_value_checked,
                                                  interval_or_date_checked, interval, dimension, date_deep_search)
     logger.info(query_string)
     socketio.emit("setProgressBarSignals", {"count": 20}, to=sid)
 
     ip, port, username, password = client_operations.read_clickhouse_server_conf()
-    socketio.emit("setUpdateSignalsRequestStatus", {"message": f"Запрос к БД Clickhouse\n"},
-                  to=sid)
+    socketio.emit("setUpdateSignalsRequestStatus", {"message": f"Запрос к БД Clickhouse\n"}, to=sid)
     socketio.emit("setProgressBarSignals", {"count": 50}, to=sid)
     client = client_operations.create_client(ip, port, username, password)
     logger.info("Clickhouse connected")

@@ -13,6 +13,8 @@ from gevent import subprocess
 from gevent.subprocess import check_output
 
 import pandas as pd
+import pandera as pa
+from io import StringIO
 
 import json
 import jsonschema
@@ -73,24 +75,35 @@ def file_quality_checked_status() -> Tuple[bool, bool]:
 
 
 def quality_name(mode: str, quality: pd.DataFrame) -> List[str]:
+    """
+    Функция возвращает список кодов качеств с их расшифровкой для отображения в веб-интерфейсе
+    :param mode: выбранный клиент
+    :param quality: pandas фрейм кодов качеств
+    :return: список кодов качеств
+    """
     if mode == 'OPC':
+        if quality.empty:
+            return ['Отсутствует файл с кодами качествами']
         quality['result'] = quality['id'].astype(str) + ' - ' + quality['opc_ua'] + ' - ' + quality['opc_ua_descr']
         return quality['result'].tolist()
 
     if mode == 'CH':
-        ip, port, username, password = client_operations.read_clickhouse_server_conf()
-        client = client_operations.create_client(ip, port, username, password)
-        logger.info("Clickhouse connected")
-        df_quality = client.query_df("SELECT id, opc_ua, opc_ua_descr FROM archive.t_quality")
-        client.close()
-        logger.info("Clickhouse disconnected")
-        df_quality['result'] = df_quality['id'].astype(str) + ' - ' + \
-                               df_quality['opc_ua'] + ' - ' + df_quality['opc_ua_descr']
+        try:
+            ip, port, username, password = client_operations.read_clickhouse_server_conf()
+            client = client_operations.create_client(ip, port, username, password)
+            logger.info("Clickhouse connected")
+            df_quality = client.query_df("SELECT id, opc_ua, opc_ua_descr FROM archive.t_quality")
+            client.close()
+            logger.info("Clickhouse disconnected")
+            df_quality['result'] = df_quality['id'].astype(str) + ' - ' + \
+                                   df_quality['opc_ua'] + ' - ' + df_quality['opc_ua_descr']
 
-        return df_quality['result'].tolist()
+            return df_quality['result'].tolist()
+        except clickhouse_exceptions.Error as error:
+            logger.error(error)
+            return ['Ошибка конфигурации клиента Clickhouse DB']
 
-    return []
-
+    return ['Ошибка конфигурации клиента']
 
 
 def last_update_file_kks(socketio: SocketIO, sid: int, mode: str) -> str:
@@ -160,10 +173,10 @@ def default_fields_read(mode: str) -> Union[str, Dict[str, Union[str, int, bool,
 
 def default_fields_write(mode: str, default_fields: dict) -> str:
     """
-    Процедура сохраняет конфигурацию вводимых полей для запроса по умолчанию в конфиг json
+    Функция сохраняет конфигурацию вводимых полей для запроса по умолчанию в конфиг json
     :param mode: выбранный клиент
     :param default_fields: json объект полей по умолчанию
-    :return:
+    :return: статус завершения
     """
 
     # Приводим строку даты глубины поиска к формату без timezone
@@ -206,6 +219,34 @@ def upload_config_process(file: dict) -> str:
     logger.warning(config)
 
     return f"Конфиг импортирован. {msg}"
+
+
+def upload_quality_process(file: bytes) -> str:
+    """
+    Функция импортирует пользовательский файл csv кодов качества
+    :param file: файл в виде байтовой последовательности
+    :return: Строка сообщения об успехе импорта или ошибке
+    """
+    try:
+        quality_df_string = file.decode('utf-8')
+        # Формирование фрейма
+        quality_df = pd.read_csv(StringIO(quality_df_string))
+    except UnicodeDecodeError as unicode_decode_error:
+        logger.error(unicode_decode_error)
+        return f"Ошибка кодировки выгружаемого на сервер файла: {unicode_decode_error}"
+    except pd.errors.ParserError as parse_errors:
+        logger.error(parse_errors)
+        return f"Ошибка считывания выгружаемого на сервер файла: {parse_errors}"
+
+    # Валидация пользовательского файла кодов качества
+    valid_flag, msg = validate_imported_quality(quality_df)
+    if not valid_flag:
+        return f"Ошибка валидации csv кодов качества: {msg}. Отмена импорта."
+
+    # Сохранение пользовательского файла кодов качества
+    quality_df.to_csv(constants.DATA_QUALITY, index=False, encoding='utf-8')
+
+    return f"Коды качества импортированы. {msg}"
 
 
 def types_of_sensors(mode: str, kks_all: pd.DataFrame) -> List[str]:
@@ -521,7 +562,7 @@ def validate_imported_config(config: dict) -> Tuple[bool, str]:
     logger.info(config)
     # Валидация схемы
     try:
-        jsonschema.validate(instance=config, schema=constants.CONFIG_SHEMA)
+        jsonschema.validate(instance=config, schema=constants.CONFIG_SCHEMA)
     except jsonschema.exceptions.ValidationError as valid_error:
         logger.error(valid_error.message)
         return False, valid_error.message
@@ -586,6 +627,22 @@ def validate_imported_config(config: dict) -> Tuple[bool, str]:
                      f"в источниках данных:" \
                      f"\n{'OPC:' + str(opc_uncorrect) if opc_uncorrect else ''} " \
                      f"\n{'CH:' + str(ch_uncorrect) if ch_uncorrect else ''}"
+    return True, ""
+
+
+def validate_imported_quality(quality_df: pd.DataFrame) -> Tuple[bool, str]:
+    """
+    Функция валидации импортируемого csv кодов качества
+    :param quality_df: pandas фрейм кодов качества
+    :return: True/False: результат валидации конфига,
+             строка с указанием ошибки валидации, если возвращается False
+    """
+    logger.info("validate_imported_quality")
+    try:
+        constants.QUALITY_SCHEMA.validate(quality_df, lazy=True)
+    except pa.errors.SchemaErrors as err:
+        logger.error(err)
+        return False, f"Обнаружены следующие ошибки при валидации импортируемго csv кодов качества {err}"
     return True, ""
 
 

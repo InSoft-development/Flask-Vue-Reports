@@ -2,6 +2,7 @@
 Модуль содержит все используемые в приложении константы
 """
 import os
+import pandera as pa
 
 DATA_DIRECTORY = f'data{os.sep}'
 DATA_QUALITY = f'{DATA_DIRECTORY}quality.csv'
@@ -247,7 +248,7 @@ CONFIG_DEFAULT = {
     }
 }
 
-CONFIG_SHEMA = {
+CONFIG_SCHEMA = {
     "type": "object",
     "properties": {
         "mode": {"type": "string", "enum": ["OPC", "CH"]},
@@ -301,8 +302,7 @@ CONFIG_SHEMA = {
                         "quality": {
                             "type": "array",
                             "items": {
-                                "type": "string",
-                                "enum": QUALITY
+                                "type": "string"
                             }
                         },
                         "dateDeepOfSearch": {"type": "string"},
@@ -348,8 +348,7 @@ CONFIG_SHEMA = {
                         "quality": {
                             "type": "array",
                             "items": {
-                                "type": "string",
-                                "enum": QUALITY
+                                "type": "string"
                             }
                         },
                         "dateDeepOfSearch": {"type": "string"},
@@ -375,3 +374,13 @@ CONFIG_SHEMA = {
     "additionalProperties": False,
     "required": ["mode", "clickhouse", "opc", "fields"]
 }
+
+QUALITY_SCHEMA = pa.DataFrameSchema({
+    "id": pa.Column(int, coerce=True),
+    "type_code_quality": pa.Column(str, pa.Check.isin(["плохой", "сомнительный", "хороший"]), coerce=True),
+    "short_descr": pa.Column(str, coerce=True),
+    "opc_ua": pa.Column(str, pa.Check.str_matches(r'^[A-Z]*$'), coerce=True),
+    "opc_ua_descr": pa.Column(str, pa.Check.str_matches(r'^([a-zA-Z]*?)(, [a-zA-Z\s()]*?)*?$'), coerce=True),
+    "source_code": pa.Column(str, coerce=True),
+    "extended_descr": pa.Column(str, coerce=True),
+})

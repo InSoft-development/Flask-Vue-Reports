@@ -28,9 +28,10 @@ export default {
   components: { Multiselect },
   setup() {
     const applicationStore = useApplicationStore()
-    const { defaultFields, getQualitiesName, getFields, setFields } = applicationStore
+    const { getQualitiesName, getFields, setFields } = applicationStore
 
-    const { qualitiesName } = storeToRefs(applicationStore)
+    const { qualitiesName, defaultFields,
+      sensorsAndTemplateValueShow, exceptionDirectoriesShow } = storeToRefs(applicationStore)
 
     const lastUpdateFileKKS = ref('')
     const configServer = ref('')
@@ -46,7 +47,6 @@ export default {
       await getTypesOfSensors(defaultTypesOfSensorsDataOptions)
       await getQualitiesName()
       await getFields()
-      fillDefaultField()
     }
 
     const ipOPC = ref('')
@@ -56,11 +56,6 @@ export default {
     const portCH = ref(0)
     const usernameCH = ref('')
     const passwordCH = ref('')
-
-    const defaultModeOfFilterRadio = ref('')
-    const defaultRootDirectory = ref('')
-    const defaultExceptionDirectories = ref('')
-    const defaultExceptionExpertTags = ref(false)
 
     const statusUpdateTextArea = ref('Лог')
     const statusUpdateButtonActive = ref(false)
@@ -92,12 +87,12 @@ export default {
     const changeUpdate = async () => {
       statusUpdateButtonActive.value = true
       await changeUpdateFile(
-        defaultRootDirectory.value,
-        defaultExceptionDirectories.value
+        defaultFields.value.rootDirectory,
+        exceptionDirectoriesShow.value
           .split(',')
           .map((item) => item.trim())
           .filter((item) => item.length),
-        defaultExceptionExpertTags.value
+        defaultFields.value.exceptionExpertTags
       )
       await getServerConfig(configServer, checkFileActive)
       statusUpdateButtonActive.value = false
@@ -109,37 +104,21 @@ export default {
       await getLastUpdateFileKKS(lastUpdateFileKKS)
     }
 
-    const defaultTypesOfSensorsDataValue = ref([])
     const defaultTypesOfSensorsDataOptions = ref([
       {
         label: 'Выбрать все типы данных',
         options: []
       }
     ])
-    let defaultChosenTypesOfSensorsData = []
 
     async function onDefaultTypesOfSensorsDataChange(val) {
-      defaultChosenTypesOfSensorsData = val
+      defaultFields.value.typesOfSensors = val
     }
-
-    const defaultSelectionTagRadio = ref('')
-
-    const defaultTemplate = ref('')
-
-    const defaultQuality = ref([])
-    let defaultChosenQuality = []
 
     function onDefaultMultiselectQualitiesChange(val) {
-      defaultChosenQuality = val
+      defaultFields.value.quality = val
     }
 
-    const defaultLastValueChecked = ref(false)
-    const defaultFilterTableChecked = ref(false)
-
-    const defaultIntervalDeepOfSearch = ref(0)
-    const defaultDimensionDeepOfSearch = ref('')
-
-    const defaultDateDeepOfSearch = ref(new Date())
     const defaultMaxDateTime = ref(new Date())
 
     function onDefaultDateDeepOfSearchClick() {
@@ -147,13 +126,8 @@ export default {
     }
 
     function onDefaultDateDeepOfSearchTodayClick() {
-      defaultDateDeepOfSearch.value = new Date()
+      defaultFields.value.dateDeepOfSearch = new Date()
     }
-
-    const defaultInterval = ref(0)
-    const defaultIntervalRadio = ref('')
-
-    const defaultCountShowSensors = ref(0)
 
     let changeDefaultTimeout = null
     const changeDefaultFields = async () => {
@@ -164,76 +138,42 @@ export default {
       changeDefaultTimeout = setTimeout(async function () {
         statusUpdateButtonActive.value = true
         let formatDateDeepOfSearch = new Date(
-          defaultDateDeepOfSearch.value.toString().split('GMT')[0] + ' UTC'
+          defaultFields.value.dateDeepOfSearch.toString().split('GMT')[0] + ' UTC'
         ).toISOString()
-        let defaultFields = {
-          typesOfSensors: defaultChosenTypesOfSensorsData,
-          selectionTag: defaultSelectionTagRadio.value,
-          sensorsAndTemplateValue: defaultTemplate.value
+        let defaultSaveFields = {
+          typesOfSensors: defaultFields.value.typesOfSensors,
+          selectionTag: defaultFields.value.selectionTag,
+          sensorsAndTemplateValue: sensorsAndTemplateValueShow.value
             .split(',')
             .map((item) => item.trim())
             .filter((item) => item.length),
-          quality: defaultChosenQuality,
-          lastValueChecked: defaultLastValueChecked.value,
-          filterTableChecked: defaultFilterTableChecked.value,
-          intervalDeepOfSearch: defaultIntervalDeepOfSearch.value,
-          dimensionDeepOfSearch: defaultDimensionDeepOfSearch.value,
+          quality: defaultFields.value.quality,
+          lastValueChecked: defaultFields.value.lastValueChecked,
+          filterTableChecked: defaultFields.value.filterTableChecked,
+          intervalDeepOfSearch: defaultFields.value.intervalDeepOfSearch,
+          dimensionDeepOfSearch: defaultFields.value.dimensionDeepOfSearch,
           dateDeepOfSearch: formatDateDeepOfSearch,
-          interval: defaultInterval.value,
-          dimension: defaultIntervalRadio.value,
-          countShowSensors: defaultCountShowSensors.value
+          interval: defaultFields.value.interval,
+          dimension: defaultFields.value.dimension,
+          countShowSensors: defaultFields.value.countShowSensors
         }
         if (modeClientRadio.value === 'OPC') {
           let separateTags = {
-            modeOfFilter: defaultModeOfFilterRadio.value,
-            rootDirectory: defaultRootDirectory.value,
-            exceptionDirectories: defaultExceptionDirectories.value
+            modeOfFilter: defaultFields.value.modeOfFilter,
+            rootDirectory: defaultFields.value.rootDirectory,
+            exceptionDirectories: exceptionDirectoriesShow.value
               .split(',')
               .map((item) => item.trim())
               .filter((item) => item.length),
-            exceptionExpertTags: defaultExceptionExpertTags.value
+            exceptionExpertTags: defaultFields.value.exceptionExpertTags
           }
-          defaultFields = { ...defaultFields, ...separateTags }
+          defaultSaveFields = { ...defaultSaveFields, ...separateTags }
         }
-        await setFields(defaultFields)
+        await setFields(defaultSaveFields)
         await getFields()
-        fillDefaultField()
         statusUpdateTextArea.value = 'Параметры по умолчанию сохранены...\n'
         statusUpdateButtonActive.value = false
       }, 500)
-    }
-
-    const fillDefaultField = () => {
-      defaultChosenTypesOfSensorsData = defaultFields.typesOfSensors
-      defaultTypesOfSensorsDataValue.value = defaultFields.typesOfSensors
-
-      defaultSelectionTagRadio.value = defaultFields.selectionTag
-
-      defaultTemplate.value = defaultFields.sensorsAndTemplateValue.join(', ')
-
-      defaultQuality.value = defaultFields.quality
-      defaultChosenQuality = defaultFields.quality
-
-      defaultLastValueChecked.value = defaultFields.lastValueChecked
-      defaultFilterTableChecked.value = defaultFields.filterTableChecked
-
-      defaultIntervalDeepOfSearch.value = defaultFields.intervalDeepOfSearch
-      defaultDimensionDeepOfSearch.value = defaultFields.dimensionDeepOfSearch
-
-      defaultDateDeepOfSearch.value = defaultFields.dateDeepOfSearch
-
-      defaultInterval.value = defaultFields.interval
-      defaultIntervalRadio.value = defaultFields.dimension
-
-      defaultCountShowSensors.value = defaultFields.countShowSensors
-
-      if (modeClientRadio.value === 'OPC') {
-        defaultModeOfFilterRadio.value = defaultFields.modeOfFilter
-        defaultRootDirectory.value = defaultFields.rootDirectory
-        defaultExceptionDirectories.value =
-          defaultFields.exceptionDirectories.join(', ')
-        defaultExceptionExpertTags.value = defaultFields.exceptionExpertTags
-      }
     }
 
     onMounted(async () => {
@@ -247,7 +187,6 @@ export default {
       await getServerConfig(configServer, checkFileActive)
       await getLastUpdateFileKKS(lastUpdateFileKKS)
       await getIpAndPortConfig(ipOPC, portOPC, ipCH, portCH, usernameCH, passwordCH)
-      fillDefaultField()
 
       statusUpdateTextArea.value = configServer.value
       if (!checkFileActive.value) {
@@ -259,7 +198,6 @@ export default {
       await getTypesOfSensors(defaultTypesOfSensorsDataOptions)
       await getQualitiesName()
       await getFields()
-      fillDefaultField()
       statusUpdateButtonActive.value = false
     })
 
@@ -278,13 +216,13 @@ export default {
       statusUpdateTextArea.value = ''
       statusUpdateTextArea.value += 'Запуск обновления тегов...\n'
       await runUpdate(
-        defaultModeOfFilterRadio.value,
-        defaultRootDirectory.value,
-        defaultExceptionDirectories.value
+        defaultFields.value.modeOfFilter,
+        defaultFields.value.rootDirectory,
+        exceptionDirectoriesShow.value
           .split(',')
           .map((item) => item.trim())
           .filter((item) => item.length),
-        defaultExceptionExpertTags.value
+        defaultFields.value.exceptionExpertTags
       )
       runUpdateFlag.value = false
       await getServerConfig(configServer, checkFileActive)
@@ -391,8 +329,32 @@ export default {
       await getTypesOfSensors(defaultTypesOfSensorsDataOptions)
       await getQualitiesName()
       await getFields()
-      fillDefaultField()
       statusUpdateButtonActive.value = false
+    }
+
+    async function uploadQuality(xhr, files) {
+      statusUpdateButtonActive.value = true
+      await new Promise((resolve) => {
+        socket.emit('upload_quality', xhr.files[0], (status) => {
+          alert(status)
+          resolve(status)
+        })
+      })
+      await getQualitiesName()
+      await getFields()
+      statusUpdateButtonActive.value = false
+    }
+
+    async function exportQualityDownloadClick() {
+      const linkQualityCsv = document.createElement('a')
+      linkQualityCsv.download = 'quality.csv'
+      const dataQualityCsv = await fetch('quality.csv').then((res) => res.blob())
+      linkQualityCsv.href = window.URL.createObjectURL(
+        new Blob([dataQualityCsv], { type: 'text/csv' })
+      )
+      linkQualityCsv.click()
+      linkQualityCsv.remove()
+      window.URL.revokeObjectURL(linkQualityCsv.href)
     }
 
     return {
@@ -406,10 +368,6 @@ export default {
       portCH,
       usernameCH,
       passwordCH,
-      defaultModeOfFilterRadio,
-      defaultRootDirectory,
-      defaultExceptionDirectories,
-      defaultExceptionExpertTags,
       changeConfigOPC,
       changeConfigCH,
       statusUpdateTextArea,
@@ -419,31 +377,21 @@ export default {
       onButtonCancelUpdateClick,
       confirmUpdate,
       changeUpdate,
-      defaultTypesOfSensorsDataValue,
       defaultTypesOfSensorsDataOptions,
-      defaultChosenTypesOfSensorsData,
       onDefaultTypesOfSensorsDataChange,
-      defaultSelectionTagRadio,
-      defaultTemplate,
-      // defaultQualitiesName,
       qualitiesName,
-      defaultQuality,
-      defaultChosenQuality,
       onDefaultMultiselectQualitiesChange,
-      defaultLastValueChecked,
-      defaultFilterTableChecked,
-      defaultIntervalDeepOfSearch,
-      defaultDimensionDeepOfSearch,
-      defaultDateDeepOfSearch,
       defaultMaxDateTime,
       onDefaultDateDeepOfSearchClick,
       onDefaultDateDeepOfSearchTodayClick,
-      defaultInterval,
-      defaultIntervalRadio,
-      defaultCountShowSensors,
       changeDefaultFields,
       exportConfigDownloadClick,
-      uploadConfig
+      uploadConfig,
+      defaultFields,
+      sensorsAndTemplateValueShow,
+      exceptionDirectoriesShow,
+      uploadQuality,
+      exportQualityDownloadClick
     }
   }
 }
@@ -482,6 +430,29 @@ export default {
       <div class="col text-end">
         <Button @click="exportConfigDownloadClick" :disabled="statusUpdateButtonActive"
           >Экспорт конфигурации</Button
+        >
+      </div>
+    </div>
+    <div class="row align-items-center components-margin-bottom">
+      <div class="col-6"></div>
+      <div class="col text-end">
+        <FileUpload
+          mode="basic"
+          name="config[]"
+          url="/upload_quality"
+          accept=".csv"
+          :maxFileSize="1000000"
+          :auto="true"
+          :customUpload="true"
+          :disabled="statusUpdateButtonActive"
+          chooseLabel="Импорт кодов качеств"
+          style="border-radius: 0px"
+          @uploader="uploadQuality"
+        />
+      </div>
+      <div class="col text-end">
+        <Button @click="exportQualityDownloadClick" :disabled="statusUpdateButtonActive"
+          >Экспорт кодов качеств</Button
         >
       </div>
     </div>
@@ -668,7 +639,7 @@ export default {
       <div class="col-3">Режим фильтрации обновления тегов:</div>
       <div class="col-2">
         <RadioButton
-          v-model="defaultModeOfFilterRadio"
+          v-model="defaultFields.modeOfFilter"
           inputId="modeFilterHistorianDefault"
           name="modeFilterHistorianDefault"
           value="historian"
@@ -680,10 +651,10 @@ export default {
       <div class="col-7">
         <label for="default-root-directory">Корневая папка</label><br />
         <InputText
-          v-model="defaultRootDirectory"
+          v-model="defaultFields.rootDirectory"
           type="text"
           id="default-root-directory"
-          :disabled="statusUpdateButtonActive || defaultModeOfFilterRadio === 'historian'"
+          :disabled="statusUpdateButtonActive || defaultFields.modeOfFilter === 'historian'"
           style="width: 100%"
           @input="changeDefaultFields"
         >
@@ -695,14 +666,14 @@ export default {
         <Button
           v-if="checkFileActive"
           @click="changeUpdate"
-          :disabled="statusUpdateButtonActive || defaultModeOfFilterRadio === 'historian'"
+          :disabled="statusUpdateButtonActive || defaultFields.modeOfFilter === 'historian'"
           style="width: 90%"
           >Применить список исключений к файлу тегов</Button
         >
       </div>
       <div class="col-2">
         <RadioButton
-          v-model="defaultModeOfFilterRadio"
+          v-model="defaultFields.modeOfFilter"
           inputId="modeFilterExceptionDefault"
           name="modeFilterExceptionDefault"
           value="exception"
@@ -718,19 +689,19 @@ export default {
           >Список исключений (перечислите через запятую регулярные выражения)</label
         ><br />
         <InputText
-          v-model="defaultExceptionDirectories"
+          v-model="exceptionDirectoriesShow"
           type="text"
           id="default-exception-directories"
-          :disabled="statusUpdateButtonActive || defaultModeOfFilterRadio === 'historian'"
+          :disabled="statusUpdateButtonActive || defaultFields.modeOfFilter === 'historian'"
           style="width: 100%"
           @input="changeDefaultFields"
         >
         </InputText>
         <Checkbox
           id="default-exception-expert-tags"
-          v-model="defaultExceptionExpertTags"
+          v-model="defaultFields.exceptionExpertTags"
           :binary="true"
-          :disabled="statusUpdateButtonActive || defaultModeOfFilterRadio === 'historian'"
+          :disabled="statusUpdateButtonActive || defaultFields.modeOfFilter === 'historian'"
           @change="changeDefaultFields"
         ></Checkbox>
         <label for="default-exception-expert-tags" class="checkbox-margin"
@@ -767,7 +738,7 @@ export default {
         <label for="typesOfSensorsDataSignals">Выберите тип данных тегов по умолчанию</label>
         <Multiselect
           id="typesOfSensorsDataSignals"
-          v-model="defaultTypesOfSensorsDataValue"
+          v-model="defaultFields.typesOfSensors"
           mode="tags"
           :close-on-select="false"
           :groups="true"
@@ -785,7 +756,7 @@ export default {
       <div class="col-3">Применять фильтр по умолчанию как:</div>
       <div class="col-3">
         <RadioButton
-          v-model="defaultSelectionTagRadio"
+          v-model="defaultFields.selectionTag"
           id="sequentialDefault"
           inputId="sequentialDefault"
           name="sequential"
@@ -798,7 +769,7 @@ export default {
       </div>
       <div class="col-3">
         <RadioButton
-          v-model="defaultSelectionTagRadio"
+          v-model="defaultFields.selectionTag"
           id="unionDefault"
           inputId="unionDefault"
           name="union"
@@ -814,7 +785,7 @@ export default {
           >Шаблон тегов по умолчанию (перечислите шаблоны или теги через запятую)</label
         >
         <InputText
-          v-model="defaultTemplate"
+          v-model="sensorsAndTemplateValueShow"
           type="text"
           id="default-template"
           :disabled="statusUpdateButtonActive"
@@ -833,7 +804,7 @@ export default {
         <label for="qualitySignals">Код качества сигнала по умолчанию</label>
         <Multiselect
           id="qualitySignals"
-          v-model="defaultQuality"
+          v-model="defaultFields.quality"
           mode="tags"
           :close-on-select="false"
           :searchable="true"
@@ -851,7 +822,7 @@ export default {
           <div class="col">
             <label for="intervalDeepOfSearch">Глубина поиска в архивах по умолчанию</label><br />
             <InputNumber
-              v-model="defaultIntervalDeepOfSearch"
+              v-model="defaultFields.intervalDeepOfSearch"
               id="intervalDeepOfSearch"
               input-id="intervalDeepOfSearch"
               :useGrouping="false"
@@ -869,7 +840,7 @@ export default {
             <label for="calendarDateDeepOfSearchSignals">Дата глубины поиска в архивах</label><br />
             <Calendar
               id="calendarDateDeepOfSearchSignals"
-              v-model="defaultDateDeepOfSearch"
+              v-model="defaultFields.dateDeepOfSearch"
               :maxDate="defaultMaxDateTime"
               show-time
               hour-format="24"
@@ -888,7 +859,7 @@ export default {
           </div>
           <div class="col-12">
             <RadioButton
-              v-model="defaultDimensionDeepOfSearch"
+              v-model="defaultFields.dimensionDeepOfSearch"
               id="dayDefaultDeepOfSearch"
               inputId="dayDefaultDeepOfSearch"
               name="day"
@@ -897,7 +868,7 @@ export default {
             />
             <label for="dayDefaultDeepOfSearch" class="radio-interval-margin">День</label>
             <RadioButton
-              v-model="defaultDimensionDeepOfSearch"
+              v-model="defaultFields.dimensionDeepOfSearch"
               id="hourDefaultDeepOfSearch"
               inputId="hourDefaultDeepOfSearch"
               name="hour"
@@ -906,7 +877,7 @@ export default {
             />
             <label for="hourDefaultDeepOfSearch" class="radio-interval-margin">Час</label>
             <RadioButton
-              v-model="defaultDimensionDeepOfSearch"
+              v-model="defaultFields.dimensionDeepOfSearch"
               id="minuteDefaultDeepOfSearch"
               inputId="minuteDefaultDeepOfSearch"
               name="minute"
@@ -915,7 +886,7 @@ export default {
             />
             <label for="minuteDefaultDeepOfSearch" class="radio-interval-margin">Минута</label>
             <RadioButton
-              v-model="defaultDimensionDeepOfSearch"
+              v-model="defaultFields.dimensionDeepOfSearch"
               id="secondDefaultDeepOfSearch"
               inputId="secondDefaultDeepOfSearch"
               name="second"
@@ -927,7 +898,7 @@ export default {
           <div class="col-12">
             <Checkbox
               id="lastValueChecked"
-              v-model="defaultLastValueChecked"
+              v-model="defaultFields.lastValueChecked"
               :binary="true"
               :disabled="statusUpdateButtonActive"
             ></Checkbox>
@@ -938,7 +909,7 @@ export default {
           <div class="col-12">
             <Checkbox
               id="filterTableChecked"
-              v-model="defaultFilterTableChecked"
+              v-model="defaultFields.filterTableChecked"
               :binary="true"
               :disabled="statusUpdateButtonActive"
             ></Checkbox>
@@ -953,7 +924,7 @@ export default {
       <div class="col-3">
         <label for="intervalDefaultGrid">Интервал по умолчанию: </label><br />
         <InputNumber
-          v-model="defaultInterval"
+          v-model="defaultFields.interval"
           id="intervalDefaultGrid"
           input-id="intervalDefaultGrid"
           :useGrouping="false"
@@ -970,7 +941,7 @@ export default {
       <div class="col-9">
         <label for="show-default-sensors">Показываемые датчики по умолчанию</label><br />
         <InputNumber
-          v-model="defaultCountShowSensors"
+          v-model="defaultFields.countShowSensors"
           id="show-default-sensors"
           input-id="defaultCountShowSensors"
           :useGrouping="false"
@@ -988,7 +959,7 @@ export default {
     <div class="row" v-if="checkFileActive">
       <div class="col">
         <RadioButton
-          v-model="defaultIntervalRadio"
+          v-model="defaultFields.dimension"
           id="dayDefault"
           inputId="dayDefault"
           name="day"
@@ -997,7 +968,7 @@ export default {
         />
         <label for="dayDefault" class="radio-interval-margin">День</label>
         <RadioButton
-          v-model="defaultIntervalRadio"
+          v-model="defaultFields.dimension"
           id="hourDefault"
           inputId="hourDefault"
           name="hour"
@@ -1006,7 +977,7 @@ export default {
         />
         <label for="hourDefault" class="radio-interval-margin">Час</label>
         <RadioButton
-          v-model="defaultIntervalRadio"
+          v-model="defaultFields.dimension"
           id="minuteDefault"
           inputId="minuteDefault"
           name="minute"
@@ -1015,7 +986,7 @@ export default {
         />
         <label for="minuteDefault" class="radio-interval-margin">Минута</label>
         <RadioButton
-          v-model="defaultIntervalRadio"
+          v-model="defaultFields.dimension"
           id="secondDefault"
           inputId="secondDefault"
           name="second"
