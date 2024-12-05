@@ -22,7 +22,7 @@ export default {
   },
   setup(props) {
     const applicationStore = useApplicationStore()
-    const { defaultFields, badCode, badNumericCode, estimatedSliceRateInHours } = applicationStore
+    const { defaultFields, badQualityDescr, badCode, estimatedSliceRateInHours } = applicationStore
 
     const { qualitiesName } = storeToRefs(applicationStore)
 
@@ -251,7 +251,7 @@ export default {
     function qualityClass(quality) {
       return [
         {
-          'text-danger': badCode.includes(quality['Качество']),
+          'text-danger': badQualityDescr.includes(quality['Качество']),
           'text-warning': quality['Качество'] === '' || quality['Качество'] === 'NaN'
         }
       ]
@@ -260,7 +260,7 @@ export default {
     function codeOfQualityClass(code) {
       return [
         {
-          'text-danger': badNumericCode.includes(code['Код качества']),
+          'text-danger': badCode.includes(code['Код качества']),
           'text-warning': code['Код качества'] === '' || code['Код качества'] === 'NaN'
         }
       ]

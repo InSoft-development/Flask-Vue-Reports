@@ -12,9 +12,11 @@ export default {
   components: { Multiselect },
   setup() {
     const applicationStore = useApplicationStore()
-    const { getFields,  getQualitiesName } = applicationStore
+    const { getFields,  getQualitiesName, getBadQualityDescr, getBadCode } = applicationStore
 
     getQualitiesName()
+    getBadQualityDescr()
+    getBadCode()
     getFields()
 
     const sidebarMenu = [

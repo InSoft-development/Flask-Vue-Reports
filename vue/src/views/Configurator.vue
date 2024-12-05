@@ -28,7 +28,7 @@ export default {
   components: { Multiselect },
   setup() {
     const applicationStore = useApplicationStore()
-    const { getQualitiesName, getFields, setFields } = applicationStore
+    const { getQualitiesName, getBadQualityDescr, getBadCode, getFields, setFields } = applicationStore
 
     const { qualitiesName, defaultFields,
       sensorsAndTemplateValueShow, exceptionDirectoriesShow } = storeToRefs(applicationStore)
@@ -46,6 +46,8 @@ export default {
       if (!checkFileActive.value) return
       await getTypesOfSensors(defaultTypesOfSensorsDataOptions)
       await getQualitiesName()
+      await getBadQualityDescr()
+      await getBadCode()
       await getFields()
     }
 
@@ -197,6 +199,8 @@ export default {
 
       await getTypesOfSensors(defaultTypesOfSensorsDataOptions)
       await getQualitiesName()
+      await getBadQualityDescr()
+      await getBadCode()
       await getFields()
       statusUpdateButtonActive.value = false
     })
@@ -328,6 +332,8 @@ export default {
       await getLastUpdateFileKKS(lastUpdateFileKKS)
       await getTypesOfSensors(defaultTypesOfSensorsDataOptions)
       await getQualitiesName()
+      await getBadQualityDescr()
+      await getBadCode()
       await getFields()
       statusUpdateButtonActive.value = false
     }
@@ -341,6 +347,8 @@ export default {
         })
       })
       await getQualitiesName()
+      await getBadQualityDescr()
+      await getBadCode()
       await getFields()
       statusUpdateButtonActive.value = false
     }

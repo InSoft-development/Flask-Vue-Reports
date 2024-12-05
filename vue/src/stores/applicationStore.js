@@ -5,16 +5,18 @@ import { socket } from '../socket'
 
 export const useApplicationStore = defineStore('ApplicationStore', () => {
   const qualitiesName = ref()
+  const badQualityDescr = ref()
+  const badCode = ref([8, 16, 24, 28, 88])
 
-  const badCode = [
-    'BadNoCommunication',
-    'BadSensorFailure',
-    'BadCommunicationFailure',
-    'BadDeviceFailure',
-    'UncertainLastUsableValue'
-  ]
-
-  const badNumericCode = [8, 16, 24, 28, 88]
+  // const badCode = [
+  //   'BadNoCommunication',
+  //   'BadSensorFailure',
+  //   'BadCommunicationFailure',
+  //   'BadDeviceFailure',
+  //   'UncertainLastUsableValue'
+  // ]
+  //
+  // const badNumericCode = [8, 16, 24, 28, 88]
 
   const getQualitiesName = async () => {
     await new Promise((resolve) => {
@@ -24,6 +26,24 @@ export const useApplicationStore = defineStore('ApplicationStore', () => {
           options: qualitiesNameAnswer
         }]
         resolve(qualitiesNameAnswer)
+      })
+    })
+  }
+
+  const getBadQualityDescr = async () => {
+    await new Promise((resolve) => {
+      socket.emit('get_bad_quality_descr', (qualitiesBadDescrAnswer) => {
+        badQualityDescr.value = qualitiesBadDescrAnswer
+        resolve(qualitiesBadDescrAnswer)
+      })
+    })
+  }
+
+  const getBadCode = async () => {
+    await new Promise((resolve) => {
+      socket.emit('get_bad_code', (qualitiesBadCodeAnswer) => {
+        badCode.value = qualitiesBadCodeAnswer
+        resolve(qualitiesBadCodeAnswer)
       })
     })
   }
@@ -67,10 +87,12 @@ export const useApplicationStore = defineStore('ApplicationStore', () => {
   const itemSize = 12
 
   return {
-    badCode,
     qualitiesName,
-    badNumericCode,
+    badQualityDescr,
+    badCode,
     getQualitiesName,
+    getBadQualityDescr,
+    getBadCode,
     getDefaultFields,
     deltaTimeInSeconds,
     estimatedSliceRateInHours,

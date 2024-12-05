@@ -33,7 +33,7 @@ export default {
   },
   setup(props) {
     const applicationStore = useApplicationStore()
-    const { defaultFields, badCode, itemSize,
+    const { defaultFields, badQualityDescrCode, itemSize,
       firstRaw, lastRaw, deltaTimeInSeconds, estimatedGridRateInHours } = applicationStore
 
     const typesOfSensorsDataValue = ref(defaultFields.typesOfSensors)
@@ -407,7 +407,7 @@ export default {
     function statusClass(index, field) {
       return [
         {
-          'text-danger': badCode.includes(
+          'text-danger': badQualityDescrCode.includes(
             dataTableStatus.value[index][String(field)]
           ),
           'text-warning':

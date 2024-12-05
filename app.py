@@ -412,6 +412,26 @@ def get_qualities_name() -> List[str]:
     return operations.quality_name(data_control.client_mode, data_control.quality)
 
 
+@socketio.on("get_bad_quality_descr")
+def get_bad_quality_descr() -> List[str]:
+    """
+    Функция получения описания (opc_ua_descr) плохих кодов качества для выделения цветом в веб-интерфейсе
+    :return: список описания плохих кодов качества
+    """
+    logger.info(f"get_bad_quality_descr()")
+    return operations.quality_bad_descr(data_control.client_mode, data_control.quality)
+
+
+@socketio.on("get_bad_code")
+def get_bad_code() -> List[str]:
+    """
+    Функция получения плохих кодов качества для выделения цветом в веб-интерфейсе
+    :return: список плохих кодов качества
+    """
+    logger.info(f"get_bad_code()")
+    return operations.quality_bad_code(data_control.client_mode, data_control.quality)
+
+
 @socketio.on("get_kks_tag_exist")
 def get_kks_tag_exist(kks_tag: str) -> bool:
     """

@@ -106,6 +106,64 @@ def quality_name(mode: str, quality: pd.DataFrame) -> List[str]:
     return ['Ошибка конфигурации клиента']
 
 
+def quality_bad_descr(mode: str, quality: pd.DataFrame) -> List[str]:
+    """
+    Функция возвращает список описания плохих кодов качества (с типом кода <<плохой>>)
+    :param mode: выбранный клиент
+    :param quality: pandas фрейм кодов качеств
+    :return: список описания плохих кодов качества
+    """
+    if mode == 'OPC':
+        if quality.empty:
+            return [""]
+        return quality.loc[quality['type_code_quality'] == "плохой"]['opc_ua_descr'].tolist()
+
+    if mode == 'CH':
+        try:
+            ip, port, username, password = client_operations.read_clickhouse_server_conf()
+            client = client_operations.create_client(ip, port, username, password)
+            logger.info("Clickhouse connected")
+            df_quality_bad_descr = client.query_df("SELECT opc_ua_descr FROM archive.t_quality "
+                                                   "WHERE type_code_quality = 'плохой'")
+            client.close()
+            logger.info("Clickhouse disconnected")
+            return df_quality_bad_descr['opc_ua_descr'].tolist()
+        except clickhouse_exceptions.Error as error:
+            logger.error(error)
+            return [""]
+
+    return [""]
+
+
+def quality_bad_code(mode:str, quality: pd.DataFrame) -> List[str]:
+    """
+    Функция возвращает список плохих кодов качества (с типом кода <<плохой>>)
+    :param mode: выбранный клиент
+    :param quality: pandas фрейм кодов качеств
+    :return: список плохих кодов качества
+    """
+    if mode == 'OPC':
+        if quality.empty:
+            return [""]
+        return quality.loc[quality['type_code_quality'] == "плохой"]['id'].tolist()
+
+    if mode == 'CH':
+        try:
+            ip, port, username, password = client_operations.read_clickhouse_server_conf()
+            client = client_operations.create_client(ip, port, username, password)
+            logger.info("Clickhouse connected")
+            df_quality_bad_code = client.query_df("SELECT id FROM archive.t_quality "
+                                                  "WHERE type_code_quality = 'плохой'")
+            client.close()
+            logger.info("Clickhouse disconnected")
+            return df_quality_bad_code['id'].tolist()
+        except clickhouse_exceptions.Error as error:
+            logger.error(error)
+            return [""]
+
+    return [""]
+
+
 def last_update_file_kks(socketio: SocketIO, sid: int, mode: str) -> str:
     """
     Функция возвращает дату последнего обновления файла тегов kks_all.csv или таблицы clickhouse
@@ -694,7 +752,7 @@ def fill_signals_query(kks_requested_list: List[str], quality: List[str], date: 
     """
     # Подготовка к выполнению запроса
     # Формирование списка выбранных кодов качества для sql запроса
-    correct_quality_list = list(map(lambda x: constants.QUALITY_SHORT_CODE_DICT[x], quality))
+    correct_quality_list = list(map(lambda x: x.split(' - ')[0], quality))
 
     # Формирование даты
     if interval_or_date_checked:
@@ -712,10 +770,12 @@ def fill_signals_query(kks_requested_list: List[str], quality: List[str], date: 
                        f"{correct_quality_list} AS arr_q, " \
                        f"{kks_requested_list} AS arr_ids, " \
                        f"tt_id AS (SELECT id, item_name FROM archive.static_data where item_name in arr_ids), " \
-                       f"tt_q AS (SELECT id, opc_ua FROM archive.t_quality where opc_ua in arr_q)"
+                       f"tt_q AS (SELECT id, opc_ua_descr FROM archive.t_quality where id in arr_q)"
+
+    logger.warning(arguments_string)
 
     # Тело запроса sql
-    body_of_query = f"SELECT mq1.id id, item_name kks, ts_m timestamp, v_m val, q_m quality, opc_ua AS q_name " \
+    body_of_query = f"SELECT mq1.id id, item_name kks, ts_m timestamp, v_m val, q_m quality, opc_ua_descr AS q_name " \
                     f"FROM ( " \
                     f"SELECT id, MAX(timestamp) ts_m, argMax(quality, timestamp) q_m, argMax(val, timestamp) v_m " \
                     f"FROM ( " \
